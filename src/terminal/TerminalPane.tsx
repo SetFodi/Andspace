@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useStore } from "./terminalStore";
@@ -71,6 +72,15 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
     const fit = new FitAddon();
     term.loadAddon(fit);
+
+    // ⌘+click on URLs opens them in the default browser. Plain clicks fall
+    // through (no-op) so the user can still select text containing a URL.
+    const webLinks = new WebLinksAddon((event, uri) => {
+      if (event.metaKey) {
+        invoke("open_url", { url: uri }).catch(() => {});
+      }
+    });
+    term.loadAddon(webLinks);
 
     term.attachCustomKeyEventHandler((e) => !isAppShortcut(e));
 

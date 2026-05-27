@@ -16,6 +16,7 @@ fn main() {
             resize_pty,
             kill_pty,
             report_renderer,
+            open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running andspace");

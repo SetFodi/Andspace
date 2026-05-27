@@ -13,25 +13,9 @@ function TitleBar() {
   );
 }
 
-function BranchIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M5 3.5 V12.5 M11 3.5 V7.5 a3 3 0 0 1 -3 3 H5"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinecap="round"
-      />
-      <circle cx="5" cy="3" r="1.4" fill="currentColor" />
-      <circle cx="11" cy="3" r="1.4" fill="currentColor" />
-      <circle cx="5" cy="13" r="1.4" fill="currentColor" />
-    </svg>
-  );
-}
-
 function StatusBar() {
-  // Placeholders matching the design reference — these will become live in v0.1
-  // (shell name, cursor position from PTY parsing, current branch from git).
+  // Minimal terminal info — shell on the left, cwd placeholder on the right.
+  // The cwd will become live in v0.1 via shell integration (OSC 7).
   return (
     <div className="status-bar">
       <div className="status-left">
@@ -39,12 +23,7 @@ function StatusBar() {
         <span>zsh</span>
       </div>
       <div className="status-right">
-        <span>Ln 1, Col 1</span>
-        <span>Spaces: 2</span>
-        <span className="status-branch">
-          <BranchIcon />
-          main
-        </span>
+        <span>~</span>
       </div>
     </div>
   );

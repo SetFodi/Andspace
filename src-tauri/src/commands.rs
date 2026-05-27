@@ -39,3 +39,13 @@ pub fn kill_pty(state: State<'_, PtyManager>, pane_id: String) -> Result<(), Str
 pub fn report_renderer(kind: String) {
     crate::pty::diag_log(&format!("renderer={kind}"));
 }
+
+#[tauri::command]
+pub fn open_url(url: String) -> Result<(), String> {
+    // Use macOS `open` to route to the registered URL handler.
+    std::process::Command::new("open")
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}

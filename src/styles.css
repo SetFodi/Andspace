@@ -122,15 +122,17 @@ body,
 }
 
 .tab-index {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  color: #545561;
+  color: #45464e;
   font-variant-numeric: tabular-nums;
-  min-width: 10px;
+  min-width: 9px;
+  opacity: 0.85;
 }
 
 .tab.active .tab-index {
-  color: #a78bfa;
+  color: rgba(167, 139, 250, 0.7);
+  opacity: 1;
 }
 
 .tab-title {
@@ -249,8 +251,9 @@ body,
 
 .pane-slot {
   position: absolute;
-  /* outer padding creates the visible "gutter" between adjacent panes */
-  padding: 4px;
+  /* Tighter gutter — feels more like native terminal splits, less like
+     floating dashboard cards. */
+  padding: 3px;
   /* Smooth glide when panes resize on split/close. Existing panes shrink
      to make room; remaining panes expand back when one closes. */
   transition: left 180ms cubic-bezier(0.32, 0.72, 0, 1),
@@ -278,8 +281,8 @@ body,
   height: 100%;
   padding: 10px 14px 2px 14px;
   background: #0d0e12;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
   position: relative;
   overflow: hidden;
   /* Subtle fade between inactive ↔ active ring color on focus change. */
@@ -287,7 +290,7 @@ body,
 }
 
 .terminal-pane.active {
-  border-color: rgba(167, 139, 250, 0.75);
+  border-color: rgba(167, 139, 250, 0.5);
 }
 
 .terminal-pane .xterm {
@@ -351,10 +354,4 @@ body,
   display: flex;
   align-items: center;
   gap: 18px;
-}
-
-.status-branch {
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
