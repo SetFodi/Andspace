@@ -46,19 +46,25 @@ export function TerminalPane({ paneId, tabId }: Props) {
     if (!container) return;
 
     const term = new Terminal({
-      fontFamily: '"SF Mono", "JetBrains Mono", Menlo, monospace',
+      fontFamily:
+        '"JetBrains Mono", "SF Mono", "Menlo", "Monaco", monospace',
       fontSize: 13,
-      lineHeight: 1.2,
+      lineHeight: 1.25,
+      letterSpacing: 0,
       cursorBlink: true,
       cursorStyle: "block",
+      cursorInactiveStyle: "outline",
       allowProposedApi: true,
       scrollback: 10000,
+      drawBoldTextInBrightColors: true,
+      minimumContrastRatio: 1,
       theme: {
         background: "#0d0e12",
         foreground: "#e6e6ea",
         cursor: "#a78bfa",
         cursorAccent: "#0d0e12",
-        selectionBackground: "#3a3550",
+        selectionBackground: "#4a3d72",
+        selectionInactiveBackground: "#322c46",
       },
     });
     termRef.current = term;

@@ -3,6 +3,53 @@ import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
 
+function TitleBar() {
+  return (
+    <div className="title-bar" data-tauri-drag-region>
+      <div className="title-bar-gutter" />
+      <div className="title-bar-text">AndSpace</div>
+      <div className="title-bar-spacer" />
+    </div>
+  );
+}
+
+function BranchIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M5 3.5 V12.5 M11 3.5 V7.5 a3 3 0 0 1 -3 3 H5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <circle cx="5" cy="3" r="1.4" fill="currentColor" />
+      <circle cx="11" cy="3" r="1.4" fill="currentColor" />
+      <circle cx="5" cy="13" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function StatusBar() {
+  // Placeholders matching the design reference — these will become live in v0.1
+  // (shell name, cursor position from PTY parsing, current branch from git).
+  return (
+    <div className="status-bar">
+      <div className="status-left">
+        <span className="status-dot" aria-hidden />
+        <span>zsh</span>
+      </div>
+      <div className="status-right">
+        <span>Ln 1, Col 1</span>
+        <span>Spaces: 2</span>
+        <span className="status-branch">
+          <BranchIcon />
+          main
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
@@ -36,15 +83,12 @@ export default function App() {
         e.preventDefault();
         newTab();
       } else if (k === "w") {
-        // Close pane if tab has multiple panes; otherwise close the tab.
         e.preventDefault();
         closeActive();
       } else if (k === "ArrowRight" && !e.shiftKey) {
-        // split right (vertical divider) — ⌘→
         e.preventDefault();
         splitActive("row");
       } else if (k === "ArrowDown" && !e.shiftKey) {
-        // split down (horizontal divider) — ⌘↓
         e.preventDefault();
         splitActive("column");
       } else if (k === "]") {
@@ -73,19 +117,19 @@ export default function App() {
 
   return (
     <div className="app">
+      <TitleBar />
       <TabStrip />
       <div className="terminal-area">
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`tab-content ${
-              tab.id === activeTabId ? "active" : ""
-            }`}
+            className={`tab-content ${tab.id === activeTabId ? "active" : ""}`}
           >
             <SplitTree node={tab.root} tabId={tab.id} />
           </div>
         ))}
       </div>
+      <StatusBar />
     </div>
   );
 }

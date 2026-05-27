@@ -1,5 +1,5 @@
 :root {
-  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter",
     "Helvetica Neue", sans-serif;
   font-size: 13px;
   color: #e6e6ea;
@@ -17,7 +17,7 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #0d0e12;
+  background: #0a0a0c;
   overflow: hidden;
 }
 
@@ -25,54 +25,106 @@ body,
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #0d0e12;
+  background: #0a0a0c;
 }
 
-/* --- Tab strip --- */
+/* === Title bar (custom, traffic-lights overlay) ========================== */
 
-.tab-strip {
+.title-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  background: #14151a;
-  border-bottom: 1px solid #1f2129;
+  height: 28px;
+  background: #0a0a0c;
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
 }
 
+/* Children of the title bar should be transparent to mouse events so every
+   click lands on the .title-bar element (which has data-tauri-drag-region
+   and -webkit-app-region: drag). This makes the full bar grab-able and
+   double-clickable for zoom. */
+.title-bar > * {
+  pointer-events: none;
+}
+
+.title-bar-gutter {
+  width: 76px;
+  flex-shrink: 0;
+}
+
+.title-bar-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6e6ea;
+  letter-spacing: -0.005em;
+}
+
+.title-bar-spacer {
+  flex: 1;
+}
+
+/* === Tab strip =========================================================== */
+
+.tab-strip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 6px 8px;
+  background: #0a0a0c;
+  -webkit-app-region: drag;
+  user-select: none;
+  flex-shrink: 0;
+  height: 40px;
+}
+
 .tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px 4px 10px;
-  background: #1c1e25;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+  background: transparent;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 12px;
-  color: #9b9ba6;
+  font-weight: 500;
+  color: #6f7080;
   -webkit-app-region: no-drag;
-  min-width: 90px;
-  max-width: 200px;
-  transition: background 80ms ease, color 80ms ease;
+  min-width: 130px;
+  max-width: 220px;
+  transition: background-color 100ms ease, color 100ms ease,
+    box-shadow 100ms ease;
+  box-shadow: inset 0 0 0 1px transparent;
+  height: 28px;
+  animation: tab-appear 160ms ease-out;
+}
+
+@keyframes tab-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tab:hover {
-  background: #20232c;
-  color: #c9c9d0;
+  background: rgba(255, 255, 255, 0.035);
+  color: #b8b8c2;
 }
 
 .tab.active {
-  background: #2a1f4a;
+  background: rgba(167, 139, 250, 0.06);
   color: #e6e6ea;
-  box-shadow: inset 0 0 0 1px #4a3a8a;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.55);
 }
 
 .tab-index {
-  font-size: 10px;
-  font-weight: 600;
-  color: #6b6c78;
+  font-size: 11px;
+  font-weight: 500;
+  color: #545561;
   font-variant-numeric: tabular-nums;
   min-width: 10px;
 }
@@ -86,6 +138,7 @@ body,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.005em;
 }
 
 .tab-close {
@@ -95,12 +148,15 @@ body,
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
-  padding: 0 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
   opacity: 0.5;
+  transition: opacity 100ms ease, background-color 100ms ease;
 }
 
 .tab-close:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tab-new {
@@ -109,22 +165,62 @@ body,
   color: #6b6c78;
   cursor: pointer;
   font-size: 16px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  line-height: 1;
+  padding: 0 9px;
+  margin-left: 2px;
+  border-radius: 5px;
   -webkit-app-region: no-drag;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 
 .tab-new:hover {
-  background: #1c1e25;
+  background: rgba(255, 255, 255, 0.05);
   color: #e6e6ea;
 }
 
-/* --- Terminal area --- */
+.tab-strip-spacer {
+  flex: 1;
+  min-width: 12px;
+  -webkit-app-region: drag;
+}
+
+.tab-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.strip-icon {
+  background: transparent;
+  border: none;
+  color: #6b6c78;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.strip-icon:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e6e6ea;
+}
+
+/* === Terminal area ======================================================= */
 
 .terminal-area {
   flex: 1;
   position: relative;
-  background: #0d0e12;
+  background: #0a0a0c;
   overflow: hidden;
 }
 
@@ -153,21 +249,45 @@ body,
 
 .pane-slot {
   position: absolute;
-  overflow: hidden;
+  /* outer padding creates the visible "gutter" between adjacent panes */
+  padding: 4px;
+  /* Smooth glide when panes resize on split/close. Existing panes shrink
+     to make room; remaining panes expand back when one closes. */
+  transition: left 180ms cubic-bezier(0.32, 0.72, 0, 1),
+    top 180ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 180ms cubic-bezier(0.32, 0.72, 0, 1),
+    height 180ms cubic-bezier(0.32, 0.72, 0, 1);
+  /* New panes fade in. Stable React keys mean this only fires once per
+     pane on creation, not on every re-render or tab switch. */
+  animation: pane-appear 220ms ease-out;
 }
 
-.pane-divider {
-  position: absolute;
-  background: #1f2129;
-  pointer-events: none;
+@keyframes pane-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .terminal-pane {
   width: 100%;
   height: 100%;
-  padding: 8px 4px 4px 8px;
+  padding: 10px 14px 2px 14px;
   background: #0d0e12;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
   position: relative;
+  overflow: hidden;
+  /* Subtle fade between inactive ↔ active ring color on focus change. */
+  transition: border-color 140ms ease;
+}
+
+.terminal-pane.active {
+  border-color: rgba(167, 139, 250, 0.75);
 }
 
 .terminal-pane .xterm {
@@ -176,4 +296,65 @@ body,
 
 .terminal-pane .xterm-viewport {
   background-color: transparent !important;
+}
+
+/* xterm scrollbar */
+.terminal-pane .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.terminal-pane .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* === Status bar ========================================================== */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 14px;
+  background: #0a0a0c;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 11px;
+  color: #6b6c78;
+  flex-shrink: 0;
+  user-select: none;
+  font-feature-settings: "tnum";
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 5px rgba(167, 139, 250, 0.45);
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.status-branch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
