@@ -25,6 +25,10 @@ import {
   type HandoffCommandRecord,
 } from "./aiHandoff";
 import { useServerStore } from "./serverStore";
+import {
+  findNearestPaneInDirection,
+  type PaneFocusDirection,
+} from "./paneNavigation";
 
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
@@ -47,6 +51,7 @@ interface State {
   splitActive: (direction: SplitDirection) => Promise<PaneId | null>;
   closePane: (paneId: PaneId) => Promise<void>;
   closeActive: () => Promise<void>;
+  focusPaneInDirection: (direction: PaneFocusDirection) => PaneId | null;
   setActivePane: (tabId: TabId, paneId: PaneId) => void;
   setActiveTab: (id: TabId) => void;
   nextTab: () => void;
@@ -507,6 +512,25 @@ export const useStore = create<State>((set, get) => ({
     } else {
       await get().closeTab(activeTabId);
     }
+  },
+
+  focusPaneInDirection: (direction) => {
+    const { tabs, activeTabId, activePaneByTab } = get();
+    const tab = tabs.find((t) => t.id === activeTabId);
+    const activePane = activePaneByTab[activeTabId];
+    if (!tab || !activePane) return null;
+
+    const nextPane = findNearestPaneInDirection(
+      tab.root,
+      activePane,
+      direction
+    );
+    if (!nextPane) return null;
+
+    set((s) => ({
+      activePaneByTab: { ...s.activePaneByTab, [activeTabId]: nextPane },
+    }));
+    return nextPane;
   },
 
   setActivePane: (tabId, paneId) =>

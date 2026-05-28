@@ -10,10 +10,40 @@ mod rules;
 
 use commands::*;
 use pty::PtyManager;
+use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::Emitter;
+
+const MENU_SPLIT_RIGHT: &str = "pane.split_right";
+const MENU_SPLIT_DOWN: &str = "pane.split_down";
 
 fn main() {
     pty::diag_log("=== app-start ===");
     tauri::Builder::default()
+        .menu(|app| {
+            let menu = Menu::default(app)?;
+            let split_right =
+                MenuItem::with_id(app, MENU_SPLIT_RIGHT, "Split Right", true, Some("Cmd+O"))?;
+            let split_down = MenuItem::with_id(
+                app,
+                MENU_SPLIT_DOWN,
+                "Split Down",
+                true,
+                Some("Cmd+L"),
+            )?;
+            let pane_menu =
+                Submenu::with_items(app, "Pane", true, &[&split_right, &split_down])?;
+            menu.insert(&pane_menu, 4)?;
+            Ok(menu)
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == MENU_SPLIT_RIGHT {
+                pty::diag_log("native-shortcut action=split-right");
+                let _ = app.emit("native-shortcut", "split-right");
+            } else if event.id() == MENU_SPLIT_DOWN {
+                pty::diag_log("native-shortcut action=split-down");
+                let _ = app.emit("native-shortcut", "split-down");
+            }
+        })
         .manage(PtyManager::new())
         .invoke_handler(tauri::generate_handler![
             create_pty,

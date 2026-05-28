@@ -36,13 +36,13 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     id: "terminal.splitRight",
     title: "Split Right",
     section: "Terminal",
-    keywords: ["split", "right", "pane"],
+    keywords: ["split", "right", "pane", "cmd", "o"],
   },
   {
     id: "terminal.splitDown",
     title: "Split Down",
     section: "Terminal",
-    keywords: ["split", "down", "pane"],
+    keywords: ["split", "down", "pane", "cmd", "l"],
   },
   {
     id: "terminal.closePane",

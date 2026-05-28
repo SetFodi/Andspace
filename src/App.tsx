@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
@@ -53,6 +54,7 @@ import {
   type CommandPaletteAction,
   type CommandPaletteActionId,
 } from "./terminal/commandPalette";
+import type { PaneFocusDirection } from "./terminal/paneNavigation";
 
 function TitleBar() {
   return (
@@ -91,10 +93,20 @@ function StatusBar() {
   );
 }
 
+function paneFocusDirectionForKey(key: string): PaneFocusDirection | null {
+  if (key === "ArrowLeft") return "left";
+  if (key === "ArrowRight") return "right";
+  if (key === "ArrowUp") return "up";
+  if (key === "ArrowDown") return "down";
+  return null;
+}
+
 interface ToastState {
   message: string;
   tone: "success" | "neutral" | "error";
 }
+
+type NativeShortcut = "split-right" | "split-down";
 
 export default function App() {
   const tabs = useStore((s) => s.tabs);
@@ -121,6 +133,7 @@ export default function App() {
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
   const splitActive = useStore((s) => s.splitActive);
+  const focusPaneInDirection = useStore((s) => s.focusPaneInDirection);
   const writeToPane = useStore((s) => s.writeToPane);
   const nextTab = useStore((s) => s.nextTab);
   const prevTab = useStore((s) => s.prevTab);
@@ -152,6 +165,9 @@ export default function App() {
   const [goToFileOpen, setGoToFileOpen] = useState(false);
   const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const lastSplitShortcutRef = useRef<{ action: NativeShortcut; at: number } | null>(
+    null
+  );
 
   const focusSidebar = useCallback(() => {
     setSidebarOpen(true);
@@ -220,6 +236,18 @@ export default function App() {
       return next;
     });
   }, [focusSidebarSoon, refocusTerminal]);
+
+  const runSplitShortcut = useCallback(
+    (action: NativeShortcut) => {
+      const now = performance.now();
+      const last = lastSplitShortcutRef.current;
+      if (last?.action === action && now - last.at < 120) return;
+
+      lastSplitShortcutRef.current = { action, at: now };
+      splitActive(action === "split-right" ? "row" : "column");
+    },
+    [splitActive]
+  );
 
   const buildPromptForActivePane = useCallback(async () => {
     return buildAiHandoffPrompt({
@@ -540,9 +568,26 @@ export default function App() {
     goToFileOpen;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!e.metaKey || e.ctrlKey) return;
       if (pendingGuardConfirmation || anyOverlayOpen) return;
       const k = e.key;
+
+      if (e.altKey) return;
+
+      {
+        const direction = paneFocusDirectionForKey(k);
+        if (direction && !e.shiftKey) {
+          e.preventDefault();
+          if (direction === "left") {
+            const paneId = focusPaneInDirection(direction);
+            if (!paneId) focusSidebar();
+            return;
+          }
+          focusPaneInDirection(direction);
+          return;
+        }
+      }
+
       if (k === "t") {
         e.preventDefault();
         newTab();
@@ -552,21 +597,21 @@ export default function App() {
       } else if (k.toLowerCase() === "b" && !e.shiftKey) {
         e.preventDefault();
         toggleSidebar();
-      } else if (k === "ArrowRight" && !e.shiftKey) {
+      } else if (k.toLowerCase() === "o" && !e.shiftKey) {
         e.preventDefault();
-        splitActive("row");
-      } else if (k === "ArrowDown" && !e.shiftKey) {
+        runSplitShortcut("split-right");
+      } else if (k.toLowerCase() === "l" && !e.shiftKey) {
         e.preventDefault();
-        splitActive("column");
+        runSplitShortcut("split-down");
+      } else if (k === "0" && !e.shiftKey) {
+        e.preventDefault();
+        focusSidebar();
       } else if (k.toLowerCase() === "i" && e.shiftKey) {
         e.preventDefault();
         void initRulesForActivePane();
       } else if (k.toLowerCase() === "e" && !e.shiftKey) {
         e.preventDefault();
         setHandoffOpen(true);
-      } else if (k === "ArrowLeft" && !e.shiftKey) {
-        e.preventDefault();
-        focusSidebar();
       } else if (k.toLowerCase() === "k" && !e.shiftKey) {
         e.preventDefault();
         setPaletteOpen(true);
@@ -596,7 +641,8 @@ export default function App() {
     newTab,
     closeTab,
     closeActive,
-    splitActive,
+    focusPaneInDirection,
+    runSplitShortcut,
     toggleSidebar,
     focusSidebar,
     nextTab,
@@ -606,6 +652,27 @@ export default function App() {
     pendingGuardConfirmation,
     showToast,
   ]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+
+    listen<NativeShortcut>("native-shortcut", (event) => {
+      if (pendingGuardConfirmation || anyOverlayOpen) return;
+      if (event.payload !== "split-right" && event.payload !== "split-down") {
+        return;
+      }
+      runSplitShortcut(event.payload);
+    }).then((fn) => {
+      if (disposed) fn();
+      else unlisten = fn;
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [anyOverlayOpen, pendingGuardConfirmation, runSplitShortcut]);
 
   useEffect(() => {
     if (activePaneId && activePaneCwd) {

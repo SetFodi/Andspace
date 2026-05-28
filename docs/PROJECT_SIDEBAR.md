@@ -9,7 +9,10 @@ sidebar.
 - `Cmd+B` toggles the sidebar **and focuses the first file row** so arrow
   keys work immediately. Pressing `Cmd+B` again closes it and returns
   focus to the terminal.
-- `Cmd+Left` focuses an already-open sidebar without toggling.
+- `Cmd+0` opens the sidebar if needed and focuses it without toggling.
+- `Cmd+Left` moves pane focus left first. If the active pane is already the
+  leftmost pane, it focuses the sidebar. While the sidebar is focused,
+  `Cmd+Right` returns focus to the active terminal pane.
 - `Esc` returns focus to the terminal.
 - Inside the sidebar: `↑` / `↓` walk rows (wraps, scrolls into view),
   `→` / `←` expand / collapse a directory, `Home` / `End` jump to first /

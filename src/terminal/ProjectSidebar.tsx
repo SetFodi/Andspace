@@ -240,6 +240,24 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
           if (!root) return;
           const focused = document.activeElement as HTMLElement | null;
 
+          // Cmd+Left/Cmd+Right are app focus movement. Plain Left/Right still
+          // owns directory collapse/expand below.
+          if (
+            e.metaKey &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            !e.shiftKey &&
+            (e.key === "ArrowLeft" || e.key === "ArrowRight")
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.key === "ArrowRight") {
+              (e.currentTarget as HTMLElement).blur();
+              window.dispatchEvent(new CustomEvent("andspace:focus-terminal"));
+            }
+            return;
+          }
+
           // Cmd+Enter on a focused file row runs the default action (Cursor
           // > Code > nvim split > copy) without showing the actions menu.
           if (

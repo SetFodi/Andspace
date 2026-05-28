@@ -27,19 +27,29 @@ interface PtyOutputPayload {
 const BLINK_IDLE_MS = 3000;
 
 function isAppShortcut(e: KeyboardEvent): boolean {
-  if (!e.metaKey || e.ctrlKey || e.altKey) return false;
+  if (!e.metaKey || e.ctrlKey) return false;
   const k = e.key;
+
+  if (e.altKey) return false;
+
   return (
     k === "t" ||
     k === "w" ||
+    k.toLowerCase() === "o" ||
+    k.toLowerCase() === "l" ||
     k.toLowerCase() === "b" ||
     k.toLowerCase() === "k" ||
     k.toLowerCase() === "e" ||
     (e.shiftKey && k.toLowerCase() === "i") ||
+    k === "0" ||
     k === "[" ||
     k === "]" ||
+    k === "ArrowLeft" ||
     k === "ArrowRight" ||
+    k === "ArrowUp" ||
     k === "ArrowDown" ||
+    k === "/" ||
+    k === "?" ||
     /^[1-9]$/.test(k)
   );
 }
