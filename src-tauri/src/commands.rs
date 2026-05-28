@@ -267,3 +267,87 @@ pub fn open_url(url: String) -> Result<(), String> {
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn resolve_project_root(
+    cwd: String,
+) -> Result<crate::project_sidebar::ResolvedProjectRoot, String> {
+    let resolved = crate::project_sidebar::resolve_project_root(&cwd);
+    crate::pty::diag_log(&format!(
+        "project-root-resolve cwd={} root={} marker={}",
+        log_value(&resolved.cwd),
+        log_value(&resolved.root),
+        resolved.marker.as_deref().unwrap_or("none")
+    ));
+    Ok(resolved)
+}
+
+#[tauri::command]
+pub fn detect_external_editors() -> crate::file_actions::AvailableEditors {
+    crate::file_actions::detect_external_editors()
+}
+
+#[tauri::command]
+pub fn open_in_external_editor(tool: String, path: String) -> Result<(), String> {
+    let result = crate::file_actions::open_in_external_editor(&tool, &path);
+    match &result {
+        Ok(_) => crate::pty::diag_log(&format!(
+            "file-action-open target={} path={}",
+            log_value(&tool),
+            log_value(&path)
+        )),
+        Err(e) => crate::pty::diag_log(&format!(
+            "file-action-open-error target={} path={} error={}",
+            log_value(&tool),
+            log_value(&path),
+            log_value(e)
+        )),
+    }
+    result
+}
+
+#[tauri::command]
+pub fn reveal_in_finder(path: String) -> Result<(), String> {
+    let result = crate::file_actions::reveal_in_finder(&path);
+    match &result {
+        Ok(_) => crate::pty::diag_log(&format!(
+            "file-action-open target=finder path={}",
+            log_value(&path)
+        )),
+        Err(e) => crate::pty::diag_log(&format!(
+            "file-action-open-error target=finder path={} error={}",
+            log_value(&path),
+            log_value(e)
+        )),
+    }
+    result
+}
+
+#[tauri::command]
+pub fn build_nvim_split_command(path: String) -> String {
+    crate::file_actions::nvim_split_command(&path)
+}
+
+#[tauri::command]
+pub fn report_file_action_event(event: String, target: String, path: String) {
+    let event = match event.as_str() {
+        "copy" | "nvim-split" | "file-picker-open" | "file-picker-select" => event,
+        _ => "file-action-unknown".to_string(),
+    };
+    let line = if event == "copy" {
+        format!("file-action-open target=copy path={}", log_value(&path))
+    } else if event == "nvim-split" {
+        format!("file-action-open target=nvim path={}", log_value(&path))
+    } else if event == "file-picker-open" {
+        format!("file-picker-open cwd={}", log_value(&path))
+    } else if event == "file-picker-select" {
+        format!("file-picker-select path={}", log_value(&path))
+    } else {
+        format!(
+            "file-action-unknown target={} path={}",
+            log_value(&target),
+            log_value(&path)
+        )
+    };
+    crate::pty::diag_log(&line);
+}

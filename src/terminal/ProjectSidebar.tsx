@@ -39,11 +39,14 @@ interface Props {
   focusedSection: "files" | "scripts";
   onFocusedSectionChange: (section: "files" | "scripts") => void;
   onRunScript: (script: PackageScript, scripts: PackageScripts) => void;
+  onFileAction: (path: string) => void;
+  onFileDefault: (path: string) => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
 
 export interface ProjectSidebarHandle {
   focus(): void;
+  getTree(): ProjectTree | null;
 }
 
 type SectionKey = "files" | "scripts";
@@ -56,6 +59,8 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
       focusedSection,
       onFocusedSectionChange,
       onRunScript,
+      onFileAction,
+      onFileDefault,
       onToast,
     },
     ref
@@ -75,20 +80,56 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
 
     const rootPath = cwd ?? "";
 
+    // Remembers where the user last had keyboard focus so that arrow keys
+    // stay coherent even if focus slips off (e.g. React re-renders, focus
+    // briefly lands on body during a state change).
+    const lastFocusedIndexRef = useRef(0);
+
     useImperativeHandle(
       ref,
       () => ({
         focus() {
           const root = rootRef.current;
           if (!root) return;
-          const target = root.querySelector<HTMLElement>(
-            ".sidebar-section-head, .file-row, .script-row"
-          );
-          target?.focus();
+          // Prefer the first file row — drops the user straight into the
+          // tree instead of the "Files" section header, so a single Down
+          // press actually moves through files.
+          const target =
+            root.querySelector<HTMLElement>(".file-row") ??
+            root.querySelector<HTMLElement>(
+              ".sidebar-section-head, .script-row"
+            );
+          if (target) {
+            target.focus();
+            const items = sidebarFocusableItems(root);
+            lastFocusedIndexRef.current = Math.max(items.indexOf(target), 0);
+          }
+        },
+        getTree() {
+          return tree;
         },
       }),
-      []
+      [tree]
     );
+
+    // If the user pressed ⌘+Left while the tree was still loading, the
+    // initial focus landed on the "Files" section header (the only thing
+    // focusable at that moment). Once the tree arrives, slide focus into
+    // the first file row so arrow keys actually walk through files.
+    useEffect(() => {
+      if (!tree) return;
+      const root = rootRef.current;
+      if (!root) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !root.contains(active)) return;
+      if (!active.classList.contains("sidebar-section-head")) return;
+      const firstFile = root.querySelector<HTMLElement>(".file-row");
+      if (firstFile) {
+        firstFile.focus();
+        const items = sidebarFocusableItems(root);
+        lastFocusedIndexRef.current = Math.max(items.indexOf(firstFile), 0);
+      }
+    }, [tree]);
 
     useEffect(() => {
       if (!open || !cwd) return;
@@ -192,32 +233,52 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
           if (!root) return;
           const focused = document.activeElement as HTMLElement | null;
 
+          // Cmd+Enter on a focused file row runs the default action (Cursor
+          // > Code > nvim split > copy) without showing the actions menu.
+          if (
+            e.key === "Enter" &&
+            e.metaKey &&
+            focused?.classList.contains("file-row") &&
+            focused.dataset.kind === "file"
+          ) {
+            const path = focused.dataset.path;
+            if (path) {
+              e.preventDefault();
+              onFileDefault(path);
+            }
+            return;
+          }
+
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
-            const items = Array.from(
-              root.querySelectorAll<HTMLElement>(
-                ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
-              )
-            );
+            const items = sidebarFocusableItems(root);
             if (items.length === 0) return;
-            const idx = focused ? items.indexOf(focused) : -1;
-            const next =
-              e.key === "ArrowDown"
-                ? items[idx === -1 ? 0 : Math.min(idx + 1, items.length - 1)]
-                : items[idx === -1 ? 0 : Math.max(idx - 1, 0)];
-            next?.focus();
+            // Anchor: where focus currently is, OR the last place we put it
+            // (so a brief slip to <body> during a re-render doesn't lose
+            // the user's place in the list).
+            let idx = focused ? items.indexOf(focused) : -1;
+            if (idx === -1) {
+              idx = Math.min(lastFocusedIndexRef.current, items.length - 1);
+            }
+            const delta = e.key === "ArrowDown" ? 1 : -1;
+            const next = focusItemAt(items, idx + delta);
+            if (next) {
+              lastFocusedIndexRef.current = items.indexOf(next);
+            }
             return;
           }
 
           if (e.key === "Home" || e.key === "End") {
             e.preventDefault();
-            const items = Array.from(
-              root.querySelectorAll<HTMLElement>(
-                ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
-              )
-            );
+            const items = sidebarFocusableItems(root);
             if (items.length === 0) return;
-            (e.key === "Home" ? items[0] : items[items.length - 1])?.focus();
+            const next = focusItemAt(
+              items,
+              e.key === "Home" ? 0 : items.length - 1
+            );
+            if (next) {
+              lastFocusedIndexRef.current = items.indexOf(next);
+            }
             return;
           }
 
@@ -302,10 +363,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
                     });
                   }}
                   onLoadMore={expandTruncated}
-                  onFileClick={(path) => {
-                    void navigator.clipboard.writeText(path);
-                    onToast("Copied file path", "neutral");
-                  }}
+                  onFileClick={(path) => onFileAction(path)}
                 />
               )}
             </SidebarSection>
@@ -517,6 +575,23 @@ function FileTree({
       )}
     </div>
   );
+}
+
+function sidebarFocusableItems(root: HTMLElement): HTMLElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
+    )
+  );
+}
+
+function focusItemAt(items: HTMLElement[], index: number): HTMLElement | null {
+  if (items.length === 0) return null;
+  const wrapped = ((index % items.length) + items.length) % items.length;
+  const target = items[wrapped];
+  target.focus();
+  target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  return target;
 }
 
 function fileIconFor(name: string) {

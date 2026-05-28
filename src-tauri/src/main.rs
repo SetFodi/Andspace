@@ -3,6 +3,7 @@
 mod ai_handoff;
 mod command_guard;
 mod commands;
+mod file_actions;
 mod project_sidebar;
 mod pty;
 mod rules;
@@ -36,6 +37,12 @@ fn main() {
             report_command_guard_ui_request,
             respond_command_guard,
             open_url,
+            resolve_project_root,
+            detect_external_editors,
+            open_in_external_editor,
+            reveal_in_finder,
+            build_nvim_split_command,
+            report_file_action_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running andspace");

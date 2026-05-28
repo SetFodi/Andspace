@@ -5,12 +5,29 @@ import { SplitTree } from "./terminal/SplitTree";
 import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
 import { HandoffOverlay } from "./terminal/HandoffOverlay";
 import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
+import { FileActionsOverlay } from "./terminal/FileActionsOverlay";
+import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
   type ProjectSidebarHandle,
 } from "./terminal/ProjectSidebar";
 import { initAndspaceRules } from "./terminal/rules";
+import {
+  buildNvimSplitCommand,
+  defaultActionFor,
+  detectExternalEditors,
+  openInExternalEditor,
+  reportFileActionEvent,
+  resolveProjectRoot,
+  revealInFinder,
+  type AvailableEditors,
+  type FileAction,
+} from "./terminal/fileActions";
+import {
+  loadProjectTree,
+  type ProjectTree,
+} from "./terminal/projectSidebarData";
 import {
   buildAiHandoffPrompt,
   prepareAiCliHandoff,
@@ -115,6 +132,18 @@ export default function App() {
     "files"
   );
   const sidebarRef = useRef<ProjectSidebarHandle | null>(null);
+
+  const [editors, setEditors] = useState<AvailableEditors>({
+    cursor: false,
+    code: false,
+    nvim: false,
+    vim: false,
+  });
+  const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+  const [fileActionsPath, setFileActionsPath] = useState<string | null>(null);
+  const [goToFileOpen, setGoToFileOpen] = useState(false);
+  const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
+  const [pickerLoading, setPickerLoading] = useState(false);
 
   const focusSidebar = useCallback(() => {
     setSidebarOpen(true);
@@ -258,6 +287,28 @@ export default function App() {
     }
   }, [activePaneCwd, activePaneId, loadRulesForPane, showToast]);
 
+  const openGoToFile = useCallback(async () => {
+    setGoToFileOpen(true);
+    const existing = sidebarRef.current?.getTree() ?? null;
+    if (existing) {
+      setPickerTree(existing);
+      return;
+    }
+    if (!projectRoot) return;
+    setPickerLoading(true);
+    try {
+      const tree = await loadProjectTree(projectRoot);
+      setPickerTree(tree);
+    } catch (e) {
+      showToast({
+        tone: "error",
+        message: `Could not load project files: ${String(e)}`,
+      });
+    } finally {
+      setPickerLoading(false);
+    }
+  }, [projectRoot, showToast]);
+
   const runPaletteAction = useCallback(
     async (action: CommandPaletteAction) => {
       await reportCommandPaletteRun(action.id);
@@ -283,6 +334,8 @@ export default function App() {
         setSidebarVisible(true);
       } else if (action.id === "project.createAndspace") {
         await initRulesForActivePane();
+      } else if (action.id === "project.goToFile") {
+        await openGoToFile();
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -309,6 +362,7 @@ export default function App() {
       closePalette,
       initRulesForActivePane,
       newTab,
+      openGoToFile,
       setSidebarVisible,
       showToast,
       splitActive,
@@ -329,6 +383,50 @@ export default function App() {
     [showToast, splitActive, writeToPane]
   );
 
+  const runFileAction = useCallback(
+    async (action: FileAction, path: string) => {
+      try {
+        if (action.type === "open") {
+          await openInExternalEditor(action.tool, path);
+          showToast({
+            tone: "success",
+            message: `Opened in ${action.tool === "cursor" ? "Cursor" : "VS Code"}`,
+          });
+        } else if (action.type === "nvim-split") {
+          const cmd = await buildNvimSplitCommand(path);
+          const paneId = await splitActive("row");
+          if (!paneId) {
+            showToast({ tone: "error", message: "Could not open nvim pane" });
+            return;
+          }
+          await writeToPane(paneId, `${cmd}\n`);
+          await reportFileActionEvent("nvim-split", { path });
+          showToast({ tone: "success", message: "Opened in Neovim split" });
+        } else if (action.type === "copy") {
+          await navigator.clipboard.writeText(path);
+          await reportFileActionEvent("copy", { path });
+          showToast({ tone: "neutral", message: "Copied file path" });
+        } else if (action.type === "reveal") {
+          await revealInFinder(path);
+          showToast({ tone: "neutral", message: "Revealed in Finder" });
+        }
+      } catch (e) {
+        showToast({ tone: "error", message: `Action failed: ${String(e)}` });
+      }
+    },
+    [showToast, splitActive, writeToPane]
+  );
+
+  const closeFileActions = useCallback(() => {
+    setFileActionsPath(null);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const closeGoToFile = useCallback(() => {
+    setGoToFileOpen(false);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
   const disabledPaletteActions = useMemo(() => {
     const disabled = new Set<CommandPaletteActionId>();
     if (!activePaneId) {
@@ -347,11 +445,14 @@ export default function App() {
       disabled.add("sidebar.focusScripts");
       disabled.add("sidebar.runScript");
     }
+    if (!projectRoot) {
+      disabled.add("project.goToFile");
+    }
     if (!activeHandoffRecord) {
       disabled.add("handoff.copyLastPrompt");
     }
     return disabled;
-  }, [activeHandoffRecord, activePaneCwd, activePaneId]);
+  }, [activeHandoffRecord, activePaneCwd, activePaneId, projectRoot]);
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -443,6 +544,42 @@ export default function App() {
     }
   }, [activePaneId, activePaneCwd, loadRulesForPane]);
 
+  // Detect external editors once at startup. Result is cached for the
+  // session — re-detecting on every overlay open would add latency for
+  // basically no benefit (PATH rarely changes mid-session).
+  useEffect(() => {
+    let cancelled = false;
+    detectExternalEditors()
+      .then((next) => {
+        if (!cancelled) setEditors(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Resolve project root whenever the active pane's cwd changes. The sidebar
+  // displays this resolved root instead of the raw cwd — feels saner when the
+  // user is buried inside `src/components/...`.
+  useEffect(() => {
+    if (!activePaneCwd) {
+      setProjectRoot(undefined);
+      return;
+    }
+    let cancelled = false;
+    resolveProjectRoot(activePaneCwd)
+      .then((resolved) => {
+        if (!cancelled) setProjectRoot(resolved.root);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectRoot(activePaneCwd);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePaneCwd]);
+
   return (
     <div className="app">
       <TitleBar />
@@ -451,10 +588,14 @@ export default function App() {
         <ProjectSidebar
           ref={sidebarRef}
           open={sidebarOpen}
-          cwd={activePaneCwd}
+          cwd={projectRoot ?? activePaneCwd}
           focusedSection={sidebarSection}
           onFocusedSectionChange={setSidebarSection}
           onRunScript={runProjectScript}
+          onFileAction={(path) => setFileActionsPath(path)}
+          onFileDefault={(path) => {
+            void runFileAction(defaultActionFor(editors), path);
+          }}
           onToast={(message, tone) => showToast({ message, tone })}
         />
         <div className="terminal-area">
@@ -488,6 +629,45 @@ export default function App() {
         disabledActions={disabledPaletteActions}
         onRun={runPaletteAction}
         onClose={closePalette}
+      />
+      <FileActionsOverlay
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          fileActionsPath !== null
+        }
+        path={fileActionsPath}
+        editors={editors}
+        onClose={closeFileActions}
+        onAction={(action) => {
+          if (fileActionsPath) {
+            void runFileAction(action, fileActionsPath);
+          }
+          closeFileActions();
+        }}
+      />
+      <GoToFileOverlay
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          fileActionsPath === null &&
+          goToFileOpen
+        }
+        tree={pickerTree}
+        loading={pickerLoading}
+        cwd={projectRoot ?? null}
+        onClose={closeGoToFile}
+        onSelect={(entry, useDefault) => {
+          setGoToFileOpen(false);
+          if (useDefault) {
+            void runFileAction(defaultActionFor(editors), entry.path);
+            refocusTerminal();
+          } else {
+            setFileActionsPath(entry.path);
+          }
+        }}
       />
       {toast && (
         <div className={`app-toast ${toast.tone}`} role="status">

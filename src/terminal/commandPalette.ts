@@ -10,6 +10,7 @@ export type CommandPaletteActionId =
   | "sidebar.focusScripts"
   | "sidebar.runScript"
   | "project.createAndspace"
+  | "project.goToFile"
   | "handoff.sendContext"
   | "handoff.copyLastPrompt"
   | "guard.testProtectedCommand";
@@ -75,6 +76,12 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Create ANDSPACE.md",
     section: "Project",
     keywords: ["andspace", "rules", "init", "project"],
+  },
+  {
+    id: "project.goToFile",
+    title: "Go to File",
+    section: "Project",
+    keywords: ["go", "to", "file", "open", "picker", "fuzzy", "search"],
   },
   {
     id: "handoff.sendContext",

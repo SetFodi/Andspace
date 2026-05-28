@@ -1,0 +1,154 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  filterPickerEntries,
+  flattenTreeFiles,
+  reportFileActionEvent,
+  type PickerEntry,
+} from "./fileActions";
+import type { ProjectTree } from "./projectSidebarData";
+
+interface Props {
+  open: boolean;
+  tree: ProjectTree | null;
+  loading: boolean;
+  cwd: string | null;
+  onClose: () => void;
+  onSelect: (entry: PickerEntry, useDefault: boolean) => void;
+}
+
+export function GoToFileOverlay({
+  open,
+  tree,
+  loading,
+  cwd,
+  onClose,
+  onSelect,
+}: Props) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const entries = useMemo(() => flattenTreeFiles(tree), [tree]);
+  const filtered = useMemo(
+    () => filterPickerEntries(entries, query),
+    [entries, query]
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setSelected(0);
+      return;
+    }
+    if (cwd) {
+      void reportFileActionEvent("file-picker-open", { path: cwd });
+    }
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open, cwd]);
+
+  useEffect(() => {
+    setSelected(0);
+  }, [query]);
+
+  if (!open) return null;
+
+  const activate = (entry: PickerEntry, useDefault: boolean) => {
+    void reportFileActionEvent("file-picker-select", { path: entry.path });
+    onSelect(entry, useDefault);
+  };
+
+  return (
+    <div
+      className="picker-overlay"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onClose();
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelected((idx) =>
+            filtered.length ? (idx + 1) % filtered.length : 0
+          );
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelected((idx) =>
+            filtered.length
+              ? (idx - 1 + filtered.length) % filtered.length
+              : 0
+          );
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          const entry = filtered[Math.min(selected, filtered.length - 1)];
+          if (entry) activate(entry, e.metaKey);
+        }
+      }}
+    >
+      <section
+        className="picker-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="picker-title"
+      >
+        <div className="picker-head">
+          <div>
+            <div className="picker-kicker">Go to File</div>
+            <h2 id="picker-title">Project files</h2>
+          </div>
+          <span className="picker-shortcut">⌘K · Go to File</span>
+        </div>
+
+        <input
+          ref={inputRef}
+          className="picker-input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            loading
+              ? "Loading project files…"
+              : entries.length === 0
+              ? "No files in the loaded tree"
+              : "Type a filename…"
+          }
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+
+        <div className="picker-list" role="listbox">
+          {filtered.length === 0 && !loading && (
+            <div className="picker-empty">
+              {entries.length === 0
+                ? "Sidebar tree hasn't loaded yet. Open the sidebar (⌘B) or wait a moment."
+                : "No matches"}
+            </div>
+          )}
+          {filtered.map((entry, idx) => {
+            const active = idx === selected;
+            return (
+              <button
+                key={entry.path}
+                className={`picker-item ${active ? "active" : ""}`}
+                onMouseEnter={() => setSelected(idx)}
+                onClick={(ev) => activate(entry, ev.metaKey)}
+                title={entry.path}
+              >
+                <span className="picker-item-name">{entry.name}</span>
+                <em className="picker-item-parent">{shorten(entry.parent)}</em>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function shorten(p: string): string {
+  return p.replace(/^\/Users\/[^/]+/, "~");
+}

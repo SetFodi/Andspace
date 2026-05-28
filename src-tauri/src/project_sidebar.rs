@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 const MAX_DEPTH: usize = 3;
 const MAX_CHILDREN_PER_DIR: usize = 120;
 const MAX_TOTAL_NODES: usize = 900;
-const IGNORED_DIRS: &[&str] = &[
+pub const IGNORED_DIRS: &[&str] = &[
     "node_modules",
     ".git",
     "dist",
@@ -14,6 +14,19 @@ const IGNORED_DIRS: &[&str] = &[
     ".next",
     "target",
     "vendor",
+];
+
+/// Marker files / directories that we treat as "this is a project root".
+/// Order is by preference — first match wins. Lockfiles and Cargo.toml come
+/// before .git because a developer rooted in a sub-package usually wants the
+/// nearest package root, not the entire monorepo root.
+pub const ROOT_MARKERS: &[&str] = &[
+    "package.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lockb",
+    "Cargo.toml",
+    ".git",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -37,6 +50,14 @@ pub enum ProjectTreeNodeKind {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectTree {
     pub root: ProjectTreeNode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedProjectRoot {
+    pub cwd: String,
+    pub root: String,
+    pub marker: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -88,6 +109,35 @@ pub fn expand_project_directory(path: &str) -> Result<Vec<ProjectTreeNode>, Stri
         }
     }
     Ok(children)
+}
+
+/// Walk upward from `cwd` looking for a marker file/dir that signals the
+/// project root (lockfiles, Cargo.toml, .git). Falls back to the original
+/// cwd when no marker is found — that keeps the sidebar useful inside ad-hoc
+/// directories without forcing a project structure.
+pub fn resolve_project_root(cwd: &str) -> ResolvedProjectRoot {
+    let original = PathBuf::from(cwd);
+    let cwd_str = original.display().to_string();
+    let mut current = original.clone();
+    loop {
+        for marker in ROOT_MARKERS {
+            if current.join(marker).exists() {
+                return ResolvedProjectRoot {
+                    cwd: cwd_str,
+                    root: current.display().to_string(),
+                    marker: Some((*marker).to_string()),
+                };
+            }
+        }
+        if !current.pop() {
+            break;
+        }
+    }
+    ResolvedProjectRoot {
+        cwd: cwd_str.clone(),
+        root: cwd_str,
+        marker: None,
+    }
 }
 
 pub fn load_package_scripts(cwd: &str) -> Result<PackageScripts, String> {
@@ -326,6 +376,49 @@ mod tests {
         );
 
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn resolve_project_root_finds_nearest_marker() {
+        let outer = unique_temp_dir("root-outer");
+        let inner = outer.join("src/sub/deeper");
+        fs::create_dir_all(&inner).unwrap();
+        fs::write(outer.join("package.json"), "{}").unwrap();
+
+        let resolved = resolve_project_root(inner.to_str().unwrap());
+        assert_eq!(resolved.root, outer.to_string_lossy());
+        assert_eq!(resolved.marker.as_deref(), Some("package.json"));
+
+        fs::remove_dir_all(outer).unwrap();
+    }
+
+    #[test]
+    fn resolve_project_root_prefers_lockfile_over_git() {
+        let outer = unique_temp_dir("root-prefer");
+        let inner = outer.join("apps/web");
+        fs::create_dir_all(&inner).unwrap();
+        // .git at outer, package.json at inner — inner should win because it's
+        // the nearest marker walking upward.
+        fs::create_dir_all(outer.join(".git")).unwrap();
+        fs::write(inner.join("package.json"), "{}").unwrap();
+
+        let resolved = resolve_project_root(inner.to_str().unwrap());
+        assert_eq!(resolved.root, inner.to_string_lossy());
+        assert_eq!(resolved.marker.as_deref(), Some("package.json"));
+
+        fs::remove_dir_all(outer).unwrap();
+    }
+
+    #[test]
+    fn resolve_project_root_falls_back_to_cwd_when_no_marker() {
+        let dir = unique_temp_dir("root-fallback");
+        fs::create_dir_all(&dir).unwrap();
+
+        let resolved = resolve_project_root(dir.to_str().unwrap());
+        assert_eq!(resolved.root, dir.to_string_lossy());
+        assert!(resolved.marker.is_none());
+
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

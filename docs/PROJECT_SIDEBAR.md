@@ -6,7 +6,11 @@ terminal companion for Files and Scripts only, not an IDE sidebar.
 ## Behavior
 
 - `Cmd+B` toggles the sidebar.
-- The sidebar uses the active pane cwd as the project root.
+- `Cmd+Left` focuses the sidebar; `Esc` returns focus to the terminal.
+- The sidebar walks upward from the active pane cwd looking for a project
+  marker (`package.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`,
+  `Cargo.toml`, `.git`) and uses the first match as the displayed root. If
+  no marker is found it falls back to the active pane cwd.
 - It does not scan until opened.
 - It does not watch the filesystem.
 - It refreshes on reopen or by using the refresh button.
@@ -24,8 +28,11 @@ The Files section loads a shallow directory tree and ignores heavy directories:
 - `target`
 - `vendor`
 
-Folders can be expanded and collapsed. Clicking a file copies its path and shows
-a small toast. It does not open an editor and does not show a full preview.
+Folders can be expanded and collapsed. Clicking or pressing Enter on a file
+opens the **File Actions** menu (Cursor / VS Code / Neovim split / Copy path /
+Reveal in Finder). `Cmd+Enter` skips the menu and runs the default action.
+AndSpace does not embed an editor and does not show a full preview — see
+[FILE_ACTIONS.md](FILE_ACTIONS.md).
 
 ## Scripts
 
@@ -50,6 +57,7 @@ Clicking a script opens a split-right pane and runs it from the project root.
 - `Focus Files`
 - `Focus Scripts`
 - `Run Script`
+- `Go to File` (compact file picker over the loaded project tree)
 
 `Run Script` opens the sidebar focused on Scripts so the user can choose the
 script explicitly.
@@ -62,8 +70,15 @@ Diagnostics are written to `/tmp/andspace-diag.log`:
 sidebar-open
 sidebar-close
 project-tree-load cwd=/repo
+project-tree-expand path=/repo/src
+project-root-resolve cwd=/repo/src/components root=/repo marker=package.json
 package-scripts-load cwd=/repo
 script-run name=dev package_manager=pnpm cwd=/repo
+file-action-open target=cursor path=/repo/src/main.ts
+file-action-open target=copy path=/repo/src/main.ts
+file-action-open target=finder path=/repo/src/main.ts
+file-picker-open cwd=/repo
+file-picker-select path=/repo/src/main.ts
 ```
 
 ## Limits
