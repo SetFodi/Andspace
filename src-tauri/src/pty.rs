@@ -78,6 +78,7 @@ impl PtyManager {
         cmd.env("ANDSPACE_SHELL_INTEGRATION", "1");
 
         let pane_id = make_id();
+        cmd.env("ANDSPACE_PANE_ID", &pane_id);
         let zsh_bootstrap = apply_zsh_bootstrap(&mut cmd, &shell);
 
         let child = pair

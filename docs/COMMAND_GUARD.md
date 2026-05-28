@@ -1,8 +1,13 @@
 # Command Guard
 
-Command Guard is dry-run only in v0.1 Milestone 4. It evaluates command text
-against resolved rules and writes diagnostics, but it does not block, prompt,
-open modals, show badges, or hand off to AI.
+Command Guard has two v0.1 paths:
+
+- Milestone 4: Rust dry-run evaluator used after shell lifecycle capture.
+- Milestone 5: zsh pre-execution proof gate using an `accept-line` widget.
+
+The zsh gate can stop protected and dangerous commands before execution, but it
+is still not the final product UI: no modal, sidebar, command palette, project
+UI, or AI handoff.
 
 ## Current Flow
 
@@ -13,6 +18,33 @@ open modals, show badges, or hand off to AI.
 5. The frontend keeps a short in-memory per-pane evaluation history.
 
 This is intentionally passive. Terminal behavior is not interrupted.
+
+## zsh Pre-Execution Gate
+
+For zsh panes, `src-tauri/shell-integration/andspace.zsh` wraps the current
+`accept-line` ZLE widget. When the user presses Enter, the wrapper inspects
+`$BUFFER` before zsh executes it.
+
+Safe and allowed commands execute normally. Protected commands show:
+
+```text
+AndSpace protected command: <matched rule>. Run once? [y/N]
+```
+
+Only `y` runs the command. Any other input cancels it.
+
+Dangerous commands show:
+
+```text
+AndSpace dangerous command: <matched rule>. Type run to continue:
+```
+
+Only exact `run` executes the command. Any other input cancels it.
+
+This milestone uses a small shell-side matcher so the gate can make a
+synchronous decision inside ZLE. It intentionally mirrors the Rust matching
+order and rule file format, but it is temporary until a Rust-backed synchronous
+bridge exists.
 
 ## Matching
 
@@ -66,12 +98,61 @@ command-guard pane=p-... decision=allowed severity=none matched_rule=git push or
 command-guard pane=p-... decision=dangerous severity=type-to-confirm matched_rule=rm -rf matched_source=project matched_pattern_type=substring cwd=/path command=rm -rf ./fake-folder
 ```
 
+Pre-execution gate diagnostics use `command-guard-preexec` and include the user
+action:
+
+```text
+command-guard-preexec pane=p-... cwd=/path decision=protected severity=confirm matched_rule=echo protected-test matched_source=project matched_pattern_type=substring command=echo protected-test action=cancel
+command-guard-preexec pane=p-... cwd=/path decision=dangerous severity=type-to-confirm matched_rule=rm -rf ./fake-folder matched_source=project matched_pattern_type=substring command=rm -rf ./fake-folder action=run
+```
+
+## Manual Verification
+
+Use a temporary `ANDSPACE.md` in the repo:
+
+```md
+# ANDSPACE.md
+<!-- andspace:version 1 -->
+
+## Protected Commands
+- echo protected-test
+
+## Dangerous Commands
+- echo dangerous-test
+- rm -rf ./fake-folder
+
+## Allowed
+- echo protected-test allowed
+```
+
+Then in AndSpace:
+
+```bash
+echo hello
+echo protected-test
+echo protected-test allowed
+echo dangerous-test
+mkdir -p fake-folder
+rm -rf ./fake-folder
+test -d fake-folder && echo "folder still exists"
+```
+
+Expected behavior:
+
+- `echo hello` runs normally.
+- `echo protected-test` prompts before execution.
+- `echo protected-test allowed` runs normally.
+- `echo dangerous-test` requires typing `run`.
+- `rm -rf ./fake-folder` requires typing `run`; if canceled, the folder remains.
+
 ## Limits
 
-- Dry-run only; no command is blocked yet.
-- No confirmation modal or visible Command Guard UI yet.
+- Pre-execution blocking is zsh only.
+- No final confirmation modal or visible Command Guard UI yet.
 - No AI handoff yet.
 - Matching uses the command text reported by shell integration.
+- The zsh pre-execution gate matches `$BUFFER` before execution.
 - Aliases, shell expansion, command substitution, shell functions, and resolved
   executable paths are not handled yet.
+- Scripts and Makefiles can hide dangerous commands internally.
 - This is a safety rail, not a security boundary.

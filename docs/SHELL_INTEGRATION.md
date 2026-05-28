@@ -13,6 +13,7 @@ directory. Instead, when the PTY spawns **zsh**, Rust sets:
 |---|---|
 | `ZDOTDIR` | Points at `src-tauri/shell-integration/zdotdir/` |
 | `TERM_PROGRAM` | `AndSpace` — guards integration to this app only |
+| `ANDSPACE_PANE_ID` | Pane id for shell-side diagnostics |
 | `ANDSPACE_ZSH_INTEGRATION` | Path to `andspace.zsh` |
 | `ANDSPACE_ZDOTDIR` | Same as `ZDOTDIR` (diagnostic / future use) |
 
@@ -46,9 +47,9 @@ zsh must not write completion caches into `zdotdir/` (that path is under
 
 | File | Role |
 |---|---|
-| `src-tauri/shell-integration/andspace.zsh` | zsh `precmd` / `preexec` OSC hooks |
+| `src-tauri/shell-integration/andspace.zsh` | zsh `precmd` / `preexec` OSC hooks and `accept-line` Command Guard gate |
 | `src-tauri/shell-integration/zdotdir/.zshenv` | Bootstrap → user's `~/.zshenv` |
-| `src-tauri/shell-integration/zdotdir/.zshrc` | Bootstrap → `andspace.zsh` → user's `~/.zshrc` |
+| `src-tauri/shell-integration/zdotdir/.zshrc` | Bootstrap → user's `~/.zshrc` → `andspace.zsh` |
 | `src-tauri/shell-integration/bash.placeholder` | Not implemented |
 | `src-tauri/shell-integration/fish.placeholder` | Not implemented |
 | `src/terminal/shellIntegration.ts` | OSC parsers + xterm handler registration |
@@ -60,8 +61,24 @@ zsh must not write completion caches into `zdotdir/` (that path is under
 |---|---|
 | `TERM_PROGRAM` | `AndSpace` |
 | `ANDSPACE_SHELL_INTEGRATION` | `1` |
+| `ANDSPACE_PANE_ID` | Pane id (`p-…`) |
 | `ANDSPACE_ZSH_INTEGRATION` | Absolute path to `andspace.zsh` (zsh only) |
 | `ZDOTDIR` | Absolute path to `zdotdir/` (zsh only) |
+
+## zsh Command Guard Gate
+
+Milestone 5 installs an `accept-line` ZLE wrapper for zsh only. The wrapper
+checks the current `$BUFFER` before zsh executes it:
+
+- safe and allowed commands call the original `accept-line` widget immediately
+- protected commands ask `Run once? [y/N]`
+- dangerous commands require exact `run`
+- canceled commands clear `$BUFFER` and do not execute
+
+The gate uses a temporary shell-side matcher that reads `./ANDSPACE.md`,
+`~/.andspace/rules.md`, and built-in defaults. It mirrors the Rust evaluator's
+matching order: allowed, dangerous, protected. A later bridge should move this
+synchronous decision back to Rust.
 
 ## OSC protocol
 
@@ -108,6 +125,12 @@ Each OSC event:
 <ms> shell pane=p-abc osc kind=start boundary=42 ...
 ```
 
+Each pre-execution Command Guard decision:
+
+```
+<ms> command-guard-preexec pane=p-abc cwd=/repo decision=protected severity=confirm matched_rule=echo protected-test matched_source=project matched_pattern_type=substring command=echo protected-test action=cancel
+```
+
 ## Verification
 
 1. Launch AndSpace once (`pnpm tauri dev` or the release app). Do **not** leave
@@ -127,8 +150,12 @@ Expect `shell-autoload pane=…` on PTY create, then `kind=cwd`, `kind=start`,
 ## Limitations (v0.1)
 
 - zsh only; bash/fish are placeholders.
+- Command Guard pre-execution blocking is zsh only.
 - Login-only files (`~/.zprofile`, `~/.zlogin`) are not chained yet unless
   added to `zdotdir/` in a later milestone.
 - Output boundary is a buffer **line index**, not byte offset.
 - OSC 7 cwd parsing on `file://hostname/path` URLs may truncate on some hosts;
   OSC 9001 `cwd|base64` is authoritative.
+- Aliases, shell expansion, scripts, and Makefiles can hide commands from the
+  simple pre-execution matcher. Command Guard is a safety rail, not a security
+  boundary.
