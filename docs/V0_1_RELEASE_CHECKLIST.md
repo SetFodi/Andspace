@@ -8,7 +8,7 @@ editing, search panel, or new sidebar sections.
 
 ## Build Checks
 
-- [x] `pnpm exec tsc --noEmit`
+- [x] `pnpm tsc --noEmit`
 - [x] `pnpm build`
 - [x] `cargo test --manifest-path src-tauri/Cargo.toml`
 - [x] `cargo check --manifest-path src-tauri/Cargo.toml`
@@ -25,7 +25,7 @@ exact error and do not work around it for alpha.
 - [x] Built `.app` launches from
   `src-tauri/target/release/bundle/macos/AndSpace.app`
 - [x] App name is `AndSpace`
-- [ ] App icon appears in Finder / Dock / app switcher
+- [x] App icon appears in Finder / Dock / app switcher
 - [x] No placeholder dev icon is packaged
 - [x] Terminal opens with a shell prompt
 - [ ] `Cmd+K` opens the command palette
@@ -63,6 +63,21 @@ exact error and do not work around it for alpha.
 - [ ] Escape closes the topmost overlay first
 - [ ] Terminal focus returns after closing overlays
 
+## Manual QA Required
+
+Visual UI automation was blocked by macOS Accessibility permissions, so these
+items must be checked manually in the launched production app:
+
+- [ ] `Cmd+K` opens the command palette
+- [ ] `Cmd+B` opens and focuses the sidebar
+- [ ] `Cmd+E` opens the handoff overlay
+- [ ] `Cmd+/` opens the keyboard shortcuts overlay
+- [ ] Command Guard overlay works for protected and dangerous commands
+- [ ] File Actions open and run expected external handoff actions
+- [ ] Server row opens the detected URL in the default browser
+- [ ] Scripts run in a split
+- [ ] Terminal focus returns after overlays close
+
 ## Performance Sanity
 
 - [x] Idle with sidebar closed has no visible CPU churn
@@ -83,11 +98,12 @@ exact error and do not work around it for alpha.
   `CFBundleIconFile=icon.icns`.
 - Packaged icon is a real macOS `.icns` file at
   `Contents/Resources/icon.icns` (634734 bytes).
+- Production icon appearance was confirmed from the user-provided screenshot.
 - Production app launched as process `andspace`.
 - Runtime diagnostics showed `app-start`, `pty-create`, `shell-autoload`,
   `renderer=webgl`, and shell cwd OSC events.
 - Idle process sampling with sidebar presumed closed: five 1-second samples
-  at `0.0%` CPU and about `100 MB` RSS.
+  at `0.0%` CPU and about `110 MB` RSS.
 - Visual UI verification was blocked in this environment: Computer Use timed
   out, `osascript` was denied Accessibility permission for keystrokes/window
   inspection, and `screencapture` could not create an image from the display.

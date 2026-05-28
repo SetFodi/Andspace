@@ -3,7 +3,7 @@
 Milestone 9 added the foundation for `⌘E` handoff. The v0.1 sprint extends it
 to local CLI handoff for installed tools only. There is no provider API
 integration, API key management, provider billing, chat history, streaming
-response, sidebar, file explorer, or settings UI.
+response, or settings UI.
 
 The current flow is capture → redact → prompt → copy/preview/send to local CLI.
 
