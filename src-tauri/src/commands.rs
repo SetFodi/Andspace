@@ -351,3 +351,29 @@ pub fn report_file_action_event(event: String, target: String, path: String) {
     };
     crate::pty::diag_log(&line);
 }
+
+#[tauri::command]
+pub fn report_server_event(
+    event: String,
+    url: Option<String>,
+    pane_id: Option<String>,
+    label: Option<String>,
+) {
+    let url = url.unwrap_or_default();
+    let line = match event.as_str() {
+        "server-detected" => format!(
+            "server-detected url={} pane={} label={}",
+            log_value(&url),
+            log_value(pane_id.as_deref().unwrap_or("")),
+            log_value(label.as_deref().unwrap_or("")),
+        ),
+        "server-open" => format!("server-open url={}", log_value(&url)),
+        "server-copy" => format!("server-copy url={}", log_value(&url)),
+        "server-duplicate-ignored" => {
+            format!("server-duplicate-ignored url={}", log_value(&url))
+        }
+        "server-section-empty" => "server-section-empty".to_string(),
+        _ => format!("server-unknown event={}", log_value(&event)),
+    };
+    crate::pty::diag_log(&line);
+}

@@ -13,12 +13,15 @@ export type CommandPaletteActionId =
   | "project.goToFile"
   | "handoff.sendContext"
   | "handoff.copyLastPrompt"
+  | "servers.openPreview"
+  | "servers.copyUrl"
+  | "servers.focus"
   | "help.showKeybinds";
 
 export interface CommandPaletteAction {
   id: CommandPaletteActionId;
   title: string;
-  section: "Terminal" | "Project" | "AI / Handoff" | "Help";
+  section: "Terminal" | "Project" | "Servers" | "AI / Handoff" | "Help";
   keywords: string[];
 }
 
@@ -94,6 +97,32 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Copy Last Prompt",
     section: "AI / Handoff",
     keywords: ["copy", "prompt", "handoff"],
+  },
+  {
+    id: "servers.openPreview",
+    title: "Open Localhost Preview",
+    section: "Servers",
+    keywords: [
+      "server",
+      "localhost",
+      "preview",
+      "open",
+      "browser",
+      "url",
+      "dev",
+    ],
+  },
+  {
+    id: "servers.copyUrl",
+    title: "Copy Server URL",
+    section: "Servers",
+    keywords: ["server", "copy", "url", "localhost", "clipboard"],
+  },
+  {
+    id: "servers.focus",
+    title: "Focus Servers",
+    section: "Servers",
+    keywords: ["server", "focus", "sidebar", "servers"],
   },
   {
     id: "help.showKeybinds",

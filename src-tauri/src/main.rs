@@ -43,6 +43,7 @@ fn main() {
             reveal_in_finder,
             build_nvim_split_command,
             report_file_action_event,
+            report_server_event,
         ])
         .run(tauri::generate_context!())
         .expect("error while running andspace");

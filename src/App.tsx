@@ -43,6 +43,11 @@ import {
   type PackageScripts,
 } from "./terminal/projectSidebarData";
 import {
+  copyServerUrl,
+  openServerUrl,
+  useServerStore,
+} from "./terminal/serverStore";
+import {
   reportCommandPaletteOpen,
   reportCommandPaletteRun,
   type CommandPaletteAction,
@@ -130,9 +135,9 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [keybindsOpen, setKeybindsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarSection, setSidebarSection] = useState<"files" | "scripts">(
-    "files"
-  );
+  const [sidebarSection, setSidebarSection] = useState<
+    "files" | "scripts" | "servers"
+  >("files");
   const sidebarRef = useRef<ProjectSidebarHandle | null>(null);
 
   const [editors, setEditors] = useState<AvailableEditors>({
@@ -142,6 +147,7 @@ export default function App() {
     vim: false,
   });
   const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
+  const serverCount = useServerStore((s) => s.servers.length);
   const [fileActionsPath, setFileActionsPath] = useState<string | null>(null);
   const [goToFileOpen, setGoToFileOpen] = useState(false);
   const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
@@ -353,6 +359,33 @@ export default function App() {
         await openGoToFile();
       } else if (action.id === "help.showKeybinds") {
         setKeybindsOpen(true);
+      } else if (action.id === "servers.openPreview") {
+        const server = useServerStore.getState().mostRecent();
+        if (!server) {
+          showToast({ tone: "neutral", message: "No local servers detected" });
+        } else {
+          try {
+            await openServerUrl(server.url);
+            showToast({ tone: "success", message: `Opening ${server.url}` });
+          } catch (e) {
+            showToast({ tone: "error", message: `Could not open URL: ${String(e)}` });
+          }
+        }
+      } else if (action.id === "servers.copyUrl") {
+        const server = useServerStore.getState().mostRecent();
+        if (!server) {
+          showToast({ tone: "neutral", message: "No local servers detected" });
+        } else {
+          try {
+            await copyServerUrl(server.url);
+            showToast({ tone: "neutral", message: "Copied server URL" });
+          } catch (e) {
+            showToast({ tone: "error", message: `Could not copy URL: ${String(e)}` });
+          }
+        }
+      } else if (action.id === "servers.focus") {
+        setSidebarSection("servers");
+        setSidebarVisible(true);
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -465,8 +498,18 @@ export default function App() {
     if (!activeHandoffRecord) {
       disabled.add("handoff.copyLastPrompt");
     }
+    if (serverCount === 0) {
+      disabled.add("servers.openPreview");
+      disabled.add("servers.copyUrl");
+    }
     return disabled;
-  }, [activeHandoffRecord, activePaneCwd, activePaneId, projectRoot]);
+  }, [
+    activeHandoffRecord,
+    activePaneCwd,
+    activePaneId,
+    projectRoot,
+    serverCount,
+  ]);
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this

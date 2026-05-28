@@ -9,6 +9,7 @@ import { installShellIntegration } from "./shellIntegration";
 import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
 import { appendOutputCapture } from "./aiHandoff";
+import { useServerStore } from "./serverStore";
 
 interface Props {
   paneId: PaneId;
@@ -240,7 +241,11 @@ export function TerminalPane({ paneId, tabId }: Props) {
     listen<PtyOutputPayload>("pty-output", (event) => {
       if (event.payload.pane_id !== paneId) return;
       const bytes = new Uint8Array(event.payload.data);
-      appendOutputCapture(paneId, new TextDecoder().decode(bytes));
+      const text = new TextDecoder().decode(bytes);
+      appendOutputCapture(paneId, text);
+      // Server detection runs off the same byte stream — no extra round
+      // trip, no port scanning. The store handles dedup and labeling.
+      useServerStore.getState().ingestPaneOutput(paneId, text);
       term.write(bytes);
     }).then((fn) => {
       unlisten = fn;

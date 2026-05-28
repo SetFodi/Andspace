@@ -24,6 +24,7 @@ import {
   startOutputCapture,
   type HandoffCommandRecord,
 } from "./aiHandoff";
+import { useServerStore } from "./serverStore";
 
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
@@ -146,6 +147,9 @@ function dropPaneShellState(
   const { [paneId]: _r, ...restRules } = resolvedRulesByPane;
   const { [paneId]: _g, ...restGuardHistory } = guardEvaluationsByPane;
   clearOutputCapture(paneId);
+  // Drop detected servers for this pane so the sidebar stays accurate
+  // when panes are closed or recreated.
+  useServerStore.getState().clearForPane(paneId);
   return {
     paneMeta: restMeta,
     commandHistoryByPane: restHistory,

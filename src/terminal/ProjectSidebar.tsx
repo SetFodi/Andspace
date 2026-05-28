@@ -32,12 +32,19 @@ import {
   type ProjectTree,
   type ProjectTreeNode,
 } from "./projectSidebarData";
+import { shortServerUrl } from "./serverDetection";
+import {
+  copyServerUrl,
+  openServerUrl,
+  useServerStore,
+  type DetectedServer,
+} from "./serverStore";
 
 interface Props {
   open: boolean;
   cwd: string | undefined;
-  focusedSection: "files" | "scripts";
-  onFocusedSectionChange: (section: "files" | "scripts") => void;
+  focusedSection: "files" | "scripts" | "servers";
+  onFocusedSectionChange: (section: "files" | "scripts" | "servers") => void;
   onRunScript: (script: PackageScript, scripts: PackageScripts) => void;
   onFileAction: (path: string) => void;
   onFileDefault: (path: string) => void;
@@ -49,7 +56,7 @@ export interface ProjectSidebarHandle {
   getTree(): ProjectTree | null;
 }
 
-type SectionKey = "files" | "scripts";
+type SectionKey = "files" | "scripts" | "servers";
 
 export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
   function ProjectSidebar(
@@ -408,6 +415,14 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
                   </button>
                 ))}
             </SidebarSection>
+
+            <ServersSection
+              collapsed={collapsed.has("servers")}
+              active={focusedSection === "servers"}
+              onToggle={() => toggleSection("servers")}
+              onFocus={() => onFocusedSectionChange("servers")}
+              onToast={onToast}
+            />
           </div>
 
           <div className="sidebar-footer">
@@ -472,6 +487,99 @@ function SidebarSection({
       </button>
       {!collapsed && <div className="sidebar-section-body">{children}</div>}
     </section>
+  );
+}
+
+function ServersSection({
+  collapsed,
+  active,
+  onToggle,
+  onFocus,
+  onToast,
+}: {
+  collapsed: boolean;
+  active: boolean;
+  onToggle: () => void;
+  onFocus: () => void;
+  onToast: (message: string, tone: "success" | "neutral" | "error") => void;
+}) {
+  const servers = useServerStore((s) => s.servers);
+  // Most-recent-first so users see what their latest `pnpm dev` printed
+  // at the top, even if older URLs are still around.
+  const sorted = useMemo(
+    () => [...servers].sort((a, b) => b.lastSeenAt - a.lastSeenAt),
+    [servers]
+  );
+  const meta = sorted.length > 0 ? String(sorted.length) : undefined;
+
+  return (
+    <SidebarSection
+      id="servers"
+      title="Servers"
+      collapsed={collapsed}
+      active={active}
+      meta={meta}
+      onToggle={onToggle}
+      onFocus={onFocus}
+    >
+      {sorted.length === 0 && (
+        <div className="sidebar-muted servers-empty">
+          No local servers yet. Run a dev server and its URL will appear here.
+        </div>
+      )}
+      {sorted.map((server) => (
+        <ServerRow
+          key={server.url}
+          server={server}
+          onOpen={() => {
+            void openServerUrl(server.url).catch((e) =>
+              onToast(`Could not open URL: ${String(e)}`, "error")
+            );
+          }}
+          onCopy={() => {
+            void copyServerUrl(server.url).then(
+              () => onToast("Copied server URL", "neutral"),
+              (e) => onToast(`Could not copy URL: ${String(e)}`, "error")
+            );
+          }}
+        />
+      ))}
+    </SidebarSection>
+  );
+}
+
+function ServerRow({
+  server,
+  onOpen,
+  onCopy,
+}: {
+  server: DetectedServer;
+  onOpen: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <button
+      className="server-row"
+      data-url={server.url}
+      title={`${server.url} — Click to open · ⌘C to copy`}
+      onClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onCopy();
+      }}
+      onKeyDown={(e) => {
+        // Cmd+C / Ctrl+C while the row is focused copies the URL without
+        // opening it — matches how the keybinds cheatsheet advertises it.
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+          e.preventDefault();
+          onCopy();
+        }
+      }}
+    >
+      <span className="server-status" aria-hidden />
+      <span className="server-label">{server.label}</span>
+      <span className="server-url">{shortServerUrl(server.url)}</span>
+    </button>
   );
 }
 
@@ -580,7 +688,7 @@ function FileTree({
 function sidebarFocusableItems(root: HTMLElement): HTMLElement[] {
   return Array.from(
     root.querySelectorAll<HTMLElement>(
-      ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
+      ".sidebar-section-head, .file-row, .script-row, .server-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
     )
   );
 }

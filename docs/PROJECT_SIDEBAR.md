@@ -1,7 +1,8 @@
 # Project Sidebar
 
 The v0.1 project sidebar is optional and hidden by default. It is a small
-terminal companion for Files and Scripts only, not an IDE sidebar.
+terminal companion for **Files, Scripts, and Servers** only — not an IDE
+sidebar.
 
 ## Behavior
 
@@ -40,6 +41,14 @@ Reveal in Finder). `Cmd+Enter` skips the menu and runs the default action.
 AndSpace does not embed an editor and does not show a full preview — see
 [FILE_ACTIONS.md](FILE_ACTIONS.md).
 
+## Servers
+
+The Servers section lists local dev URLs that AndSpace has seen in terminal
+output (Vite, Next.js, NestJS, etc.). Detection is best-effort, comes only
+from terminal text, and **does no port scanning, no polling, and no fetches**.
+Click a row to open in the default browser; right-click or `⌘C` to copy the
+URL. Full behavior in [SERVERS.md](SERVERS.md).
+
 ## Scripts
 
 The Scripts section reads `package.json` in the project root and lists scripts.
@@ -62,8 +71,11 @@ Clicking a script opens a split-right pane and runs it from the project root.
 - `Toggle Sidebar`
 - `Focus Files`
 - `Focus Scripts`
+- `Focus Servers`
 - `Run Script`
 - `Go to File` (compact file picker over the loaded project tree)
+- `Open Localhost Preview`
+- `Copy Server URL`
 
 `Run Script` opens the sidebar focused on Scripts so the user can choose the
 script explicitly.
@@ -85,6 +97,9 @@ file-action-open target=copy path=/repo/src/main.ts
 file-action-open target=finder path=/repo/src/main.ts
 file-picker-open cwd=/repo
 file-picker-select path=/repo/src/main.ts
+server-detected url=http://localhost:5173 pane=pane-abc label=Vite
+server-open url=http://localhost:5173
+server-copy url=http://localhost:5173
 ```
 
 ## Limits
