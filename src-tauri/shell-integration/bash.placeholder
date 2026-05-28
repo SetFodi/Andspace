@@ -1,0 +1,2 @@
+# Bash integration is not implemented in v0.1.
+# Use zsh with src-tauri/shell-integration/andspace.zsh for OSC lifecycle events.

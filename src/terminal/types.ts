@@ -13,3 +13,21 @@ export interface Tab {
   title: string;
   root: SplitNode;
 }
+
+export interface CommandHistoryEntry {
+  command: string;
+  exitCode: number;
+  startedAt: number;
+  endedAt: number;
+  outputBoundary: number;
+}
+
+export interface PaneMeta {
+  cwd?: string;
+  lastCommand?: string;
+  lastExitCode?: number;
+  lastCommandStartedAt?: number;
+  lastCommandEndedAt?: number;
+  outputBoundary?: number;
+  commandRunning?: boolean;
+}

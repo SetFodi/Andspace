@@ -5,6 +5,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { installShellIntegration } from "./shellIntegration";
 import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
 
@@ -41,6 +42,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const setActivePane = useStore((s) => s.setActivePane);
+  const handleShellOsc = useStore((s) => s.handleShellOsc);
   // A pane is "active" only when its tab is the active tab AND it's the
   // active pane within that tab. This makes focus follow tab switches.
   const isActive = useStore(
@@ -99,6 +101,11 @@ export function TerminalPane({ paneId, tabId }: Props) {
     term.attachCustomKeyEventHandler((e) => !isAppShortcut(e));
 
     term.open(container);
+
+    const shellIntegration = installShellIntegration(term, paneId, {
+      onOsc: (event, outputBoundary) =>
+        handleShellOsc(paneId, event, outputBoundary),
+    });
 
     let webgl: WebglAddon | null = null;
     let initialized = false;
@@ -240,6 +247,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       window.removeEventListener("focus", evaluateBlink);
       window.removeEventListener("blur", evaluateBlink);
       dataDisposable.dispose();
+      shellIntegration.dispose();
       unlisten?.();
       unlistenExit?.();
       ro.disconnect();
@@ -250,7 +258,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       term.dispose();
       termRef.current = null;
     };
-  }, [paneId, tabId, setActivePane]);
+  }, [paneId, tabId, setActivePane, handleShellOsc]);
 
   // Focus/blur the xterm based on whether it's the active pane. Blurring
   // inactive panes means cursorInactiveStyle: "none" applies and they

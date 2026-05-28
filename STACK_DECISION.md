@@ -1,11 +1,11 @@
 # Stack Decision — Phase 0
 
-**Status: Matrix complete except #15 (deferred) and author sign-off.**
+**Status: Approved — proceed to v0.1**
 
 Fifteen benchmark rows remain in `docs/BENCHMARKS.md` after **#9 tmux was
 removed** from scope. Fourteen rows have a verdict; **#15 (1 hr battery)**
-was not run. **No final approved / rejected stamp** until the prototype
-author adds the honest paragraph below.
+was deferred. Phase 0 practical stack gate is **approved** for v0.1 with
+the #11 background-tail limitation documented below.
 
 ## Full results (15 rows, tmux removed)
 
@@ -65,13 +65,6 @@ terminal throughput bottleneck is **not** a Phase 0 blocker. If v0.1 needs
 more headroom, `tauri::ipc::Channel<Vec<u8>>` remains an optimization path,
 not a stack pivot.
 
-## Remaining before final stamp
-
-1. Optional: run **#15** (1 hr battery) and update `docs/BENCHMARKS.md`.
-2. Required: **author paragraph** (see `docs/PHASE_0.md` “honest verdict”).
-3. Then set **Status** above to Approved / Conditional / Rejected and
-   delete this “pending” section.
-
 ## Gate rules (from `docs/PHASE_0.md`)
 
 | Result distribution | Decision |
@@ -80,7 +73,14 @@ not a stack pivot.
 | 50–69 % acceptable, 3–5 fails | **Conditional** → ship, drop Ghostty comparison publicly |
 | < 50 % acceptable or > 5 fails | **Rejected** → pivot to native Swift + Metal |
 
-## Author sign-off (fill in)
+## Author sign-off
 
-_Prototype author: one paragraph — did it feel daily-driver ready? Where
-did you flinch? What should a Ghostty user expect?_
+Phase 0 passes the practical stack gate for v0.1. The terminal feels usable
+as a daily local-dev shell foundation: tabs, splits, Neovim, large output,
+selection, IME, mixed-DPI, and rapid tab switching are all acceptable or
+better. The main limitation is background-tab tail-follow behavior caused by
+WKWebView throttling, documented as a known limitation rather than a stack
+rejection. Foreground throughput passed, idle CPU is acceptable after cursor
+optimization, and memory/cold launch are strong enough to continue. The stack
+is approved for v0.1 with the constraint that AndSpace should be positioned
+as a fast workflow terminal, not a raw Ghostty-performance competitor.

@@ -1,11 +1,24 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { PaneId, SplitDirection, SplitNode, Tab, TabId } from "./types";
+import type {
+  CommandHistoryEntry,
+  PaneId,
+  PaneMeta,
+  SplitDirection,
+  SplitNode,
+  Tab,
+  TabId,
+} from "./types";
+import type { ShellOscEvent } from "./shellIntegration";
+
+const MAX_COMMAND_HISTORY = 50;
 
 interface State {
   tabs: Tab[];
   activeTabId: TabId;
   activePaneByTab: Record<TabId, PaneId>;
+  paneMeta: Record<PaneId, PaneMeta>;
+  commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>;
 
   newTab: () => Promise<void>;
   closeTab: (id: TabId) => Promise<void>;
@@ -17,6 +30,13 @@ interface State {
   nextTab: () => void;
   prevTab: () => void;
   switchToIndex: (idx: number) => void;
+  updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
+  handleShellOsc: (
+    paneId: PaneId,
+    event: ShellOscEvent,
+    outputBoundary: number
+  ) => void;
+  clearPaneShellState: (paneId: PaneId) => void;
 }
 
 function uid(): string {
@@ -65,10 +85,94 @@ function collectPanes(node: SplitNode): PaneId[] {
   return [...collectPanes(node.a), ...collectPanes(node.b)];
 }
 
+function initPaneShellState(
+  paneMeta: Record<PaneId, PaneMeta>,
+  commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  paneId: PaneId
+) {
+  return {
+    paneMeta: { ...paneMeta, [paneId]: {} },
+    commandHistoryByPane: { ...commandHistoryByPane, [paneId]: [] },
+  };
+}
+
+function dropPaneShellState(
+  paneMeta: Record<PaneId, PaneMeta>,
+  commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  paneId: PaneId
+) {
+  const { [paneId]: _m, ...restMeta } = paneMeta;
+  const { [paneId]: _h, ...restHistory } = commandHistoryByPane;
+  return { paneMeta: restMeta, commandHistoryByPane: restHistory };
+}
+
 export const useStore = create<State>((set, get) => ({
   tabs: [],
   activeTabId: "",
   activePaneByTab: {},
+  paneMeta: {},
+  commandHistoryByPane: {},
+
+  updatePaneMeta: (paneId, patch) =>
+    set((s) => ({
+      paneMeta: {
+        ...s.paneMeta,
+        [paneId]: { ...s.paneMeta[paneId], ...patch },
+      },
+    })),
+
+  handleShellOsc: (paneId, event, outputBoundary) => {
+    const meta = get().paneMeta[paneId] ?? {};
+    if (event.kind === "cwd" && event.cwd) {
+      get().updatePaneMeta(paneId, { cwd: event.cwd });
+      return;
+    }
+    if (event.kind === "start") {
+      get().updatePaneMeta(paneId, {
+        commandRunning: true,
+        lastCommandStartedAt: event.timestamp ?? Date.now(),
+        outputBoundary,
+      });
+      return;
+    }
+    if (event.kind === "cmd" && event.command) {
+      get().updatePaneMeta(paneId, { lastCommand: event.command });
+      return;
+    }
+    if (event.kind === "end") {
+      const endedAt = event.timestamp ?? Date.now();
+      const exitCode = event.exitCode ?? 0;
+      const entry: CommandHistoryEntry = {
+        command: meta.lastCommand ?? "",
+        exitCode,
+        startedAt: meta.lastCommandStartedAt ?? endedAt,
+        endedAt,
+        outputBoundary: meta.outputBoundary ?? outputBoundary,
+      };
+      set((s) => {
+        const prev = s.commandHistoryByPane[paneId] ?? [];
+        const next = [...prev, entry].slice(-MAX_COMMAND_HISTORY);
+        return {
+          commandHistoryByPane: {
+            ...s.commandHistoryByPane,
+            [paneId]: next,
+          },
+          paneMeta: {
+            ...s.paneMeta,
+            [paneId]: {
+              ...meta,
+              commandRunning: false,
+              lastExitCode: exitCode,
+              lastCommandEndedAt: endedAt,
+            },
+          },
+        };
+      });
+    }
+  },
+
+  clearPaneShellState: (paneId) =>
+    set((s) => dropPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId)),
 
   newTab: async () => {
     const paneId = await createPty();
@@ -78,6 +182,7 @@ export const useStore = create<State>((set, get) => ({
       root: { kind: "pane", paneId },
     };
     set((s) => ({
+      ...initPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId),
       tabs: [...s.tabs, tab],
       activeTabId: tab.id,
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: paneId },
@@ -97,10 +202,21 @@ export const useStore = create<State>((set, get) => ({
           ? (remaining[remaining.length - 1]?.id ?? "")
           : s.activeTabId;
       const { [id]: _removed, ...rest } = s.activePaneByTab;
+      let paneMeta = s.paneMeta;
+      let commandHistoryByPane = s.commandHistoryByPane;
+      for (const p of collectPanes(tab.root)) {
+        ({ paneMeta, commandHistoryByPane } = dropPaneShellState(
+          paneMeta,
+          commandHistoryByPane,
+          p
+        ));
+      }
       return {
         tabs: remaining,
         activeTabId: nextActive,
         activePaneByTab: rest,
+        paneMeta,
+        commandHistoryByPane,
       };
     });
   },
@@ -118,6 +234,7 @@ export const useStore = create<State>((set, get) => ({
       b: { kind: "pane", paneId: newPaneId },
     });
     set((s) => ({
+      ...initPaneShellState(s.paneMeta, s.commandHistoryByPane, newPaneId),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: newPaneId },
     }));
@@ -135,6 +252,7 @@ export const useStore = create<State>((set, get) => ({
     }
     const remainingPanes = collectPanes(newRoot);
     set((s) => ({
+      ...dropPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: {
         ...s.activePaneByTab,

@@ -41,6 +41,11 @@ pub fn report_renderer(kind: String) {
 }
 
 #[tauri::command]
+pub fn report_shell_event(pane_id: String, line: String) {
+    crate::pty::diag_log(&format!("shell pane={pane_id} {line}"));
+}
+
+#[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     // Use macOS `open` to route to the registered URL handler.
     std::process::Command::new("open")

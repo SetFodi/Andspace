@@ -13,9 +13,20 @@ function TitleBar() {
   );
 }
 
+function shortenPath(path: string): string {
+  const m = path.match(/^\/Users\/[^/]+(\/.*)?$/);
+  if (m) return `~${m[1] ?? ""}`;
+  return path.length > 48 ? `…${path.slice(-45)}` : path;
+}
+
 function StatusBar() {
-  // Minimal terminal info — shell on the left, cwd placeholder on the right.
-  // The cwd will become live in v0.1 via shell integration (OSC 7).
+  const activeTabId = useStore((s) => s.activeTabId);
+  const activePaneId = useStore((s) => s.activePaneByTab[activeTabId]);
+  const meta = useStore((s) =>
+    activePaneId ? s.paneMeta[activePaneId] : undefined
+  );
+  const cwd = meta?.cwd ? shortenPath(meta.cwd) : "~";
+
   return (
     <div className="status-bar">
       <div className="status-left">
@@ -23,7 +34,7 @@ function StatusBar() {
         <span>zsh</span>
       </div>
       <div className="status-right">
-        <span>~</span>
+        <span title={meta?.cwd}>{cwd}</span>
       </div>
     </div>
   );

@@ -74,6 +74,11 @@ impl PtyManager {
         }
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
+        cmd.env("TERM_PROGRAM", "AndSpace");
+        cmd.env("ANDSPACE_SHELL_INTEGRATION", "1");
+        if let Some(path) = zsh_integration_path() {
+            cmd.env("ANDSPACE_ZSH_INTEGRATION", path);
+        }
 
         let child = pair
             .slave
@@ -167,6 +172,18 @@ impl PtyManager {
             diag_log(&format!("pty-kill pid={pid} pane={pane_id}"));
         }
         Ok(())
+    }
+}
+
+fn zsh_integration_path() -> Option<String> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("shell-integration/andspace.zsh");
+    if path.exists() {
+        path.canonicalize()
+            .ok()
+            .map(|p| p.display().to_string())
+    } else {
+        None
     }
 }
 
