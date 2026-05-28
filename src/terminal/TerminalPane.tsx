@@ -66,7 +66,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
     const term = new Terminal({
       fontFamily:
-        '"JetBrains Mono", "SF Mono", "Menlo", "Monaco", monospace',
+        '"JetBrainsMono Nerd Font Mono", "JetBrains Mono", "SF Mono", "Menlo", "Monaco", monospace',
       fontSize: 13,
       lineHeight: 1.25,
       letterSpacing: 0,
@@ -140,6 +140,25 @@ export function TerminalPane({ paneId, tabId }: Props) {
         term.loadAddon(webgl);
       } catch (e) {
         console.warn("WebGL renderer unavailable, using default", e);
+      }
+
+      // If the Nerd Font finishes loading after xterm has already initialized
+      // its glyph atlas, clear the atlas + force a redraw so icons render
+      // with the correct glyphs instead of missing-glyph boxes.
+      if (document.fonts?.load) {
+        Promise.all([
+          document.fonts.load('400 1em "JetBrainsMono Nerd Font Mono"'),
+          document.fonts.load('700 1em "JetBrainsMono Nerd Font Mono"'),
+        ])
+          .then(() => {
+            try {
+              webgl?.clearTextureAtlas();
+              term.refresh(0, term.rows - 1);
+            } catch {
+              // Atlas may already be disposed if the component unmounted.
+            }
+          })
+          .catch(() => {});
       }
 
       // Diagnostic — write the chosen renderer to /tmp/andspace-diag.log so we
