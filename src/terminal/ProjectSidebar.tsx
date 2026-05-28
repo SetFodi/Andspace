@@ -1,5 +1,27 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import logoUrl from "../assets/logo.png";
+import {
+  ChevronIcon,
+  FileCodeIcon,
+  FileHiddenIcon,
+  FileIcon,
+  FileTextIcon,
+  FolderClosedIcon,
+  FolderOpenIcon,
+  PlayIcon,
+  RefreshIcon,
+} from "./SidebarIcons";
+import {
+  expandProjectDirectory,
   loadPackageScripts,
   loadProjectTree,
   reportSidebarEvent,
@@ -20,170 +42,377 @@ interface Props {
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
 
-export function ProjectSidebar({
-  open,
-  cwd,
-  focusedSection,
-  onFocusedSectionChange,
-  onRunScript,
-  onToast,
-}: Props) {
-  const [tree, setTree] = useState<ProjectTree | null>(null);
-  const [scripts, setScripts] = useState<PackageScripts | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const rootPath = cwd ?? "";
-
-  useEffect(() => {
-    if (!open || !cwd) return;
-    let cancelled = false;
-    setLoading(true);
-    Promise.all([loadProjectTree(cwd), loadPackageScripts(cwd)])
-      .then(([nextTree, nextScripts]) => {
-        if (cancelled) return;
-        setTree(nextTree);
-        setScripts(nextScripts);
-        setExpanded(new Set([nextTree.root.path]));
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          onToast(`Could not load project sidebar: ${String(e)}`, "error");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [cwd, onToast, open]);
-
-  const scriptList = scripts?.scripts ?? [];
-  const packageManagerLabel = scripts?.packageManager ?? "npm";
-
-  return (
-    <aside className={`project-sidebar ${open ? "open" : ""}`} aria-hidden={!open}>
-      <div className="project-sidebar-inner">
-        <div className="sidebar-head">
-          <div>
-            <div className="sidebar-kicker">Project</div>
-            <h2 title={rootPath}>{shortPath(rootPath) || "No cwd yet"}</h2>
-          </div>
-          <button
-            className="sidebar-refresh"
-            disabled={!cwd || loading}
-            title="Refresh"
-            onClick={() => {
-              if (!cwd) return;
-              setTree(null);
-              setScripts(null);
-              void Promise.all([loadProjectTree(cwd), loadPackageScripts(cwd)]).then(
-                ([nextTree, nextScripts]) => {
-                  setTree(nextTree);
-                  setScripts(nextScripts);
-                  setExpanded(new Set([nextTree.root.path]));
-                }
-              );
-            }}
-          >
-            ↻
-          </button>
-        </div>
-
-        <SidebarSection
-          id="files"
-          title="Files"
-          active={focusedSection === "files"}
-          onFocus={() => onFocusedSectionChange("files")}
-        >
-          {loading && !tree && <div className="sidebar-muted">Loading files...</div>}
-          {!loading && !tree && (
-            <div className="sidebar-muted">Open a pane with a cwd to load files.</div>
-          )}
-          {tree && (
-            <FileTree
-              node={tree.root}
-              expanded={expanded}
-              depth={0}
-              onToggle={(path) =>
-                setExpanded((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(path)) next.delete(path);
-                  else next.add(path);
-                  return next;
-                })
-              }
-              onFileClick={(path) => {
-                void navigator.clipboard.writeText(path);
-                onToast("Copied file path", "neutral");
-              }}
-            />
-          )}
-        </SidebarSection>
-
-        <SidebarSection
-          id="scripts"
-          title="Scripts"
-          active={focusedSection === "scripts"}
-          onFocus={() => onFocusedSectionChange("scripts")}
-          meta={scriptList.length ? packageManagerLabel : undefined}
-        >
-          {loading && !scripts && <div className="sidebar-muted">Loading scripts...</div>}
-          {scripts && scriptList.length === 0 && (
-            <div className="sidebar-muted">No package scripts found.</div>
-          )}
-          {scripts &&
-            scriptList.map((script) => (
-              <button
-                key={script.name}
-                className="script-row"
-                title={script.command}
-                onClick={() => {
-                  void reportSidebarEvent("script-run", {
-                    cwd: scripts.cwd,
-                    name: script.name,
-                    packageManager: scripts.packageManager,
-                  });
-                  onRunScript(script, scripts);
-                }}
-              >
-                <span>{script.name}</span>
-                <code>{scriptRunCommand(scripts.packageManager, script.name)}</code>
-              </button>
-            ))}
-        </SidebarSection>
-      </div>
-    </aside>
-  );
+export interface ProjectSidebarHandle {
+  focus(): void;
 }
+
+type SectionKey = "files" | "scripts";
+
+export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
+  function ProjectSidebar(
+    {
+      open,
+      cwd,
+      focusedSection,
+      onFocusedSectionChange,
+      onRunScript,
+      onToast,
+    },
+    ref
+  ) {
+    const [tree, setTree] = useState<ProjectTree | null>(null);
+    const [scripts, setScripts] = useState<PackageScripts | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [collapsed, setCollapsed] = useState<Set<SectionKey>>(new Set());
+    const [activeScript, setActiveScript] = useState<string | null>(null);
+    const [lazyChildren, setLazyChildren] = useState<
+      Map<string, ProjectTreeNode[]>
+    >(new Map());
+    const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
+
+    const rootRef = useRef<HTMLElement | null>(null);
+
+    const rootPath = cwd ?? "";
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        focus() {
+          const root = rootRef.current;
+          if (!root) return;
+          const target = root.querySelector<HTMLElement>(
+            ".sidebar-section-head, .file-row, .script-row"
+          );
+          target?.focus();
+        },
+      }),
+      []
+    );
+
+    useEffect(() => {
+      if (!open || !cwd) return;
+      let cancelled = false;
+      setLoading(true);
+      setLazyChildren(new Map());
+      setLoadingPaths(new Set());
+      Promise.all([loadProjectTree(cwd), loadPackageScripts(cwd)])
+        .then(([nextTree, nextScripts]) => {
+          if (cancelled) return;
+          setTree(nextTree);
+          setScripts(nextScripts);
+          setExpanded(new Set([nextTree.root.path]));
+        })
+        .catch((e) => {
+          if (!cancelled) {
+            onToast(`Could not load project sidebar: ${String(e)}`, "error");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [cwd, onToast, open]);
+
+    const expandTruncated = useCallback(
+      (path: string) => {
+        if (lazyChildren.has(path) || loadingPaths.has(path)) return;
+        setLoadingPaths((prev) => {
+          const next = new Set(prev);
+          next.add(path);
+          return next;
+        });
+        expandProjectDirectory(path)
+          .then((nodes) => {
+            setLazyChildren((prev) => {
+              const next = new Map(prev);
+              next.set(path, nodes);
+              return next;
+            });
+          })
+          .catch((e) => {
+            onToast(`Could not expand directory: ${String(e)}`, "error");
+          })
+          .finally(() => {
+            setLoadingPaths((prev) => {
+              const next = new Set(prev);
+              next.delete(path);
+              return next;
+            });
+          });
+      },
+      [lazyChildren, loadingPaths, onToast]
+    );
+
+    const handleRefresh = () => {
+      if (!cwd) return;
+      setTree(null);
+      setScripts(null);
+      setLazyChildren(new Map());
+      setLoadingPaths(new Set());
+      void Promise.all([loadProjectTree(cwd), loadPackageScripts(cwd)]).then(
+        ([nextTree, nextScripts]) => {
+          setTree(nextTree);
+          setScripts(nextScripts);
+          setExpanded(new Set([nextTree.root.path]));
+        }
+      );
+    };
+
+    const toggleSection = (key: SectionKey) => {
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    };
+
+    const scriptList = scripts?.scripts ?? [];
+    const packageManagerLabel = scripts?.packageManager ?? "npm";
+
+    return (
+      <aside
+        ref={rootRef}
+        className={`project-sidebar ${open ? "open" : ""}`}
+        aria-hidden={!open}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).blur();
+            // Hand focus back to the terminal — TerminalPane listens for this
+            // and only the active pane responds.
+            window.dispatchEvent(new CustomEvent("andspace:focus-terminal"));
+            return;
+          }
+
+          const root = rootRef.current;
+          if (!root) return;
+          const focused = document.activeElement as HTMLElement | null;
+
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const items = Array.from(
+              root.querySelectorAll<HTMLElement>(
+                ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
+              )
+            );
+            if (items.length === 0) return;
+            const idx = focused ? items.indexOf(focused) : -1;
+            const next =
+              e.key === "ArrowDown"
+                ? items[idx === -1 ? 0 : Math.min(idx + 1, items.length - 1)]
+                : items[idx === -1 ? 0 : Math.max(idx - 1, 0)];
+            next?.focus();
+            return;
+          }
+
+          if (e.key === "Home" || e.key === "End") {
+            e.preventDefault();
+            const items = Array.from(
+              root.querySelectorAll<HTMLElement>(
+                ".sidebar-section-head, .file-row, .script-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
+              )
+            );
+            if (items.length === 0) return;
+            (e.key === "Home" ? items[0] : items[items.length - 1])?.focus();
+            return;
+          }
+
+          // Left/Right collapse/expand directory rows.
+          if (
+            (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+            focused?.classList.contains("file-row") &&
+            focused.dataset.kind === "directory"
+          ) {
+            const path = focused.dataset.path;
+            if (!path) return;
+            e.preventDefault();
+            const isOpen = expanded.has(path);
+            if (e.key === "ArrowRight" && !isOpen) {
+              if (focused.dataset.truncated === "true" && !lazyChildren.has(path)) {
+                expandTruncated(path);
+              }
+              setExpanded((prev) => {
+                const next = new Set(prev);
+                next.add(path);
+                return next;
+              });
+            } else if (e.key === "ArrowLeft" && isOpen) {
+              setExpanded((prev) => {
+                const next = new Set(prev);
+                next.delete(path);
+                return next;
+              });
+            }
+          }
+        }}
+      >
+        <div className="project-sidebar-inner">
+          <div className="sidebar-brand">
+            <img
+              className="sidebar-brand-mark"
+              src={logoUrl}
+              alt="AndSpace"
+              draggable={false}
+            />
+            <div className="sidebar-brand-text">
+              <div className="sidebar-brand-name">AndSpace</div>
+              <div className="sidebar-brand-sub" title={rootPath}>
+                {shortPath(rootPath) || "No cwd"}
+              </div>
+            </div>
+          </div>
+
+          <div className="sidebar-scroll">
+            <SidebarSection
+              id="files"
+              title="Files"
+              collapsed={collapsed.has("files")}
+              active={focusedSection === "files"}
+              onToggle={() => toggleSection("files")}
+              onFocus={() => onFocusedSectionChange("files")}
+            >
+              {loading && !tree && (
+                <div className="sidebar-muted">Loading files…</div>
+              )}
+              {!loading && !tree && (
+                <div className="sidebar-muted">
+                  Open a pane with a cwd to load files.
+                </div>
+              )}
+              {tree && (
+                <FileTree
+                  node={tree.root}
+                  expanded={expanded}
+                  depth={0}
+                  lazyChildren={lazyChildren}
+                  loadingPaths={loadingPaths}
+                  onToggle={(path, isTruncated) => {
+                    if (isTruncated && !lazyChildren.has(path)) {
+                      expandTruncated(path);
+                    }
+                    setExpanded((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(path)) next.delete(path);
+                      else next.add(path);
+                      return next;
+                    });
+                  }}
+                  onLoadMore={expandTruncated}
+                  onFileClick={(path) => {
+                    void navigator.clipboard.writeText(path);
+                    onToast("Copied file path", "neutral");
+                  }}
+                />
+              )}
+            </SidebarSection>
+
+            <SidebarSection
+              id="scripts"
+              title="Scripts"
+              collapsed={collapsed.has("scripts")}
+              active={focusedSection === "scripts"}
+              meta={scriptList.length ? packageManagerLabel : undefined}
+              onToggle={() => toggleSection("scripts")}
+              onFocus={() => onFocusedSectionChange("scripts")}
+            >
+              {loading && !scripts && (
+                <div className="sidebar-muted">Loading scripts…</div>
+              )}
+              {scripts && scriptList.length === 0 && (
+                <div className="sidebar-muted">No package scripts found.</div>
+              )}
+              {scripts &&
+                scriptList.map((script) => (
+                  <button
+                    key={script.name}
+                    className={`script-row ${
+                      activeScript === script.name ? "active" : ""
+                    }`}
+                    title={scriptRunCommand(scripts.packageManager, script.name)}
+                    onClick={() => {
+                      setActiveScript(script.name);
+                      void reportSidebarEvent("script-run", {
+                        cwd: scripts.cwd,
+                        name: script.name,
+                        packageManager: scripts.packageManager,
+                      });
+                      onRunScript(script, scripts);
+                    }}
+                  >
+                    <span className="script-glyph" aria-hidden>
+                      <PlayIcon width={10} height={10} />
+                    </span>
+                    <span className="script-name">{script.name}</span>
+                  </button>
+                ))}
+            </SidebarSection>
+          </div>
+
+          <div className="sidebar-footer">
+            <button
+              className="sidebar-foot-btn"
+              disabled={!cwd || loading}
+              title="Refresh project"
+              onClick={handleRefresh}
+              aria-label="Refresh project"
+            >
+              <RefreshIcon />
+            </button>
+            <div className="sidebar-foot-spacer" />
+            <div className="sidebar-foot-hint" title="Toggle sidebar">
+              ⌘B
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+);
 
 function SidebarSection({
   id,
   title,
+  collapsed,
   active,
   meta,
   children,
+  onToggle,
   onFocus,
 }: {
   id: string;
   title: string;
+  collapsed: boolean;
   active: boolean;
   meta?: string;
   children: ReactNode;
+  onToggle: () => void;
   onFocus: () => void;
 }) {
   return (
     <section
-      className={`sidebar-section ${active ? "active" : ""}`}
+      className={`sidebar-section ${active ? "active" : ""} ${
+        collapsed ? "collapsed" : ""
+      }`}
       aria-labelledby={`sidebar-${id}`}
       onFocus={onFocus}
     >
-      <div className="sidebar-section-head">
+      <button
+        type="button"
+        className="sidebar-section-head"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+      >
+        <span className="sidebar-section-chevron" aria-hidden>
+          <ChevronIcon open={!collapsed} width={10} height={10} />
+        </span>
         <h3 id={`sidebar-${id}`}>{title}</h3>
-        {meta && <span>{meta}</span>}
-      </div>
-      {children}
+        {meta && <span className="sidebar-section-meta">{meta}</span>}
+      </button>
+      {!collapsed && <div className="sidebar-section-body">{children}</div>}
     </section>
   );
 }
@@ -192,54 +421,114 @@ function FileTree({
   node,
   expanded,
   depth,
+  lazyChildren,
+  loadingPaths,
   onToggle,
+  onLoadMore,
   onFileClick,
 }: {
   node: ProjectTreeNode;
   expanded: Set<string>;
   depth: number;
-  onToggle: (path: string) => void;
+  lazyChildren: Map<string, ProjectTreeNode[]>;
+  loadingPaths: Set<string>;
+  onToggle: (path: string, isTruncated: boolean) => void;
+  onLoadMore: (path: string) => void;
   onFileClick: (path: string) => void;
 }) {
   const isDirectory = node.kind === "directory";
   const isExpanded = expanded.has(node.path);
-  const children = useMemo(() => node.children ?? [], [node.children]);
+  const overriddenChildren = lazyChildren.get(node.path);
+  const effectiveChildren = useMemo(
+    () => overriddenChildren ?? node.children ?? [],
+    [node.children, overriddenChildren]
+  );
+  const stillTruncated = node.truncated && !overriddenChildren;
+  const isLoading = loadingPaths.has(node.path);
 
   return (
     <div className="file-tree-node">
       <button
-        className={`file-row ${isDirectory ? "directory" : "file"}`}
-        style={{ paddingLeft: 8 + depth * 13 }}
+        className={`file-row ${isDirectory ? "directory" : "file"} ${
+          isDirectory && isExpanded ? "open" : ""
+        }`}
+        style={{ paddingLeft: 6 + depth * 12 }}
         title={node.path}
+        data-path={node.path}
+        data-kind={isDirectory ? "directory" : "file"}
+        data-truncated={node.truncated ? "true" : "false"}
         onClick={() => {
-          if (isDirectory) onToggle(node.path);
+          if (isDirectory) onToggle(node.path, node.truncated);
           else onFileClick(node.path);
         }}
       >
-        <span className="file-chevron">{isDirectory ? (isExpanded ? "▾" : "▸") : "·"}</span>
+        <span className="file-chevron" aria-hidden>
+          {isDirectory ? (
+            <ChevronIcon open={isExpanded} width={9} height={9} />
+          ) : null}
+        </span>
+        <span className="file-glyph" aria-hidden>
+          {isDirectory ? (
+            isExpanded ? (
+              <FolderOpenIcon />
+            ) : (
+              <FolderClosedIcon />
+            )
+          ) : (
+            fileIconFor(node.name)
+          )}
+        </span>
         <span className="file-name">{node.name}</span>
       </button>
       {isDirectory && isExpanded && (
-        <div>
-          {children.map((child) => (
+        <div className="file-tree-children">
+          {effectiveChildren.map((child) => (
             <FileTree
               key={child.path}
               node={child}
               expanded={expanded}
               depth={depth + 1}
+              lazyChildren={lazyChildren}
+              loadingPaths={loadingPaths}
               onToggle={onToggle}
+              onLoadMore={onLoadMore}
               onFileClick={onFileClick}
             />
           ))}
-          {node.truncated && (
-            <div className="file-truncated" style={{ paddingLeft: 22 + depth * 13 }}>
-              More hidden for performance
+          {isLoading && (
+            <div
+              className="file-truncated"
+              style={{ paddingLeft: 22 + depth * 12 }}
+            >
+              Loading…
             </div>
+          )}
+          {!isLoading && stillTruncated && (
+            <button
+              type="button"
+              className="file-load-more"
+              style={{ paddingLeft: 22 + depth * 12 }}
+              onClick={() => onLoadMore(node.path)}
+            >
+              Show all items in this folder
+            </button>
           )}
         </div>
       )}
     </div>
   );
+}
+
+function fileIconFor(name: string) {
+  if (name.startsWith(".")) return <FileHiddenIcon />;
+  if (/\.(md|mdx|txt|rst|log)$/i.test(name)) return <FileTextIcon />;
+  if (
+    /\.(ts|tsx|js|jsx|mjs|cjs|json|jsonc|toml|yaml|yml|rs|go|py|sh|html|css|scss)$/i.test(
+      name
+    )
+  )
+    return <FileCodeIcon />;
+  return <FileIcon />;
 }
 
 function shortPath(path: string): string {

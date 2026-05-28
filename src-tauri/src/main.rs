@@ -29,6 +29,7 @@ fn main() {
             report_ai_handoff_event,
             report_command_palette_event,
             load_project_tree,
+            expand_project_directory,
             load_package_scripts,
             report_sidebar_event,
             evaluate_command_guard,

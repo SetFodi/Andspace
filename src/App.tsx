@@ -8,6 +8,7 @@ import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
+  type ProjectSidebarHandle,
 } from "./terminal/ProjectSidebar";
 import { initAndspaceRules } from "./terminal/rules";
 import {
@@ -113,6 +114,18 @@ export default function App() {
   const [sidebarSection, setSidebarSection] = useState<"files" | "scripts">(
     "files"
   );
+  const sidebarRef = useRef<ProjectSidebarHandle | null>(null);
+
+  const focusSidebar = useCallback(() => {
+    setSidebarOpen(true);
+    // Wait for the open transition to apply so the first focusable element
+    // is actually in the layout when we try to focus it.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        sidebarRef.current?.focus();
+      });
+    });
+  }, []);
 
   const showToast = useCallback((next: ToastState) => {
     setToast(next);
@@ -381,6 +394,9 @@ export default function App() {
         if (!pendingGuardConfirmation && !paletteOpen) {
           setHandoffOpen(true);
         }
+      } else if (k === "ArrowLeft" && !e.shiftKey) {
+        e.preventDefault();
+        focusSidebar();
       } else if (k.toLowerCase() === "k" && !e.shiftKey) {
         e.preventDefault();
         if (!pendingGuardConfirmation && !handoffOpen) {
@@ -411,6 +427,7 @@ export default function App() {
     closeActive,
     splitActive,
     toggleSidebar,
+    focusSidebar,
     nextTab,
     prevTab,
     switchToIndex,
@@ -432,6 +449,7 @@ export default function App() {
       <TabStrip />
       <div className={`workspace ${sidebarOpen ? "sidebar-open" : ""}`}>
         <ProjectSidebar
+          ref={sidebarRef}
           open={sidebarOpen}
           cwd={activePaneCwd}
           focusedSection={sidebarSection}

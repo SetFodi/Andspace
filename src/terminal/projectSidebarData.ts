@@ -30,6 +30,10 @@ export function loadProjectTree(cwd: string): Promise<ProjectTree> {
   return invoke<ProjectTree>("load_project_tree", { cwd });
 }
 
+export function expandProjectDirectory(path: string): Promise<ProjectTreeNode[]> {
+  return invoke<ProjectTreeNode[]>("expand_project_directory", { path });
+}
+
 export function loadPackageScripts(cwd: string): Promise<PackageScripts> {
   return invoke<PackageScripts>("load_package_scripts", { cwd });
 }

@@ -139,6 +139,17 @@ pub fn load_project_tree(cwd: String) -> Result<crate::project_sidebar::ProjectT
 }
 
 #[tauri::command]
+pub fn expand_project_directory(
+    path: String,
+) -> Result<Vec<crate::project_sidebar::ProjectTreeNode>, String> {
+    let result = crate::project_sidebar::expand_project_directory(&path);
+    if result.is_ok() {
+        crate::pty::diag_log(&format!("project-tree-expand path={}", log_value(&path)));
+    }
+    result
+}
+
+#[tauri::command]
 pub fn load_package_scripts(cwd: String) -> Result<crate::project_sidebar::PackageScripts, String> {
     let result = crate::project_sidebar::load_package_scripts(&cwd);
     if result.is_ok() {

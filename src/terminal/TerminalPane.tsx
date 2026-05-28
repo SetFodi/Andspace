@@ -294,6 +294,19 @@ export function TerminalPane({ paneId, tabId }: Props) {
     }
   }, [isActive]);
 
+  // External focus requests (e.g. Esc from the sidebar). Only the active
+  // pane responds so we don't fight focus when multiple panes mount.
+  useEffect(() => {
+    const onFocusRequest = () => {
+      const term = termRef.current;
+      if (!term || !isActiveRef.current) return;
+      term.focus();
+    };
+    window.addEventListener("andspace:focus-terminal", onFocusRequest);
+    return () =>
+      window.removeEventListener("andspace:focus-terminal", onFocusRequest);
+  }, []);
+
   return (
     <div
       ref={containerRef}

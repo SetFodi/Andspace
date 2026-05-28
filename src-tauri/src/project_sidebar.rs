@@ -72,6 +72,24 @@ pub fn load_project_tree(cwd: &str) -> Result<ProjectTree, String> {
     Ok(ProjectTree { root })
 }
 
+/// Shallow read of a directory's direct children, ignoring the global tree
+/// caps. Subdirectory children are returned empty + `truncated: true` so the
+/// frontend can lazy-load further levels on demand.
+pub fn expand_project_directory(path: &str) -> Result<Vec<ProjectTreeNode>, String> {
+    let dir = validate_cwd(path)?;
+    let entries = sorted_visible_entries(&dir)?;
+    const HARD_CAP: usize = 5000;
+    let mut children = Vec::with_capacity(entries.len().min(HARD_CAP));
+    for entry in entries.into_iter().take(HARD_CAP) {
+        if entry.is_dir() {
+            children.push(node(&entry, ProjectTreeNodeKind::Directory, Vec::new(), true));
+        } else {
+            children.push(node(&entry, ProjectTreeNodeKind::File, Vec::new(), false));
+        }
+    }
+    Ok(children)
+}
+
 pub fn load_package_scripts(cwd: &str) -> Result<PackageScripts, String> {
     let root = validate_cwd(cwd)?;
     let package_json = root.join("package.json");

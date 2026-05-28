@@ -233,24 +233,39 @@ body,
   overflow: hidden;
   border-right: 1px solid transparent;
   background: #0a0a0c;
+  position: relative;
   transition: width 180ms cubic-bezier(0.32, 0.72, 0, 1),
     border-color 180ms ease;
 }
 
 .project-sidebar.open {
-  width: 264px;
-  border-color: rgba(255, 255, 255, 0.07);
+  width: 256px;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Mirror the active terminal pane's purple ring when focus is anywhere
+   inside the sidebar — gives a clear "this is where keys go" signal. */
+.project-sidebar.open:focus-within {
+  border-right-color: rgba(167, 139, 250, 0.5);
+}
+
+.project-sidebar.open:focus-within .project-sidebar-inner {
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.5);
 }
 
 .project-sidebar-inner {
-  width: 264px;
+  width: 256px;
   height: 100%;
-  padding: 12px 10px 10px;
-  overflow: auto;
-  background: linear-gradient(180deg, #101116 0%, #0b0c10 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 8px 8px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #111218 0%, #0a0b10 100%);
   opacity: 0;
-  transform: translateX(-8px);
-  transition: opacity 160ms ease, transform 180ms cubic-bezier(0.32, 0.72, 0, 1);
+  transform: translateX(-6px);
+  transition: opacity 160ms ease,
+    transform 180ms cubic-bezier(0.32, 0.72, 0, 1),
+    box-shadow 140ms ease;
 }
 
 .project-sidebar.open .project-sidebar-inner {
@@ -258,93 +273,187 @@ body,
   transform: translateX(0);
 }
 
-.sidebar-head {
+.sidebar-brand {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
-  padding: 2px 2px 0;
+  padding: 2px 6px 14px;
 }
 
-.sidebar-kicker {
-  color: #8d7bf2;
-  font-size: 10px;
-  font-weight: 760;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
+.sidebar-brand-mark {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 7px;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 4px rgba(80, 50, 200, 0.32));
 }
 
-.sidebar-head h2 {
-  margin: 0;
-  max-width: 190px;
-  overflow: hidden;
+.sidebar-brand-text {
+  min-width: 0;
+}
+
+.sidebar-brand-name {
   color: #f4f4f6;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.sidebar-brand-sub {
+  margin-top: 2px;
+  color: #6e7081;
+  font-size: 10.5px;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 180px;
 }
 
-.sidebar-refresh {
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 7px;
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.06);
-  color: #a7a8b3;
-  cursor: pointer;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
-.sidebar-refresh:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+  background-clip: padding-box;
+  border: 2px solid transparent;
 }
 
 .sidebar-section {
-  margin-top: 12px;
-  padding: 8px 6px 7px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  margin-top: 10px;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
-.sidebar-section.active {
-  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.25);
+.sidebar-section:first-child {
+  margin-top: 0;
+}
+
+.sidebar-section.collapsed {
+  margin-bottom: 0;
+}
+
+.sidebar-section-body {
+  padding: 2px 0 4px;
 }
 
 .sidebar-section-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 4px 7px;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 120ms ease;
+}
+
+.sidebar-section-head:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.sidebar-section-chevron {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6a6c7b;
+  flex-shrink: 0;
+  transition: color 120ms ease;
+}
+
+.sidebar-section-head:hover .sidebar-section-chevron {
+  color: #a9a9b6;
 }
 
 .sidebar-section-head h3 {
   margin: 0;
-  color: #bfc0ca;
-  font-size: 11px;
-  font-weight: 760;
-  letter-spacing: 0.08em;
+  color: #8d8f9c;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.sidebar-section-head span {
-  color: #777986;
-  font-size: 10px;
+.sidebar-section.active .sidebar-section-head h3 {
+  color: #c8c8d2;
+}
+
+.sidebar-section-meta {
+  margin-left: auto;
+  color: #5a5c6a;
+  font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .sidebar-muted,
 .file-truncated {
-  padding: 8px 5px;
-  color: #777986;
+  padding: 6px 8px;
+  color: #6a6c7b;
   font-size: 11px;
   line-height: 1.4;
+}
+
+.file-load-more {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #8d7bf2;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.file-load-more:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b3ff;
+}
+
+.file-row:focus-visible,
+.script-row:focus-visible,
+.sidebar-section-head:focus-visible,
+.sidebar-foot-btn:focus-visible,
+.file-load-more:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.6);
 }
 
 .file-row,
@@ -352,34 +461,67 @@ body,
   width: 100%;
   border: 0;
   background: transparent;
-  color: #d8d8df;
+  color: #d6d6df;
   font: inherit;
   cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
 }
 
 .file-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-height: 24px;
-  border-radius: 7px;
-  padding-top: 3px;
+  border-radius: 5px;
+  padding-top: 2px;
   padding-right: 6px;
-  padding-bottom: 3px;
+  padding-bottom: 2px;
   text-align: left;
 }
 
 .file-row:hover,
 .script-row:hover {
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .file-chevron {
   width: 11px;
-  color: #777986;
-  font-size: 10px;
-  text-align: center;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5a5c6a;
   flex-shrink: 0;
+}
+
+.file-row.directory:hover .file-chevron {
+  color: #a9a9b6;
+}
+
+.file-glyph {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7a7c8a;
+  flex-shrink: 0;
+}
+
+.file-row.directory .file-glyph {
+  color: #a78bfa;
+}
+
+.file-row.directory.open .file-glyph {
+  color: #c4b3ff;
+}
+
+.file-row.file .file-glyph {
+  color: #6a6c7b;
+}
+
+.file-row.file:hover .file-glyph {
+  color: #9ea0ac;
 }
 
 .file-name {
@@ -388,40 +530,113 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+  letter-spacing: -0.005em;
 }
 
 .file-row.directory .file-name {
-  color: #eeeeF3;
+  color: #eaeaf0;
   font-weight: 620;
 }
 
 .script-row {
-  display: grid;
-  grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr);
+  display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
-  padding: 6px 7px;
-  border-radius: 8px;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 6px;
   text-align: left;
 }
 
-.script-row span {
-  overflow: hidden;
-  color: #f1f1f4;
-  font-size: 12px;
-  font-weight: 680;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.script-row.active {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.22) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.25);
 }
 
-.script-row code {
+.script-row.active:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.28) 0%,
+    rgba(139, 92, 246, 0.14) 100%
+  );
+}
+
+.script-glyph {
+  color: #8d7bf2;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.script-row.active .script-glyph {
+  color: #c4b3ff;
+}
+
+.script-name {
   overflow: hidden;
-  color: #8d8f9d;
-  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
-  font-size: 10px;
+  color: #e8e8ee;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+
+.script-row.active .script-name {
+  color: #ffffff;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-foot-btn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8d8f9c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.sidebar-foot-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8e8ee;
+}
+
+.sidebar-foot-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.sidebar-foot-spacer {
+  flex: 1;
+}
+
+.sidebar-foot-hint {
+  color: #5a5c6a;
+  font-size: 10px;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  letter-spacing: 0.05em;
+  padding-right: 4px;
 }
 
 .terminal-area {
@@ -497,6 +712,12 @@ body,
 
 .terminal-pane.active {
   border-color: rgba(167, 139, 250, 0.5);
+}
+
+/* While the sidebar holds focus, drop the purple ring from every pane (active
+   or not) so there's only one "focused surface" on screen. */
+.workspace:has(.project-sidebar:focus-within) .terminal-pane.active {
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .terminal-pane .xterm {
