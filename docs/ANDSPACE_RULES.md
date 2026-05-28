@@ -1,7 +1,7 @@
 # ANDSPACE Rules
 
-AndSpace v0.1 loads command safety rules as data for future Command Guard work.
-This milestone parses and resolves rules, but does not show prompts, modals,
+AndSpace v0.1 loads command safety rules as data for Command Guard. Milestone 4
+evaluates these rules in dry-run mode only: no prompts, modals, blocking,
 sidebars, AI handoff UI, or command palette features.
 
 ## File Locations
@@ -28,8 +28,8 @@ Higher-precedence sources come first. Identical rules in the same category keep
 the highest-precedence source, so project overrides user and user overrides
 built-in defaults.
 
-Allowed rules are returned separately and are intended to suppress protected or
-dangerous matches when Command Guard is added.
+Allowed rules suppress protected or dangerous matches during Command Guard
+evaluation.
 
 ## Recognized Sections
 
@@ -43,6 +43,9 @@ Section names are matched case-insensitively. Unknown sections are ignored.
 
 Protected rules resolve with `confirm` severity. Dangerous rules resolve with
 `type-to-confirm` severity. Allowed rules have no severity.
+
+Command Guard checks `Allowed` first, then `Dangerous Commands`, then
+`Protected Commands`.
 
 ## Rule Format
 
@@ -110,3 +113,5 @@ Dangerous defaults:
 - Aliases, shell functions, shell expansion, command substitution, and resolved
   executable paths are not handled yet.
 - Project lookup is `cwd/ANDSPACE.md`; it does not walk parent directories yet.
+- Command Guard catches what shell integration reports as command text.
+- Command Guard is a safety rail, not a security boundary.

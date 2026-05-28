@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod command_guard;
 mod commands;
 mod pty;
 mod rules;
@@ -19,6 +20,7 @@ fn main() {
             report_renderer,
             report_shell_event,
             load_rules_for_cwd,
+            evaluate_command_guard,
             open_url,
         ])
         .run(tauri::generate_context!())

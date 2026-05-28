@@ -11,8 +11,13 @@ import type {
 } from "./types";
 import type { ShellOscEvent } from "./shellIntegration";
 import { loadRulesForCwd, type ResolvedRules } from "./rules";
+import {
+  evaluateCommandGuard,
+  type CommandGuardEvaluation,
+} from "./commandGuard";
 
 const MAX_COMMAND_HISTORY = 50;
+const MAX_GUARD_HISTORY = 50;
 
 interface State {
   tabs: Tab[];
@@ -21,6 +26,7 @@ interface State {
   paneMeta: Record<PaneId, PaneMeta>;
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>;
   resolvedRulesByPane: Record<PaneId, ResolvedRules>;
+  guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>;
 
   newTab: () => Promise<void>;
   closeTab: (id: TabId) => Promise<void>;
@@ -34,6 +40,7 @@ interface State {
   switchToIndex: (idx: number) => void;
   updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
   loadRulesForPane: (paneId: PaneId, cwd: string) => Promise<void>;
+  evaluateGuardForPane: (paneId: PaneId, command: string) => Promise<void>;
   handleShellOsc: (
     paneId: PaneId,
     event: ShellOscEvent,
@@ -92,12 +99,14 @@ function initPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
   resolvedRulesByPane: Record<PaneId, ResolvedRules>,
+  guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>,
   paneId: PaneId
 ) {
   return {
     paneMeta: { ...paneMeta, [paneId]: {} },
     commandHistoryByPane: { ...commandHistoryByPane, [paneId]: [] },
     resolvedRulesByPane,
+    guardEvaluationsByPane: { ...guardEvaluationsByPane, [paneId]: [] },
   };
 }
 
@@ -105,15 +114,18 @@ function dropPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
   resolvedRulesByPane: Record<PaneId, ResolvedRules>,
+  guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>,
   paneId: PaneId
 ) {
   const { [paneId]: _m, ...restMeta } = paneMeta;
   const { [paneId]: _h, ...restHistory } = commandHistoryByPane;
   const { [paneId]: _r, ...restRules } = resolvedRulesByPane;
+  const { [paneId]: _g, ...restGuardHistory } = guardEvaluationsByPane;
   return {
     paneMeta: restMeta,
     commandHistoryByPane: restHistory,
     resolvedRulesByPane: restRules,
+    guardEvaluationsByPane: restGuardHistory,
   };
 }
 
@@ -124,6 +136,7 @@ export const useStore = create<State>((set, get) => ({
   paneMeta: {},
   commandHistoryByPane: {},
   resolvedRulesByPane: {},
+  guardEvaluationsByPane: {},
 
   updatePaneMeta: (paneId, patch) =>
     set((s) => ({
@@ -147,6 +160,38 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  evaluateGuardForPane: async (paneId, command) => {
+    const cwd = get().paneMeta[paneId]?.cwd;
+    if (!cwd) return;
+
+    try {
+      let rules = get().resolvedRulesByPane[paneId];
+      if (!rules || rules.cwd !== cwd) {
+        rules = await loadRulesForCwd(cwd);
+        set((s) => ({
+          resolvedRulesByPane: {
+            ...s.resolvedRulesByPane,
+            [paneId]: rules,
+          },
+        }));
+      }
+
+      const result = await evaluateCommandGuard(paneId, command, cwd, rules);
+      set((s) => {
+        const prev = s.guardEvaluationsByPane[paneId] ?? [];
+        const next = [...prev, result].slice(-MAX_GUARD_HISTORY);
+        return {
+          guardEvaluationsByPane: {
+            ...s.guardEvaluationsByPane,
+            [paneId]: next,
+          },
+        };
+      });
+    } catch (e) {
+      console.warn("Failed to evaluate Command Guard", e);
+    }
+  },
+
   handleShellOsc: (paneId, event, outputBoundary) => {
     const meta = get().paneMeta[paneId] ?? {};
     if (event.kind === "cwd" && event.cwd) {
@@ -163,6 +208,7 @@ export const useStore = create<State>((set, get) => ({
     }
     if (event.kind === "cmd" && event.command) {
       get().updatePaneMeta(paneId, { lastCommand: event.command });
+      void get().evaluateGuardForPane(paneId, event.command);
       return;
     }
     if (event.kind === "end") {
@@ -203,6 +249,7 @@ export const useStore = create<State>((set, get) => ({
         s.paneMeta,
         s.commandHistoryByPane,
         s.resolvedRulesByPane,
+        s.guardEvaluationsByPane,
         paneId
       )
     ),
@@ -219,6 +266,7 @@ export const useStore = create<State>((set, get) => ({
         s.paneMeta,
         s.commandHistoryByPane,
         s.resolvedRulesByPane,
+        s.guardEvaluationsByPane,
         paneId
       ),
       tabs: [...s.tabs, tab],
@@ -243,12 +291,19 @@ export const useStore = create<State>((set, get) => ({
       let paneMeta = s.paneMeta;
       let commandHistoryByPane = s.commandHistoryByPane;
       let resolvedRulesByPane = s.resolvedRulesByPane;
+      let guardEvaluationsByPane = s.guardEvaluationsByPane;
       for (const p of collectPanes(tab.root)) {
-        ({ paneMeta, commandHistoryByPane, resolvedRulesByPane } =
+        ({
+          paneMeta,
+          commandHistoryByPane,
+          resolvedRulesByPane,
+          guardEvaluationsByPane,
+        } =
           dropPaneShellState(
             paneMeta,
             commandHistoryByPane,
             resolvedRulesByPane,
+            guardEvaluationsByPane,
             p
           ));
       }
@@ -259,6 +314,7 @@ export const useStore = create<State>((set, get) => ({
         paneMeta,
         commandHistoryByPane,
         resolvedRulesByPane,
+        guardEvaluationsByPane,
       };
     });
   },
@@ -280,6 +336,7 @@ export const useStore = create<State>((set, get) => ({
         s.paneMeta,
         s.commandHistoryByPane,
         s.resolvedRulesByPane,
+        s.guardEvaluationsByPane,
         newPaneId
       ),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
@@ -303,6 +360,7 @@ export const useStore = create<State>((set, get) => ({
         s.paneMeta,
         s.commandHistoryByPane,
         s.resolvedRulesByPane,
+        s.guardEvaluationsByPane,
         paneId
       ),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),

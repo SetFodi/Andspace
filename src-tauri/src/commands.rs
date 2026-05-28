@@ -51,6 +51,18 @@ pub fn load_rules_for_cwd(cwd: String) -> Result<crate::rules::ResolvedRules, St
 }
 
 #[tauri::command]
+pub fn evaluate_command_guard(
+    pane_id: String,
+    command: String,
+    cwd: String,
+    rules: crate::rules::ResolvedRules,
+) -> Result<crate::command_guard::CommandGuardEvaluation, String> {
+    let result = crate::command_guard::evaluate_command_guard(&command, &cwd, &rules);
+    crate::pty::diag_log(&crate::command_guard::format_guard_log(&pane_id, &result));
+    Ok(result)
+}
+
+#[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     // Use macOS `open` to route to the registered URL handler.
     std::process::Command::new("open")

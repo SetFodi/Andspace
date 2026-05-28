@@ -47,6 +47,7 @@ version = "0.0.1"
 dependencies = [
  "parking_lot",
  "portable-pty",
+ "regex",
  "serde",
  "serde_json",
  "tauri",
