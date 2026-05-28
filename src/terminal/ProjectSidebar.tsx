@@ -52,6 +52,7 @@ import {
 interface Props {
   open: boolean;
   cwd: string | undefined;
+  gitRefreshKey: string;
   focusedSection: SectionKey;
   onFocusedSectionChange: (section: SectionKey) => void;
   onRunScript: (script: PackageScript, scripts: PackageScripts) => void;
@@ -76,6 +77,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
     {
       open,
       cwd,
+      gitRefreshKey,
       focusedSection,
       onFocusedSectionChange,
       onRunScript,
@@ -101,6 +103,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
     const [gitError, setGitError] = useState<string | null>(null);
 
     const rootRef = useRef<HTMLElement | null>(null);
+    const gitRefreshTimerRef = useRef<number | null>(null);
 
     const rootPath = cwd ?? "";
 
@@ -111,6 +114,10 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
 
     const refreshGitChanges = useCallback(() => {
       if (!cwd) return;
+      if (gitRefreshTimerRef.current !== null) {
+        window.clearTimeout(gitRefreshTimerRef.current);
+        gitRefreshTimerRef.current = null;
+      }
       setGitLoading(true);
       setGitError(null);
       void reportGitEvent("git-refresh", { cwd });
@@ -125,6 +132,17 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
         })
         .finally(() => setGitLoading(false));
     }, [cwd]);
+
+    const scheduleGitRefresh = useCallback(() => {
+      if (!cwd) return;
+      if (gitRefreshTimerRef.current !== null) {
+        window.clearTimeout(gitRefreshTimerRef.current);
+      }
+      gitRefreshTimerRef.current = window.setTimeout(() => {
+        gitRefreshTimerRef.current = null;
+        refreshGitChanges();
+      }, 220);
+    }, [cwd, refreshGitChanges]);
 
     useImperativeHandle(
       ref,
@@ -209,14 +227,27 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
     }, [cwd, onToast, open]);
 
     useEffect(() => {
-      if (!open || !cwd) return;
-      refreshGitChanges();
-    }, [cwd, open, refreshGitChanges]);
-
-    useEffect(() => {
       if (!open || focusedSection !== "git") return;
       refreshGitChanges();
     }, [focusedSection, open, refreshGitChanges]);
+
+    useEffect(() => {
+      if (!open || !cwd || !gitRefreshKey) return;
+      scheduleGitRefresh();
+      return () => {
+        if (gitRefreshTimerRef.current !== null) {
+          window.clearTimeout(gitRefreshTimerRef.current);
+          gitRefreshTimerRef.current = null;
+        }
+      };
+    }, [cwd, gitRefreshKey, open, scheduleGitRefresh]);
+
+    useEffect(() => {
+      if (!open || !cwd) return;
+      const onFocus = () => scheduleGitRefresh();
+      window.addEventListener("focus", onFocus);
+      return () => window.removeEventListener("focus", onFocus);
+    }, [cwd, open, scheduleGitRefresh]);
 
     const expandTruncated = useCallback(
       (path: string) => {
@@ -702,6 +733,7 @@ function GitChangesSection({
       : status?.isRepo
         ? "clean"
         : undefined;
+  const repoName = status?.repoRoot ? basename(status.repoRoot) : null;
 
   return (
     <SidebarSection
@@ -714,8 +746,15 @@ function GitChangesSection({
       onFocus={onFocus}
     >
       <div className="git-summary">
-        <div className="git-branch" title={status?.branch ?? ""}>
-          {status?.isRepo ? (status.branch ?? "detached") : "No Git repo"}
+        <div className="git-identity">
+          <div className="git-repo" title={status?.repoRoot ?? ""}>
+            {status?.isRepo ? (repoName ?? "Repository") : "No Git repo"}
+          </div>
+          {status?.isRepo && (
+            <div className="git-branch" title={status.branch ?? ""}>
+              {status.branch ?? "detached"}
+            </div>
+          )}
         </div>
         <button
           type="button"
@@ -964,6 +1003,10 @@ function fileIconFor(name: string) {
 function shortPath(path: string): string {
   if (!path) return "";
   return path.replace(/^\/Users\/[^/]+/, "~");
+}
+
+function basename(path: string): string {
+  return path.replace(/\/$/, "").split("/").pop() ?? path;
 }
 
 export function scriptCommandForSidebar(script: PackageScript, scripts: PackageScripts) {

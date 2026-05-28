@@ -153,6 +153,10 @@ export default function App() {
     const paneId = s.activePaneByTab[s.activeTabId];
     return paneId ? s.paneMeta[paneId]?.cwd : undefined;
   });
+  const activePaneCommandEndedAt = useStore((s) => {
+    const paneId = s.activePaneByTab[s.activeTabId];
+    return paneId ? (s.paneMeta[paneId]?.lastCommandEndedAt ?? 0) : 0;
+  });
   const activeHandoffRecord = useStore((s) => {
     const paneId = s.activePaneByTab[s.activeTabId];
     const history = paneId ? s.handoffHistoryByPane[paneId] : undefined;
@@ -252,6 +256,8 @@ export default function App() {
     () => activeRules?.projectContext.map((item) => item.value) ?? [],
     [activeRules]
   );
+  const sidebarCwd = projectRoot ?? activePaneCwd;
+  const gitRefreshKey = `${activePaneId ?? ""}:${sidebarCwd ?? ""}:${activePaneCommandEndedAt}`;
 
   const refocusTerminal = useCallback(() => {
     window.setTimeout(() => {
@@ -1013,6 +1019,10 @@ export default function App() {
     }
   }, [activePaneId, activePaneCwd, loadRulesForPane]);
 
+  useEffect(() => {
+    lastGitFileRef.current = null;
+  }, [sidebarCwd]);
+
   // Detect external editors once at startup. Result is cached for the
   // session — re-detecting on every overlay open would add latency for
   // basically no benefit (PATH rarely changes mid-session).
@@ -1037,6 +1047,7 @@ export default function App() {
       return;
     }
     let cancelled = false;
+    setProjectRoot(undefined);
     resolveProjectRoot(activePaneCwd)
       .then((resolved) => {
         if (!cancelled) setProjectRoot(resolved.root);
@@ -1057,7 +1068,8 @@ export default function App() {
         <ProjectSidebar
           ref={sidebarRef}
           open={sidebarOpen}
-          cwd={projectRoot ?? activePaneCwd}
+          cwd={sidebarCwd}
+          gitRefreshKey={gitRefreshKey}
           focusedSection={sidebarSection}
           onFocusedSectionChange={setSidebarSection}
           onRunScript={runProjectScript}

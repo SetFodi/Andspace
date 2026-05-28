@@ -36,8 +36,12 @@ AndSpace does not run `git add`, `git commit`, `git push`, `git pull`,
 
 There is no polling and no background Git watcher.
 
-Git status loads when the sidebar opens and refreshes when the Git Changes
-section is focused. The section also has a small refresh button, and the
+Git Changes follows the active terminal pane / tab. When focus moves to a pane
+in another repository, the section switches to that pane's repo only.
+
+Git status loads when the sidebar opens, refreshes when Git Changes is focused,
+refreshes after the active pane's foreground command ends, and refreshes when
+the app regains focus. The section also has a small refresh button, and the
 command palette includes **Refresh Git Changes**.
 
 ## Diff Preview

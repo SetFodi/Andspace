@@ -54,8 +54,9 @@ URL. Full behavior in [SERVERS.md](SERVERS.md).
 
 ## Git Changes
 
-The Git Changes section is read-only. It walks upward from the project root /
-active cwd to find `.git`, then runs only:
+The Git Changes section is read-only and follows the active terminal pane /
+tab. It walks upward from that pane's project root / active cwd to find `.git`,
+then runs only:
 
 ```text
 git status --porcelain=v1 -b
@@ -66,7 +67,9 @@ deleted, renamed, and untracked files. Clicking a changed file opens a
 read-only diff preview. Right-click or `Cmd+Enter` opens the existing File
 Actions overlay. There is no staging, commit, push, pull, reset, checkout,
 stash, merge, or rebase UI. Risky Git commands remain protected by Command
-Guard. Full behavior in [GIT_CHANGES.md](GIT_CHANGES.md).
+Guard. Git status refreshes on sidebar open, Git-section focus, active command
+end, app focus, and manual refresh; there is still no polling or watcher. Full
+behavior in [GIT_CHANGES.md](GIT_CHANGES.md).
 
 ## Scripts
 

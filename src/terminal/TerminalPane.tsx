@@ -26,6 +26,11 @@ interface PtyOutputPayload {
 // Cheap and significant: 2 paints/sec while blinking is ~2% of one CPU core.
 const BLINK_IDLE_MS = 3000;
 
+type RepairOptions = {
+  resize?: boolean;
+  clearAtlas?: boolean;
+};
+
 function isAppShortcut(e: KeyboardEvent): boolean {
   if (!e.metaKey || e.ctrlKey) return false;
   const k = e.key;
@@ -127,6 +132,40 @@ export function TerminalPane({ paneId, tabId }: Props) {
     let webgl: WebglAddon | null = null;
     let initialized = false;
     let cancelled = false;
+    let repairFrame: number | null = null;
+
+    const resizePtyToTerminal = () => {
+      invoke("resize_pty", {
+        paneId,
+        cols: term.cols,
+        rows: term.rows,
+      }).catch(() => {});
+    };
+
+    const repairTerminalRender = (options: RepairOptions = {}) => {
+      if (cancelled) return;
+      if (repairFrame !== null) {
+        cancelAnimationFrame(repairFrame);
+      }
+      repairFrame = requestAnimationFrame(() => {
+        repairFrame = requestAnimationFrame(() => {
+          repairFrame = null;
+          if (cancelled) return;
+          try {
+            if (options.resize) {
+              fit.fit();
+              resizePtyToTerminal();
+            }
+            if (options.clearAtlas) {
+              webgl?.clearTextureAtlas();
+            }
+            term.refresh(0, Math.max(0, term.rows - 1));
+          } catch {
+            // xterm may already be disposed while a deferred repair is queued.
+          }
+        });
+      });
+    };
 
     // Defer fit + WebGL + PTY resize until the container has its real size.
     // On mount the WKWebView may not have committed layout yet, so xterm's
@@ -160,15 +199,9 @@ export function TerminalPane({ paneId, tabId }: Props) {
         Promise.all([
           document.fonts.load('400 1em "JetBrainsMono Nerd Font Mono"'),
           document.fonts.load('700 1em "JetBrainsMono Nerd Font Mono"'),
+          document.fonts.ready,
         ])
-          .then(() => {
-            try {
-              webgl?.clearTextureAtlas();
-              term.refresh(0, term.rows - 1);
-            } catch {
-              // Atlas may already be disposed if the component unmounted.
-            }
-          })
+          .then(() => repairTerminalRender({ resize: true, clearAtlas: true }))
           .catch(() => {});
       }
 
@@ -178,17 +211,11 @@ export function TerminalPane({ paneId, tabId }: Props) {
         () => {}
       );
 
-      invoke("resize_pty", {
-        paneId,
-        cols: term.cols,
-        rows: term.rows,
-      }).catch(() => {});
+      resizePtyToTerminal();
 
       // Force a paint — WebGL renderer sometimes skips its first frame
       // if the container size changed between open() and load().
-      try {
-        term.refresh(0, term.rows - 1);
-      } catch {}
+      repairTerminalRender({ clearAtlas: true });
     };
 
     const rafId = requestAnimationFrame(initialize);
@@ -231,6 +258,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
     const onRefocusTerminal = () => {
       if (isActiveRef.current && document.hasFocus()) {
         term.focus();
+        repairTerminalRender({ resize: true, clearAtlas: true });
       }
     };
     window.addEventListener("andspace-refocus-terminal", onRefocusTerminal);
@@ -238,7 +266,10 @@ export function TerminalPane({ paneId, tabId }: Props) {
     // Initial state
     evaluateBlink();
 
+    const activatePane = () => setActivePane(tabId, paneId);
+
     const dataDisposable = term.onData((data) => {
+      activatePane();
       onInputActivity();
       invoke("write_to_pty", { paneId, data }).catch(() => {});
     });
@@ -278,34 +309,41 @@ export function TerminalPane({ paneId, tabId }: Props) {
       }
       try {
         fit.fit();
-        invoke("resize_pty", {
-          paneId,
-          cols: term.cols,
-          rows: term.rows,
-        }).catch(() => {});
+        resizePtyToTerminal();
+        repairTerminalRender();
       } catch {}
     };
 
     const ro = new ResizeObserver(syncSize);
     ro.observe(container);
+    window.addEventListener("resize", syncSize);
 
-    const onMouseDown = () => setActivePane(tabId, paneId);
-    container.addEventListener("mousedown", onMouseDown);
+    const paneSlot = container.parentElement;
+    paneSlot?.addEventListener("transitionend", syncSize);
+    paneSlot?.addEventListener("animationend", syncSize);
+
+    container.addEventListener("pointerdown", activatePane, true);
+    container.addEventListener("focusin", activatePane);
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
+      if (repairFrame !== null) cancelAnimationFrame(repairFrame);
       window.clearInterval(blinkInterval);
       window.removeEventListener("focus", evaluateBlink);
       window.removeEventListener("blur", evaluateBlink);
       window.removeEventListener("andspace-refocus-terminal", onRefocusTerminal);
+      window.removeEventListener("resize", syncSize);
       dataDisposable.dispose();
       selectionDisposable.dispose();
       shellIntegration.dispose();
       unlisten?.();
       unlistenExit?.();
       ro.disconnect();
-      container.removeEventListener("mousedown", onMouseDown);
+      paneSlot?.removeEventListener("transitionend", syncSize);
+      paneSlot?.removeEventListener("animationend", syncSize);
+      container.removeEventListener("pointerdown", activatePane, true);
+      container.removeEventListener("focusin", activatePane);
       try {
         webgl?.dispose();
       } catch {}

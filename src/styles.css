@@ -687,21 +687,38 @@ body,
 
 .git-summary {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   padding: 2px 6px 5px;
 }
 
-.git-branch {
+.git-identity {
   min-width: 0;
   flex: 1;
+}
+
+.git-repo,
+.git-branch {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-repo {
   color: #c8c8d2;
   font-size: 11px;
   font-weight: 650;
   letter-spacing: -0.005em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.git-branch {
+  margin-top: 2px;
+  color: #7b7d8b;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .git-refresh {
@@ -884,11 +901,9 @@ body,
 @keyframes pane-appear {
   from {
     opacity: 0;
-    transform: scale(0.97);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -916,6 +931,7 @@ body,
 }
 
 .terminal-pane .xterm {
+  width: 100%;
   height: 100%;
 }
 
