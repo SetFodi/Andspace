@@ -83,7 +83,7 @@ Each OSC event invokes `report_shell_event` → append to
 
 ## Manual verification
 
-1. Launch AndSpace.
+1. Launch AndSpace (`pnpm tauri dev` or the release `.app` after `pnpm tauri build`).
 2. In a pane: `source "$ANDSPACE_ZSH_INTEGRATION"`.
 3. Run `pwd`, `echo hello`, `false`.
 4. Inspect log:
@@ -96,6 +96,21 @@ Expect lines containing `kind=cwd`, `kind=start`, `kind=cmd`, `kind=end`
 with `exit=0` or `exit=1`.
 
 5. Status bar (bottom right) should show the current directory after `pwd`.
+
+## Automated verification (dev)
+
+When keyboard automation cannot focus the WebView, use the env-gated PTY
+injector (dev builds only):
+
+```bash
+: > /tmp/andspace-diag.log
+ANDSPACE_RUN_SHELL_TEST=1 pnpm tauri dev
+# wait ~8s, then:
+grep 'shell pane=' /tmp/andspace-diag.log
+```
+
+Expect `shell-test-inject`, then `kind=start` / `kind=cmd` / `kind=end`
+for `pwd`, `echo hello`, and `false` (`exit=1`).
 
 ## Limitations (v0.1)
 

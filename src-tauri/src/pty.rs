@@ -3,7 +3,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::sync::Arc;
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Append a single timestamped line to /tmp/andspace-diag.log. Used to verify
 /// PTY lifecycle (create / kill / natural exit) and renderer choice without
@@ -136,6 +136,28 @@ impl PtyManager {
             child,
         };
         self.panes.lock().insert(pane_id.clone(), handle);
+
+        if std::env::var("ANDSPACE_RUN_SHELL_TEST").is_ok() {
+            if let Some(path) = zsh_integration_path() {
+                let pane_for_test = pane_id.clone();
+                let panes_for_test = self.panes.clone();
+                thread::spawn(move || {
+                    thread::sleep(Duration::from_secs(4));
+                    let script = format!(
+                        "source '{path}'\npwd\necho hello\nfalse\n"
+                    );
+                    if let Some(h) = panes_for_test.lock().get_mut(&pane_for_test) {
+                        diag_log(&format!(
+                            "shell-test-inject pane={pane_for_test} bytes={}",
+                            script.len()
+                        ));
+                        let _ = h.writer.write_all(script.as_bytes());
+                        let _ = h.writer.flush();
+                    }
+                });
+            }
+        }
+
         Ok(pane_id)
     }
 
