@@ -18,9 +18,16 @@ import {
   type CommandGuardEvaluation,
   type GuardConfirmationRequest,
 } from "./commandGuard";
+import {
+  clearOutputCapture,
+  finishOutputCapture,
+  startOutputCapture,
+  type HandoffCommandRecord,
+} from "./aiHandoff";
 
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
+const MAX_HANDOFF_HISTORY = 12;
 
 interface State {
   tabs: Tab[];
@@ -28,6 +35,8 @@ interface State {
   activePaneByTab: Record<TabId, PaneId>;
   paneMeta: Record<PaneId, PaneMeta>;
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>;
+  handoffHistoryByPane: Record<PaneId, HandoffCommandRecord[]>;
+  selectedTextByPane: Record<PaneId, string>;
   resolvedRulesByPane: Record<PaneId, ResolvedRules>;
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>;
   pendingGuardConfirmation: GuardConfirmationRequest | null;
@@ -43,6 +52,7 @@ interface State {
   prevTab: () => void;
   switchToIndex: (idx: number) => void;
   updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
+  setPaneSelectedText: (paneId: PaneId, text: string) => void;
   loadRulesForPane: (paneId: PaneId, cwd: string) => Promise<void>;
   evaluateGuardForPane: (paneId: PaneId, command: string) => Promise<void>;
   respondToGuardConfirmation: (action: "run" | "cancel") => Promise<void>;
@@ -103,6 +113,8 @@ function collectPanes(node: SplitNode): PaneId[] {
 function initPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  handoffHistoryByPane: Record<PaneId, HandoffCommandRecord[]>,
+  selectedTextByPane: Record<PaneId, string>,
   resolvedRulesByPane: Record<PaneId, ResolvedRules>,
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>,
   paneId: PaneId
@@ -110,6 +122,8 @@ function initPaneShellState(
   return {
     paneMeta: { ...paneMeta, [paneId]: {} },
     commandHistoryByPane: { ...commandHistoryByPane, [paneId]: [] },
+    handoffHistoryByPane: { ...handoffHistoryByPane, [paneId]: [] },
+    selectedTextByPane: { ...selectedTextByPane, [paneId]: "" },
     resolvedRulesByPane,
     guardEvaluationsByPane: { ...guardEvaluationsByPane, [paneId]: [] },
   };
@@ -118,17 +132,24 @@ function initPaneShellState(
 function dropPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  handoffHistoryByPane: Record<PaneId, HandoffCommandRecord[]>,
+  selectedTextByPane: Record<PaneId, string>,
   resolvedRulesByPane: Record<PaneId, ResolvedRules>,
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>,
   paneId: PaneId
 ) {
   const { [paneId]: _m, ...restMeta } = paneMeta;
   const { [paneId]: _h, ...restHistory } = commandHistoryByPane;
+  const { [paneId]: _hh, ...restHandoffHistory } = handoffHistoryByPane;
+  const { [paneId]: _st, ...restSelectedText } = selectedTextByPane;
   const { [paneId]: _r, ...restRules } = resolvedRulesByPane;
   const { [paneId]: _g, ...restGuardHistory } = guardEvaluationsByPane;
+  clearOutputCapture(paneId);
   return {
     paneMeta: restMeta,
     commandHistoryByPane: restHistory,
+    handoffHistoryByPane: restHandoffHistory,
+    selectedTextByPane: restSelectedText,
     resolvedRulesByPane: restRules,
     guardEvaluationsByPane: restGuardHistory,
   };
@@ -140,6 +161,8 @@ export const useStore = create<State>((set, get) => ({
   activePaneByTab: {},
   paneMeta: {},
   commandHistoryByPane: {},
+  handoffHistoryByPane: {},
+  selectedTextByPane: {},
   resolvedRulesByPane: {},
   guardEvaluationsByPane: {},
   pendingGuardConfirmation: null,
@@ -149,6 +172,14 @@ export const useStore = create<State>((set, get) => ({
       paneMeta: {
         ...s.paneMeta,
         [paneId]: { ...s.paneMeta[paneId], ...patch },
+      },
+    })),
+
+  setPaneSelectedText: (paneId, text) =>
+    set((s) => ({
+      selectedTextByPane: {
+        ...s.selectedTextByPane,
+        [paneId]: text,
       },
     })),
 
@@ -216,6 +247,7 @@ export const useStore = create<State>((set, get) => ({
       return;
     }
     if (event.kind === "start") {
+      startOutputCapture(paneId);
       get().updatePaneMeta(paneId, {
         commandRunning: true,
         lastCommandStartedAt: event.timestamp ?? Date.now(),
@@ -258,20 +290,42 @@ export const useStore = create<State>((set, get) => ({
     if (event.kind === "end") {
       const endedAt = event.timestamp ?? Date.now();
       const exitCode = event.exitCode ?? 0;
+      const captured = finishOutputCapture(paneId);
       const entry: CommandHistoryEntry = {
         command: meta.lastCommand ?? "",
         exitCode,
         startedAt: meta.lastCommandStartedAt ?? endedAt,
         endedAt,
         outputBoundary: meta.outputBoundary ?? outputBoundary,
+        outputLines: captured.outputLines,
+        outputLineCount: captured.outputLineCount,
+        outputTruncated: captured.outputTruncated,
+      };
+      const handoffRecord: HandoffCommandRecord = {
+        command: entry.command,
+        cwd: meta.cwd ?? "",
+        exitCode,
+        startedAt: entry.startedAt,
+        endedAt,
+        outputLines: captured.outputLines,
+        outputLineCount: captured.outputLineCount,
+        outputTruncated: captured.outputTruncated,
       };
       set((s) => {
         const prev = s.commandHistoryByPane[paneId] ?? [];
         const next = [...prev, entry].slice(-MAX_COMMAND_HISTORY);
+        const prevHandoff = s.handoffHistoryByPane[paneId] ?? [];
+        const nextHandoff = [...prevHandoff, handoffRecord].slice(
+          -MAX_HANDOFF_HISTORY
+        );
         return {
           commandHistoryByPane: {
             ...s.commandHistoryByPane,
             [paneId]: next,
+          },
+          handoffHistoryByPane: {
+            ...s.handoffHistoryByPane,
+            [paneId]: nextHandoff,
           },
           paneMeta: {
             ...s.paneMeta,
@@ -292,6 +346,8 @@ export const useStore = create<State>((set, get) => ({
       dropPaneShellState(
         s.paneMeta,
         s.commandHistoryByPane,
+        s.handoffHistoryByPane,
+        s.selectedTextByPane,
         s.resolvedRulesByPane,
         s.guardEvaluationsByPane,
         paneId
@@ -309,6 +365,8 @@ export const useStore = create<State>((set, get) => ({
       ...initPaneShellState(
         s.paneMeta,
         s.commandHistoryByPane,
+        s.handoffHistoryByPane,
+        s.selectedTextByPane,
         s.resolvedRulesByPane,
         s.guardEvaluationsByPane,
         paneId
@@ -334,18 +392,24 @@ export const useStore = create<State>((set, get) => ({
       const { [id]: _removed, ...rest } = s.activePaneByTab;
       let paneMeta = s.paneMeta;
       let commandHistoryByPane = s.commandHistoryByPane;
+      let handoffHistoryByPane = s.handoffHistoryByPane;
+      let selectedTextByPane = s.selectedTextByPane;
       let resolvedRulesByPane = s.resolvedRulesByPane;
       let guardEvaluationsByPane = s.guardEvaluationsByPane;
       for (const p of collectPanes(tab.root)) {
         ({
           paneMeta,
           commandHistoryByPane,
+          handoffHistoryByPane,
+          selectedTextByPane,
           resolvedRulesByPane,
           guardEvaluationsByPane,
         } =
           dropPaneShellState(
             paneMeta,
             commandHistoryByPane,
+            handoffHistoryByPane,
+            selectedTextByPane,
             resolvedRulesByPane,
             guardEvaluationsByPane,
             p
@@ -357,6 +421,8 @@ export const useStore = create<State>((set, get) => ({
         activePaneByTab: rest,
         paneMeta,
         commandHistoryByPane,
+        handoffHistoryByPane,
+        selectedTextByPane,
         resolvedRulesByPane,
         guardEvaluationsByPane,
       };
@@ -379,6 +445,8 @@ export const useStore = create<State>((set, get) => ({
       ...initPaneShellState(
         s.paneMeta,
         s.commandHistoryByPane,
+        s.handoffHistoryByPane,
+        s.selectedTextByPane,
         s.resolvedRulesByPane,
         s.guardEvaluationsByPane,
         newPaneId
@@ -403,6 +471,8 @@ export const useStore = create<State>((set, get) => ({
       ...dropPaneShellState(
         s.paneMeta,
         s.commandHistoryByPane,
+        s.handoffHistoryByPane,
+        s.selectedTextByPane,
         s.resolvedRulesByPane,
         s.guardEvaluationsByPane,
         paneId

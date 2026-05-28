@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai_handoff;
 mod command_guard;
 mod commands;
 mod pty;
@@ -21,6 +22,8 @@ fn main() {
             report_shell_event,
             load_rules_for_cwd,
             init_andspace_rules,
+            build_ai_handoff_prompt,
+            report_ai_handoff_event,
             evaluate_command_guard,
             report_command_guard_ui_request,
             respond_command_guard,

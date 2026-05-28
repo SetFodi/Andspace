@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
 import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
+import { HandoffOverlay } from "./terminal/HandoffOverlay";
 import { initAndspaceRules } from "./terminal/rules";
 
 function TitleBar() {
@@ -55,6 +56,19 @@ export default function App() {
     const paneId = s.activePaneByTab[s.activeTabId];
     return paneId ? s.paneMeta[paneId]?.cwd : undefined;
   });
+  const activeHandoffRecord = useStore((s) => {
+    const paneId = s.activePaneByTab[s.activeTabId];
+    const history = paneId ? s.handoffHistoryByPane[paneId] : undefined;
+    return history?.[history.length - 1] ?? null;
+  });
+  const activeRules = useStore((s) => {
+    const paneId = s.activePaneByTab[s.activeTabId];
+    return paneId ? s.resolvedRulesByPane[paneId] : undefined;
+  });
+  const activeSelectedText = useStore((s) => {
+    const paneId = s.activePaneByTab[s.activeTabId];
+    return paneId ? (s.selectedTextByPane[paneId] ?? "") : "";
+  });
   const newTab = useStore((s) => s.newTab);
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
@@ -68,11 +82,17 @@ export default function App() {
     (s) => s.respondToGuardConfirmation
   );
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [handoffOpen, setHandoffOpen] = useState(false);
 
-  const showToast = (next: ToastState) => {
+  const showToast = useCallback((next: ToastState) => {
     setToast(next);
     window.setTimeout(() => setToast(null), 2800);
-  };
+  }, []);
+
+  const handoffProjectContext = useMemo(
+    () => activeRules?.projectContext.map((item) => item.value) ?? [],
+    [activeRules]
+  );
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -132,6 +152,9 @@ export default function App() {
               message: `Could not initialize ANDSPACE.md: ${String(e)}`,
             })
           );
+      } else if (k.toLowerCase() === "e" && !e.shiftKey) {
+        e.preventDefault();
+        setHandoffOpen(true);
       } else if (k === "]") {
         e.preventDefault();
         nextTab();
@@ -157,6 +180,7 @@ export default function App() {
     prevTab,
     switchToIndex,
     loadRulesForPane,
+    showToast,
   ]);
 
   useEffect(() => {
@@ -182,6 +206,16 @@ export default function App() {
       <GuardConfirmationOverlay
         request={pendingGuardConfirmation}
         onRespond={respondToGuardConfirmation}
+      />
+      <HandoffOverlay
+        open={handoffOpen}
+        paneId={activePaneId}
+        cwd={activePaneCwd}
+        record={activeHandoffRecord}
+        projectContext={handoffProjectContext}
+        selectedText={activeSelectedText}
+        onClose={() => setHandoffOpen(false)}
+        onToast={(message, tone) => showToast({ message, tone })}
       />
       {toast && (
         <div className={`app-toast ${toast.tone}`} role="status">

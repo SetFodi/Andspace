@@ -8,6 +8,7 @@ import { listen } from "@tauri-apps/api/event";
 import { installShellIntegration } from "./shellIntegration";
 import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
+import { appendOutputCapture } from "./aiHandoff";
 
 interface Props {
   paneId: PaneId;
@@ -30,6 +31,7 @@ function isAppShortcut(e: KeyboardEvent): boolean {
   return (
     k === "t" ||
     k === "w" ||
+    k.toLowerCase() === "e" ||
     (e.shiftKey && k.toLowerCase() === "i") ||
     k === "[" ||
     k === "]" ||
@@ -43,6 +45,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const setActivePane = useStore((s) => s.setActivePane);
+  const setPaneSelectedText = useStore((s) => s.setPaneSelectedText);
   const handleShellOsc = useStore((s) => s.handleShellOsc);
   // A pane is "active" only when its tab is the active tab AND it's the
   // active pane within that tab. This makes focus follow tab switches.
@@ -202,10 +205,16 @@ export function TerminalPane({ paneId, tabId }: Props) {
       invoke("write_to_pty", { paneId, data }).catch(() => {});
     });
 
+    const selectionDisposable = term.onSelectionChange(() => {
+      setPaneSelectedText(paneId, term.getSelection());
+    });
+
     let unlisten: (() => void) | null = null;
     listen<PtyOutputPayload>("pty-output", (event) => {
       if (event.payload.pane_id !== paneId) return;
-      term.write(new Uint8Array(event.payload.data));
+      const bytes = new Uint8Array(event.payload.data);
+      appendOutputCapture(paneId, new TextDecoder().decode(bytes));
+      term.write(bytes);
     }).then((fn) => {
       unlisten = fn;
     });
@@ -248,6 +257,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       window.removeEventListener("focus", evaluateBlink);
       window.removeEventListener("blur", evaluateBlink);
       dataDisposable.dispose();
+      selectionDisposable.dispose();
       shellIntegration.dispose();
       unlisten?.();
       unlistenExit?.();
@@ -259,7 +269,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       term.dispose();
       termRef.current = null;
     };
-  }, [paneId, tabId, setActivePane, handleShellOsc]);
+  }, [paneId, tabId, setActivePane, setPaneSelectedText, handleShellOsc]);
 
   // Focus/blur the xterm based on whether it's the active pane. Blurring
   // inactive panes means cursorInactiveStyle: "none" applies and they

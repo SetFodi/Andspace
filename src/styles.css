@@ -534,6 +534,198 @@ body,
   filter: grayscale(0.4);
 }
 
+/* === AI handoff utility ================================================== */
+
+.handoff-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 26px;
+  background: linear-gradient(180deg, transparent 0%, rgba(4, 5, 8, 0.48) 100%);
+  backdrop-filter: blur(3px);
+}
+
+.handoff-card {
+  position: relative;
+  overflow: hidden;
+  width: min(620px, calc(100vw - 52px));
+  max-height: min(78vh, 720px);
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(27, 28, 35, 0.98), #101116);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  animation: handoff-in 140ms ease-out;
+}
+
+.handoff-glow {
+  position: absolute;
+  inset: -80px -40px auto auto;
+  width: 180px;
+  height: 180px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.2), transparent 62%);
+}
+
+@keyframes handoff-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.handoff-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.handoff-kicker {
+  margin-bottom: 5px;
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.handoff-head h2 {
+  margin: 0;
+  color: #f4f4f6;
+  font-size: 20px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.handoff-chip {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.14);
+  color: #ded8ff;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.handoff-summary {
+  display: grid;
+  grid-template-columns: 1.4fr 1.4fr 0.45fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.handoff-summary div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.handoff-summary span {
+  display: block;
+  margin-bottom: 5px;
+  color: #777986;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.handoff-summary strong {
+  display: block;
+  overflow: hidden;
+  color: #e6e6ea;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.handoff-note {
+  margin: 13px 0 0;
+  color: #a7a8b3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.handoff-preview {
+  max-height: 320px;
+  margin: 14px 0 0;
+  padding: 13px;
+  overflow: auto;
+  border-radius: 12px;
+  background: #08090c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ededf2;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.handoff-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.handoff-button {
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 13px;
+  color: #f4f4f6;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.handoff-button.primary {
+  background: #a78bfa;
+  color: #111217;
+}
+
+.handoff-button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.handoff-button.ghost {
+  background: transparent;
+  color: #a7a8b3;
+}
+
+.handoff-button:hover,
+.handoff-button:focus-visible {
+  filter: brightness(1.08);
+}
+
+.handoff-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.handoff-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
 /* === Toast ============================================================== */
 
 .app-toast {

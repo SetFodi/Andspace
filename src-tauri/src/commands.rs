@@ -58,6 +58,40 @@ pub fn init_andspace_rules(cwd: String) -> Result<crate::rules::InitRulesResult,
 }
 
 #[tauri::command]
+pub fn build_ai_handoff_prompt(
+    input: crate::ai_handoff::HandoffPromptInput,
+) -> Result<crate::ai_handoff::HandoffPrompt, String> {
+    Ok(crate::ai_handoff::build_handoff_prompt(input))
+}
+
+#[tauri::command]
+pub fn report_ai_handoff_event(
+    event: String,
+    pane_id: String,
+    command: Option<String>,
+    exit_code: Option<i32>,
+    output_line_count: usize,
+    redaction_count: usize,
+) {
+    let event = if matches!(
+        event.as_str(),
+        "handoff-open" | "handoff-copy" | "handoff-preview"
+    ) {
+        event
+    } else {
+        "handoff-unknown".to_string()
+    };
+    let command = command.unwrap_or_default();
+    let exit_code = exit_code
+        .map(|code| code.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    crate::pty::diag_log(&format!(
+        "{event} pane={pane_id} command={} exit_code={exit_code} output_line_count={output_line_count} redaction_count={redaction_count}",
+        log_value(&command)
+    ));
+}
+
+#[tauri::command]
 pub fn evaluate_command_guard(
     pane_id: String,
     command: String,

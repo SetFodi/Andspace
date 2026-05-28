@@ -20,6 +20,9 @@ export interface CommandHistoryEntry {
   startedAt: number;
   endedAt: number;
   outputBoundary: number;
+  outputLines?: string[];
+  outputLineCount?: number;
+  outputTruncated?: boolean;
 }
 
 export interface PaneMeta {
