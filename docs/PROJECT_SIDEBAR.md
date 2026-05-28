@@ -108,7 +108,8 @@ server-copy url=http://localhost:5173
 ## Limits
 
 - No Git panel.
-- No server detection.
+- No background server scanning.
+- No embedded server preview.
 - No file editing.
 - No full file preview.
 - No settings UI.

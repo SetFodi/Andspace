@@ -1,35 +1,74 @@
-# AndSpace — Phase 0 Prototype
+# AndSpace
 
-Minimal macOS terminal built on Tauri 2 + Rust + xterm.js, used to validate
-whether this stack can carry the eventual AndSpace product.
+AndSpace is a terminal-first macOS app built with Tauri 2, Rust, and xterm.js.
+The current v0.1-alpha focuses on a reliable local workflow: terminal tabs and
+splits, command safety, AI CLI handoff, and a lightweight project sidebar.
 
-**This is not v0.1.** No Command Guard, no `ANDSPACE.md`, no AI handoff,
-no sidebar. See `docs/PHASE_0.md` for what this is and isn't, and
-`docs/BENCHMARKS.md` for the validation gate.
+## Current v0.1-alpha
+
+- Terminal tabs, splits, and pane focus navigation
+- Command Guard with project rules from `ANDSPACE.md`
+- `Cmd+Shift+I` initializer for `ANDSPACE.md`
+- AI handoff through installed local Claude Code, Codex, or Cursor CLIs
+- Command palette for core workflow actions
+- Optional project sidebar with Files, Scripts, and Servers
+- File Actions for Cursor, VS Code, Neovim split, copy path, and Finder reveal
+- Passive localhost server detection from terminal output
+
+AndSpace does not call provider APIs, manage API keys, or create API billing.
+AI handoff is local CLI orchestration only.
 
 ## Run
 
 ```bash
 pnpm install
-pnpm build          # one-time: populates dist/ so Tauri's macro is satisfied
+pnpm build
 pnpm tauri dev
 ```
 
-First `pnpm tauri dev` compiles all Cargo deps (5–10 min). Subsequent runs
-are fast. The `pnpm build` step is only needed once — `dist/` is gitignored
-but Tauri's `generate_context!` macro validates it exists at compile time.
+First `pnpm tauri dev` compiles all Cargo dependencies. Subsequent runs are
+incremental. `pnpm build` populates `dist/`, which Tauri validates at compile
+time.
+
+## Build
+
+```bash
+pnpm tauri build
+```
+
+The release app is written to:
+
+```text
+src-tauri/target/release/bundle/macos/AndSpace.app
+```
 
 ## Shortcuts
 
 | Shortcut | Action |
-|---|---|
-| ⌘T | New tab |
-| ⌘W | Close current pane (closes tab if it's the only pane) |
-| ⌘→ | Split right |
-| ⌘↓ | Split down |
-| ⌘[ / ⌘] | Previous / next tab |
-| ⌘1–⌘9 | Jump to tab N |
+| --- | --- |
+| `Cmd+T` | New tab |
+| `Cmd+W` | Close active pane / tab |
+| `Cmd+O` | Split right |
+| `Cmd+L` | Split down |
+| `Cmd+Arrow` | Move focus between panes |
+| `Cmd+Left` | From the leftmost pane, focus the sidebar |
+| `Cmd+Right` | From the sidebar, return to the terminal |
+| `Cmd+B` | Toggle sidebar |
+| `Cmd+0` | Focus sidebar |
+| `Cmd+K` | Command palette |
+| `Cmd+E` | Send context |
+| `Cmd+/` | Keyboard shortcuts |
+| `Cmd+Shift+I` | Create `ANDSPACE.md` |
+| `Cmd+[` / `Cmd+]` | Previous / next tab |
+| `Cmd+1`-`Cmd+9` | Jump to tab |
 
-`⌘→` / `⌘↓` override macOS's default "move to end of line / scroll to
-bottom" inside the AndSpace window. They're not intercepted globally —
-they only affect AndSpace when it has focus.
+## Docs
+
+- [v0.1 status](docs/V0_1.md)
+- [release checklist](docs/V0_1_RELEASE_CHECKLIST.md)
+- [Command Guard](docs/COMMAND_GUARD.md)
+- [AI handoff](docs/AI_HANDOFF.md)
+- [Command Palette](docs/COMMAND_PALETTE.md)
+- [Project Sidebar](docs/PROJECT_SIDEBAR.md)
+- [Servers](docs/SERVERS.md)
+- [File Actions](docs/FILE_ACTIONS.md)
