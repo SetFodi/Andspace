@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -93,11 +94,14 @@ def run_direct_matcher(work):
 
 def run_zle_gate(work):
     env = os.environ.copy()
+    ready = f"ANDSPACE_READY_{uuid.uuid4().hex}"
     env.update({
         "TERM": "xterm-256color",
         "TERM_PROGRAM": "AndSpace",
         "ANDSPACE_SHELL_INTEGRATION": "1",
         "ANDSPACE_PANE_ID": "verify-zle",
+        "ANDSPACE_GUARD_RESPONSE_TIMEOUT_MS": "5000",
+        "ANDSPACE_VERIFY_READY": ready,
     })
 
     pid, master = pty.fork()
@@ -113,46 +117,91 @@ def run_zle_gate(work):
         nonlocal buffer
         deadline = time.time() + timeout
         while time.time() < deadline:
+            if token in buffer:
+                idx = buffer.index(token) + len(token)
+                out, buffer = buffer[:idx], buffer[idx:]
+                return out
             ready, _, _ = select.select([master], [], [], 0.1)
             if master in ready:
                 buffer += os.read(master, 4096).decode("utf-8", "replace")
                 if token in buffer:
-                    out, buffer = buffer, ""
+                    idx = buffer.index(token) + len(token)
+                    out, buffer = buffer[:idx], buffer[idx:]
                     return out
         raise TimeoutError(f"timed out waiting for {token!r}; buffer={buffer!r}")
 
     def send(text):
         os.write(master, text.encode())
 
+    def next_guard_request():
+        nonlocal buffer
+        out = read_until("guard-request|", 5)
+        rest = read_until("\x1b\\", 5)
+        payload = (out + rest).split("guard-request|", 1)[1].split("\x1b\\", 1)[0]
+        request_id = payload.split("|", 1)[0]
+        buffer = ""
+        return request_id
+
+    def respond(request_id, action):
+        Path(f"/tmp/andspace-guard-{request_id}.response").write_text(action)
+
+    def wait_prompt(timeout=5):
+        nonlocal buffer
+        out = read_until("PROMPT> ", timeout)
+        buffer = ""
+        return out
+
+    def assert_contains(label, haystack, needle):
+        if needle not in haystack:
+            raise AssertionError(f"{label}: expected {needle!r} in {haystack!r}")
+
     try:
-        send(f"PS1='PROMPT> '; source {integration}; echo READY\n")
-        assert "READY" in read_until("PROMPT> ")
+        send(f"PS1='PROMPT> '; source {integration}; print -r -- \"$ANDSPACE_VERIFY_READY\"\n")
+        read_until(ready)
+        wait_prompt()
 
         send("echo hello\n")
-        assert "hello" in read_until("PROMPT> ")
+        assert_contains("safe command", wait_prompt(), "hello")
 
         send("echo protected-test\n")
-        assert "Run once? [y/N]" in read_until("Run once? [y/N]")
-        send("n\n")
-        assert "AndSpace canceled command." in read_until("PROMPT> ")
+        respond(next_guard_request(), "cancel")
+        assert_contains(
+            "protected ui cancel",
+            wait_prompt(),
+            "AndSpace canceled command.",
+        )
+
+        send("echo protected-test\n")
+        respond(next_guard_request(), "run")
+        assert_contains("protected ui run", wait_prompt(), "protected-test")
 
         send("echo protected-test allowed\n")
-        assert "protected-test allowed" in read_until("PROMPT> ")
+        assert_contains("allowed command", wait_prompt(), "protected-test allowed")
 
         send("echo dangerous-test\n")
-        assert "Type run to continue:" in read_until("Type run to continue:")
-        send("run\n")
-        assert "dangerous-test" in read_until("PROMPT> ")
+        respond(next_guard_request(), "cancel")
+        assert_contains(
+            "dangerous ui cancel",
+            wait_prompt(),
+            "AndSpace canceled command.",
+        )
+
+        send("echo dangerous-test\n")
+        respond(next_guard_request(), "run")
+        assert_contains("dangerous ui run", wait_prompt(), "dangerous-test")
 
         send("mkdir -p fake-folder\n")
-        read_until("PROMPT> ")
+        wait_prompt()
         send("rm -rf ./fake-folder\n")
-        assert "Type run to continue:" in read_until("Type run to continue:")
-        send("no\n")
-        assert "AndSpace canceled command." in read_until("PROMPT> ")
+        respond(next_guard_request(), "cancel")
+        assert_contains(
+            "destructive ui cancel",
+            wait_prompt(),
+            "AndSpace canceled command.",
+        )
+        if not (work / "fake-folder").is_dir():
+            raise AssertionError("destructive cancel removed fake-folder")
 
-        send('test -d fake-folder && echo "folder still exists"\n')
-        assert "folder still exists" in read_until("PROMPT> ")
     finally:
         try:
             send("exit\n")

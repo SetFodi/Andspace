@@ -14,6 +14,19 @@ export interface CommandGuardEvaluation {
   cwd: string;
 }
 
+export interface GuardConfirmationRequest {
+  requestId: string;
+  paneId: string;
+  command: string;
+  cwd: string;
+  decision: "protected" | "dangerous";
+  severity: "confirm" | "type-to-confirm";
+  matchedRule: string;
+  matchedSource: RuleSource;
+  matchedPatternType: RuleMatcher;
+  requestedAt: number;
+}
+
 export function evaluateCommandGuard(
   paneId: string,
   command: string,
@@ -25,5 +38,34 @@ export function evaluateCommandGuard(
     command,
     cwd,
     rules,
+  });
+}
+
+export function reportCommandGuardUiRequest(
+  request: GuardConfirmationRequest
+): Promise<void> {
+  return invoke("report_command_guard_ui_request", {
+    paneId: request.paneId,
+    requestId: request.requestId,
+    command: request.command,
+    decision: request.decision,
+    severity: request.severity,
+    matchedRule: request.matchedRule,
+    matchedSource: request.matchedSource,
+  });
+}
+
+export function respondCommandGuard(
+  request: GuardConfirmationRequest,
+  action: "run" | "cancel"
+): Promise<void> {
+  return invoke("respond_command_guard", {
+    paneId: request.paneId,
+    requestId: request.requestId,
+    command: request.command,
+    decision: request.decision,
+    action,
+    matchedRule: request.matchedRule,
+    matchedSource: request.matchedSource,
   });
 }

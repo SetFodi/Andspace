@@ -71,14 +71,18 @@ Milestone 5 installs an `accept-line` ZLE wrapper for zsh only. The wrapper
 checks the current `$BUFFER` before zsh executes it:
 
 - safe and allowed commands call the original `accept-line` widget immediately
-- protected commands ask `Run once? [y/N]`
-- dangerous commands require exact `run`
+- protected commands emit an OSC confirmation request and wait for the native UI
+- dangerous commands emit an OSC confirmation request and require exact `run` in the native UI
 - canceled commands clear `$BUFFER` and do not execute
 
 The gate uses a temporary shell-side matcher that reads `./ANDSPACE.md`,
 `~/.andspace/rules.md`, and built-in defaults. It mirrors the Rust evaluator's
 matching order: allowed, dangerous, protected. A later bridge should move this
 synchronous decision back to Rust.
+
+The UI bridge is intentionally small: zsh emits OSC 9001 `guard-request`, the
+frontend shows the overlay, Rust writes `/tmp/andspace-guard-<request>.response`,
+and zsh polls that file. Missing or late responses default to cancel.
 
 ## OSC protocol
 
@@ -100,6 +104,7 @@ Terminator: `ESC \` (ST). Payload is pipe-separated:
 | `start\|<unix_s>` | Command started |
 | `cmd\|<b64>` | Command line text (UTF-8, base64) |
 | `end\|<exit>\|<unix_s>` | Command finished with exit code |
+| `guard-request\|...` | Pre-execution Command Guard UI request |
 
 zsh order per command: `start` → `cmd` → … run … → `end` (in next `precmd`).
 
@@ -131,6 +136,13 @@ Each pre-execution Command Guard decision:
 <ms> command-guard-preexec pane=p-abc cwd=/repo decision=protected severity=confirm matched_rule=echo protected-test matched_source=project matched_pattern_type=substring command=echo protected-test action=cancel
 ```
 
+Each native UI request/action:
+
+```
+<ms> command-guard-ui-request pane=p-abc request_id=p-... decision=protected severity=confirm matched_rule=echo protected-test matched_source=project command=echo protected-test
+<ms> command-guard-ui-action pane=p-abc request_id=p-... decision=protected action=run matched_rule=echo protected-test matched_source=project command=echo protected-test
+```
+
 ## Verification
 
 1. Launch AndSpace once (`pnpm tauri dev` or the release app). Do **not** leave
@@ -159,3 +171,4 @@ Expect `shell-autoload pane=…` on PTY create, then `kind=cwd`, `kind=start`,
 - Aliases, shell expansion, scripts, and Makefiles can hide commands from the
   simple pre-execution matcher. Command Guard is a safety rail, not a security
   boundary.
+- Dangerous commands default to cancel if the UI bridge fails or times out.

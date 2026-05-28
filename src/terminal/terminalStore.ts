@@ -13,7 +13,10 @@ import type { ShellOscEvent } from "./shellIntegration";
 import { loadRulesForCwd, type ResolvedRules } from "./rules";
 import {
   evaluateCommandGuard,
+  reportCommandGuardUiRequest,
+  respondCommandGuard,
   type CommandGuardEvaluation,
+  type GuardConfirmationRequest,
 } from "./commandGuard";
 
 const MAX_COMMAND_HISTORY = 50;
@@ -27,6 +30,7 @@ interface State {
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>;
   resolvedRulesByPane: Record<PaneId, ResolvedRules>;
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>;
+  pendingGuardConfirmation: GuardConfirmationRequest | null;
 
   newTab: () => Promise<void>;
   closeTab: (id: TabId) => Promise<void>;
@@ -41,6 +45,7 @@ interface State {
   updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
   loadRulesForPane: (paneId: PaneId, cwd: string) => Promise<void>;
   evaluateGuardForPane: (paneId: PaneId, command: string) => Promise<void>;
+  respondToGuardConfirmation: (action: "run" | "cancel") => Promise<void>;
   handleShellOsc: (
     paneId: PaneId,
     event: ShellOscEvent,
@@ -137,6 +142,7 @@ export const useStore = create<State>((set, get) => ({
   commandHistoryByPane: {},
   resolvedRulesByPane: {},
   guardEvaluationsByPane: {},
+  pendingGuardConfirmation: null,
 
   updatePaneMeta: (paneId, patch) =>
     set((s) => ({
@@ -192,6 +198,17 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  respondToGuardConfirmation: async (action) => {
+    const request = get().pendingGuardConfirmation;
+    if (!request) return;
+    set({ pendingGuardConfirmation: null });
+    try {
+      await respondCommandGuard(request, action);
+    } catch (e) {
+      console.warn("Failed to respond to Command Guard", e);
+    }
+  },
+
   handleShellOsc: (paneId, event, outputBoundary) => {
     const meta = get().paneMeta[paneId] ?? {};
     if (event.kind === "cwd" && event.cwd) {
@@ -209,6 +226,33 @@ export const useStore = create<State>((set, get) => ({
     if (event.kind === "cmd" && event.command) {
       get().updatePaneMeta(paneId, { lastCommand: event.command });
       void get().evaluateGuardForPane(paneId, event.command);
+      return;
+    }
+    if (
+      event.kind === "guard-request" &&
+      event.requestId &&
+      event.command &&
+      event.cwd &&
+      event.decision &&
+      event.severity &&
+      event.matchedRule &&
+      event.matchedSource &&
+      event.matchedPatternType
+    ) {
+      const request: GuardConfirmationRequest = {
+        requestId: event.requestId,
+        paneId,
+        command: event.command,
+        cwd: event.cwd,
+        decision: event.decision,
+        severity: event.severity,
+        matchedRule: event.matchedRule,
+        matchedSource: event.matchedSource,
+        matchedPatternType: event.matchedPatternType,
+        requestedAt: Date.now(),
+      };
+      set({ pendingGuardConfirmation: request });
+      void reportCommandGuardUiRequest(request);
       return;
     }
     if (event.kind === "end") {

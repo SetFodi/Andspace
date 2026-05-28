@@ -21,6 +21,8 @@ fn main() {
             report_shell_event,
             load_rules_for_cwd,
             evaluate_command_guard,
+            report_command_guard_ui_request,
+            respond_command_guard,
             open_url,
         ])
         .run(tauri::generate_context!())

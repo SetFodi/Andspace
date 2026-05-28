@@ -79,6 +79,31 @@ __andspace_guard_log() {
   print -r -- "$line" >> /tmp/andspace-diag.log 2>/dev/null
 }
 
+__andspace_guard_ui_action_log() {
+  local request_id="$1"
+  local decision="$2"
+  local matched_rule="$3"
+  local matched_source="$4"
+  local command="$5"
+  local action="$6"
+  local reason="$7"
+  local pane="${ANDSPACE_PANE_ID:-unknown}"
+  local line="$(__andspace_guard_now_ms) command-guard-ui-action pane=$pane request_id=$request_id decision=$decision action=$action"
+
+  if [[ -n "$matched_rule" ]]; then
+    line+=" matched_rule=$(__andspace_guard_log_value "$matched_rule")"
+  fi
+  if [[ -n "$matched_source" ]]; then
+    line+=" matched_source=$matched_source"
+  fi
+  if [[ -n "$reason" ]]; then
+    line+=" reason=$reason"
+  fi
+
+  line+=" command=$(__andspace_guard_log_value "$command")"
+  print -r -- "$line" >> /tmp/andspace-diag.log 2>/dev/null
+}
+
 __andspace_guard_add_rule() {
   local bucket="$1"
   local pattern="$(__andspace_guard_trim "$2")"
@@ -230,27 +255,84 @@ __andspace_guard_evaluate() {
   print -r -- "safe"$'\t'"none"$'\t'$'\t'$'\t'
 }
 
-__andspace_guard_prompt() {
+__andspace_guard_response_path() {
+  local request_id="$1"
+  printf '/tmp/andspace-guard-%s.response' "$request_id"
+}
+
+__andspace_guard_request_id() {
+  local pane="${ANDSPACE_PANE_ID:-unknown}"
+  local now
+  now="$(__andspace_guard_now_ms)"
+  printf '%s-%s-%s-%s' "$pane" "$$" "$now" "$RANDOM"
+}
+
+__andspace_guard_emit_ui_request() {
+  local request_id="$1"
+  local decision="$2"
+  local severity="$3"
+  local matched_rule="$4"
+  local matched_source="$5"
+  local matched_pattern_type="$6"
+  local command="$7"
+  local pane="${ANDSPACE_PANE_ID:-unknown}"
+
+  __andspace_osc "guard-request|$request_id|$pane|$decision|$severity|$(__andspace_b64 "$matched_rule")|$matched_source|$matched_pattern_type|$(__andspace_b64 "$command")|$(__andspace_b64 "$PWD")"
+}
+
+__andspace_guard_wait_for_ui_response() {
+  local request_id="$1"
+  local path="$(__andspace_guard_response_path "$request_id")"
+  local timeout_ms="${ANDSPACE_GUARD_RESPONSE_TIMEOUT_MS:-30000}"
+  local interval_ms=50
+  local max=$(( timeout_ms / interval_ms ))
+  local i=0
+  local action
+
+  (( max > 0 )) || max=1
+
+  while (( i < max )); do
+    if [[ -f "$path" ]]; then
+      action="$(<"$path")"
+      rm -f "$path" 2>/dev/null
+      if [[ "$action" == "run" ]]; then
+        print -r -- "run"
+      else
+        print -r -- "cancel"
+      fi
+      return 0
+    fi
+    /bin/sleep 0.05
+    (( i++ ))
+  done
+
+  print -r -- "timeout"
+  return 1
+}
+
+__andspace_guard_confirm() {
   local decision="$1"
-  local matched_rule="$2"
-  local reply
+  local severity="$2"
+  local matched_rule="$3"
+  local matched_source="$4"
+  local matched_pattern_type="$5"
+  local command="$6"
+  local request_id response
 
   zle -I
-  if [[ "$decision" == "protected" ]]; then
-    printf '\nAndSpace protected command: %s. Run once? [y/N] ' "$matched_rule" > /dev/tty
-    IFS= read -r reply < /dev/tty
-    [[ "${(L)reply}" == "y" ]]
-    return $?
+  request_id="$(__andspace_guard_request_id)"
+  rm -f "$(__andspace_guard_response_path "$request_id")" 2>/dev/null
+  __andspace_guard_emit_ui_request "$request_id" "$decision" "$severity" "$matched_rule" "$matched_source" "$matched_pattern_type" "$command"
+
+  response="$(__andspace_guard_wait_for_ui_response "$request_id")"
+  if [[ "$response" == "run" ]]; then
+    return 0
   fi
 
-  if [[ "$decision" == "dangerous" ]]; then
-    printf '\nAndSpace dangerous command: %s. Type run to continue: ' "$matched_rule" > /dev/tty
-    IFS= read -r reply < /dev/tty
-    [[ "$reply" == "run" ]]
-    return $?
+  if [[ "$response" == "timeout" ]]; then
+    __andspace_guard_ui_action_log "$request_id" "$decision" "$matched_rule" "$matched_source" "$command" "cancel" "timeout"
   fi
-
-  return 0
+  return 1
 }
 
 __andspace_accept_line() {
@@ -267,7 +349,7 @@ __andspace_accept_line() {
   matched_pattern_type="${parts[5]}"
 
   if [[ "$decision" == "protected" || "$decision" == "dangerous" ]]; then
-    if __andspace_guard_prompt "$decision" "$matched_rule"; then
+    if __andspace_guard_confirm "$decision" "$severity" "$matched_rule" "$matched_source" "$matched_pattern_type" "$command"; then
       action="run"
       __andspace_guard_log "$decision" "$severity" "$matched_rule" "$matched_source" "$matched_pattern_type" "$command" "$action"
       zle __andspace_orig_accept_line

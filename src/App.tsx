@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
+import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
 
 function TitleBar() {
   return (
@@ -56,6 +57,10 @@ export default function App() {
   const prevTab = useStore((s) => s.prevTab);
   const switchToIndex = useStore((s) => s.switchToIndex);
   const loadRulesForPane = useStore((s) => s.loadRulesForPane);
+  const pendingGuardConfirmation = useStore((s) => s.pendingGuardConfirmation);
+  const respondToGuardConfirmation = useStore(
+    (s) => s.respondToGuardConfirmation
+  );
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -131,6 +136,10 @@ export default function App() {
           </div>
         ))}
       </div>
+      <GuardConfirmationOverlay
+        request={pendingGuardConfirmation}
+        onRespond={respondToGuardConfirmation}
+      />
       <StatusBar />
     </div>
   );

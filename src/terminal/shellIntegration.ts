@@ -4,7 +4,7 @@ import type { PaneId } from "./types";
 
 export const ANDSPACE_OSC_ID = 9001;
 
-export type ShellOscKind = "cwd" | "start" | "cmd" | "end";
+export type ShellOscKind = "cwd" | "start" | "cmd" | "end" | "guard-request";
 
 export interface ShellOscEvent {
   kind: ShellOscKind;
@@ -12,6 +12,13 @@ export interface ShellOscEvent {
   command?: string;
   exitCode?: number;
   timestamp?: number;
+  requestId?: string;
+  paneId?: string;
+  decision?: "protected" | "dangerous";
+  severity?: "confirm" | "type-to-confirm";
+  matchedRule?: string;
+  matchedSource?: "project" | "user" | "builtin";
+  matchedPatternType?: "substring" | "regex";
 }
 
 function decodeBase64Utf8(b64: string): string {
@@ -58,6 +65,26 @@ export function parseAndspaceOsc9001(data: string): ShellOscEvent | null {
       timestamp: parts[2] ? Number(parts[2]) * 1000 : Date.now(),
     };
   }
+  if (tag === "guard-request" && parts.length >= 10) {
+    const decision = parts[3] === "dangerous" ? "dangerous" : "protected";
+    const severity =
+      parts[4] === "type-to-confirm" ? "type-to-confirm" : "confirm";
+    const source =
+      parts[6] === "user" || parts[6] === "builtin" ? parts[6] : "project";
+    const patternType = parts[7] === "regex" ? "regex" : "substring";
+    return {
+      kind: "guard-request",
+      requestId: parts[1],
+      paneId: parts[2],
+      decision,
+      severity,
+      matchedRule: decodeBase64Utf8(parts[5]),
+      matchedSource: source,
+      matchedPatternType: patternType,
+      command: decodeBase64Utf8(parts[8]),
+      cwd: decodeBase64Utf8(parts[9]),
+    };
+  }
   return null;
 }
 
@@ -88,6 +115,7 @@ export function installShellIntegration(
       `osc kind=${event.kind} boundary=${boundary}` +
         (event.cwd ? ` cwd=${event.cwd}` : "") +
         (event.command ? ` cmd=${event.command.slice(0, 80)}` : "") +
+        (event.requestId ? ` request=${event.requestId}` : "") +
         (event.exitCode !== undefined ? ` exit=${event.exitCode}` : "")
     );
     handlers.onOsc(event, boundary);

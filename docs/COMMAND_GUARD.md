@@ -5,10 +5,11 @@ Command Guard has two v0.1 paths:
 - Milestone 4: Rust dry-run evaluator used after shell lifecycle capture.
 - Milestone 5: zsh pre-execution proof gate using an `accept-line` widget.
 - Milestone 6: hardening and parity checks for the temporary zsh matcher.
+- Milestone 7: native AndSpace confirmation UI for protected/dangerous commands.
 
 The zsh gate can stop protected and dangerous commands before execution, but it
-is still not the final product UI: no modal, sidebar, command palette, project
-UI, or AI handoff.
+is still scoped to Command Guard only: no sidebar, command palette, project UI,
+or AI handoff.
 
 ## Source Of Truth
 
@@ -22,13 +23,26 @@ synchronous bridge replaces it.
 
 ## Current Flow
 
+Dry-run flow:
+
 1. Shell integration reports command text through the existing OSC lifecycle.
 2. The frontend reads the pane cwd and resolved rules for that pane.
 3. The frontend calls the Rust `evaluate_command_guard` Tauri command.
 4. Rust evaluates the command and logs the result to `/tmp/andspace-diag.log`.
-5. The frontend keeps a short in-memory per-pane evaluation history.
 
-This is intentionally passive. Terminal behavior is not interrupted.
+Pre-execution UI flow:
+
+1. zsh `accept-line` checks `$BUFFER`.
+2. If the command is protected or dangerous, zsh emits an OSC 9001
+   `guard-request`.
+3. The frontend stores a pending confirmation and shows a compact overlay.
+4. The user chooses cancel/run.
+5. Rust writes the action to `/tmp/andspace-guard-<request>.response`.
+6. zsh polls that response file and either runs the original command or clears
+   `$BUFFER`.
+
+If the UI bridge fails or times out, zsh defaults to cancel.
+The frontend also auto-cancels stale confirmations before the shell-side timeout.
 
 ## zsh Pre-Execution Gate
 
@@ -36,21 +50,25 @@ For zsh panes, `src-tauri/shell-integration/andspace.zsh` wraps the current
 `accept-line` ZLE widget. When the user presses Enter, the wrapper inspects
 `$BUFFER` before zsh executes it.
 
-Safe and allowed commands execute normally. Protected commands show:
+Safe and allowed commands execute normally. Protected commands show the native
+AndSpace confirmation overlay with:
 
-```text
-AndSpace protected command: <matched rule>. Run once? [y/N]
-```
+- title `Protected command`
+- command text
+- matched rule
+- source
+- `Cancel` and `Run once`
 
-Only `y` runs the command. Any other input cancels it.
+Dangerous commands show a stronger overlay with:
 
-Dangerous commands show:
+- title `Dangerous command`
+- command text
+- matched rule
+- source
+- exact `run` text input
+- `Cancel` and `Run command`
 
-```text
-AndSpace dangerous command: <matched rule>. Type run to continue:
-```
-
-Only exact `run` executes the command. Any other input cancels it.
+Escape cancels. Dangerous commands cannot run until exact `run` is typed.
 
 This milestone uses a small shell-side matcher so the gate can make a
 synchronous decision inside ZLE. It intentionally mirrors the Rust matching
@@ -126,6 +144,13 @@ Milestone 6 adds `matcher_impl=zsh` to pre-execution diagnostics:
 command-guard-preexec pane=p-... cwd=/path matcher_impl=zsh decision=dangerous severity=type-to-confirm matched_rule=rm -rf ./fake-folder matched_source=project matched_pattern_type=substring command=rm -rf ./fake-folder action=cancel
 ```
 
+Milestone 7 adds UI bridge diagnostics:
+
+```text
+command-guard-ui-request pane=p-... request_id=p-... decision=dangerous severity=type-to-confirm matched_rule=rm -rf ./fake-folder matched_source=project command=rm -rf ./fake-folder
+command-guard-ui-action pane=p-... request_id=p-... decision=dangerous action=cancel matched_rule=rm -rf ./fake-folder matched_source=project command=rm -rf ./fake-folder
+```
+
 ## Manual Verification
 
 Use a temporary `ANDSPACE.md` in the repo:
@@ -160,10 +185,12 @@ test -d fake-folder && echo "folder still exists"
 Expected behavior:
 
 - `echo hello` runs normally.
-- `echo protected-test` prompts before execution.
+- `echo protected-test` opens the UI; cancel prevents execution.
+- Running `echo protected-test` again and choosing `Run once` executes it.
 - `echo protected-test allowed` runs normally.
-- `echo dangerous-test` requires typing `run`.
-- `rm -rf ./fake-folder` requires typing `run`; if canceled, the folder remains.
+- `echo dangerous-test` opens the UI; exact `run` is required to execute.
+- `rm -rf ./fake-folder` opens the UI; cancel leaves the folder, exact `run`
+  removes it.
 
 The automated dev verification script runs the same fixture through the direct
 zsh matcher and a controlling-PTY ZLE flow:
@@ -175,10 +202,11 @@ scripts/verify-command-guard-zsh.sh
 ## Limits
 
 - Pre-execution blocking is zsh only.
-- No final confirmation modal or visible Command Guard UI yet.
+- The native confirmation overlay is intentionally small and Command Guard-only.
 - No AI handoff yet.
 - Matching uses the command text reported by shell integration.
 - The zsh pre-execution gate matches `$BUFFER` before execution.
+- Dangerous commands default to cancel on UI failure or timeout.
 - Rust is canonical for app-side matching; zsh matching is temporary for
   blocking.
 - Aliases, shell expansion, command substitution, shell functions, and resolved

@@ -1,4 +1,6 @@
 use crate::pty::PtyManager;
+use std::fs;
+use std::path::PathBuf;
 use tauri::{AppHandle, State};
 
 #[tauri::command]
@@ -60,6 +62,74 @@ pub fn evaluate_command_guard(
     let result = crate::command_guard::evaluate_command_guard(&command, &cwd, &rules);
     crate::pty::diag_log(&crate::command_guard::format_guard_log(&pane_id, &result));
     Ok(result)
+}
+
+#[tauri::command]
+pub fn report_command_guard_ui_request(
+    pane_id: String,
+    request_id: String,
+    command: String,
+    decision: String,
+    severity: String,
+    matched_rule: Option<String>,
+    matched_source: Option<String>,
+) {
+    let mut line = format!(
+        "command-guard-ui-request pane={pane_id} request_id={request_id} decision={decision} severity={severity}"
+    );
+    if let Some(rule) = matched_rule {
+        line.push_str(&format!(" matched_rule={}", log_value(&rule)));
+    }
+    if let Some(source) = matched_source {
+        line.push_str(&format!(" matched_source={source}"));
+    }
+    line.push_str(&format!(" command={}", log_value(&command)));
+    crate::pty::diag_log(&line);
+}
+
+#[tauri::command]
+pub fn respond_command_guard(
+    pane_id: String,
+    request_id: String,
+    command: String,
+    decision: String,
+    action: String,
+    matched_rule: Option<String>,
+    matched_source: Option<String>,
+) -> Result<(), String> {
+    let action = if action == "run" { "run" } else { "cancel" };
+    fs::write(command_guard_response_path(&request_id)?, action)
+        .map_err(|e| format!("write guard response failed: {e}"))?;
+
+    let mut line = format!(
+        "command-guard-ui-action pane={pane_id} request_id={request_id} decision={decision} action={action}"
+    );
+    if let Some(rule) = matched_rule {
+        line.push_str(&format!(" matched_rule={}", log_value(&rule)));
+    }
+    if let Some(source) = matched_source {
+        line.push_str(&format!(" matched_source={source}"));
+    }
+    line.push_str(&format!(" command={}", log_value(&command)));
+    crate::pty::diag_log(&line);
+    Ok(())
+}
+
+fn command_guard_response_path(request_id: &str) -> Result<PathBuf, String> {
+    if request_id.is_empty()
+        || !request_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err("invalid guard request id".to_string());
+    }
+    Ok(PathBuf::from(format!(
+        "/tmp/andspace-guard-{request_id}.response"
+    )))
+}
+
+fn log_value(value: &str) -> String {
+    value.replace('\n', "\\n")
 }
 
 #[tauri::command]
