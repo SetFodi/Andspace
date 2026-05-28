@@ -23,6 +23,9 @@ explorer, or settings UI.
 | Servers      | Open Localhost Preview | Open the most recently detected server    |
 | Servers      | Copy Server URL      | Copy the most recently detected server URL  |
 | Servers      | Focus Servers        | Open the sidebar focused on Servers         |
+| Git          | Focus Git Changes    | Open the sidebar focused on Git Changes     |
+| Git          | Refresh Git Changes  | Refresh read-only Git status                |
+| Git          | Open Changed File    | Open File Actions for the first changed file |
 | Workspace    | Restore Last Workspace | Recreate tabs/splits/cwds from saved state |
 | Workspace    | Reset Saved Workspace | Delete the saved workspace file             |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
@@ -55,13 +58,15 @@ Diagnostics are written to `/tmp/andspace-diag.log`:
 command-palette-open
 command-palette-run action=terminal.splitRight
 command-palette-run action=workspace.restore
+command-palette-run action=git.refresh
 ```
 
 ## Limits
 
 - The palette stays lightweight; it should not become a dashboard.
-- Sidebar commands only focus or toggle Files / Scripts / Servers.
-- No Git panel.
+- Sidebar commands only focus or toggle Files / Scripts / Servers / Git Changes.
+- Git Changes actions are read-only: no commit, push, pull, staging, reset,
+  checkout, stash, merge, or rebase actions.
 - No settings UI.
 - No embedded browser preview.
 - Workspace commands restore layout and cwd only; they do not restore

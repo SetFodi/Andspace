@@ -3,7 +3,7 @@ import type { PaneId, PaneMeta, SplitDirection, SplitNode, Tab } from "./types";
 export const WORKSPACE_VERSION = 1;
 export const FIXED_SIDEBAR_WIDTH = 256;
 
-export type WorkspaceSidebarSection = "files" | "scripts" | "servers";
+export type WorkspaceSidebarSection = "files" | "scripts" | "servers" | "git";
 
 export type PersistedSplitNode =
   | { kind: "pane"; paneId: PaneId }
@@ -301,7 +301,12 @@ function normalizeSidebar(value: unknown): PersistedSidebar {
 function normalizeSidebarSection(
   section: unknown
 ): WorkspaceSidebarSection {
-  return section === "scripts" || section === "servers" || section === "files"
+  return (
+    section === "scripts" ||
+    section === "servers" ||
+    section === "git" ||
+    section === "files"
+  )
     ? section
     : "files";
 }

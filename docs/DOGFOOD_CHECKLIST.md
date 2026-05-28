@@ -77,7 +77,9 @@ work block without focus bugs, stale UI, or terminal friction?
 
 - [ ] `Cmd+K` opens Command Palette.
 - [ ] Command Palette runs New Tab / Split Right / Split Down / Close Pane.
-- [ ] Command Palette can focus Files / Scripts / Servers.
+- [ ] Command Palette can focus Files / Scripts / Servers / Git Changes.
+- [ ] Command Palette can refresh Git Changes.
+- [ ] Command Palette can open a changed file when one exists.
 - [ ] Command Palette disables server actions when no server is known.
 - [ ] `Cmd+E` opens AI Handoff.
 - [ ] AI Handoff can preview and copy the redacted prompt.

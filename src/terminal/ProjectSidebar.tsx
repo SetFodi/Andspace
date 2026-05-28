@@ -32,6 +32,14 @@ import {
   type ProjectTree,
   type ProjectTreeNode,
 } from "./projectSidebarData";
+import {
+  gitStatusLabel,
+  loadGitStatus,
+  reportGitEvent,
+  shortGitPath,
+  type GitChangedFile,
+  type GitStatus,
+} from "./gitChanges";
 import { shortServerUrl } from "./serverDetection";
 import {
   copyServerUrl,
@@ -43,8 +51,8 @@ import {
 interface Props {
   open: boolean;
   cwd: string | undefined;
-  focusedSection: "files" | "scripts" | "servers";
-  onFocusedSectionChange: (section: "files" | "scripts" | "servers") => void;
+  focusedSection: SectionKey;
+  onFocusedSectionChange: (section: SectionKey) => void;
   onRunScript: (script: PackageScript, scripts: PackageScripts) => void;
   onFileAction: (path: string) => void;
   onFileDefault: (path: string) => void;
@@ -54,9 +62,11 @@ interface Props {
 export interface ProjectSidebarHandle {
   focus(): void;
   getTree(): ProjectTree | null;
+  refreshGitChanges(): void;
+  openFirstGitChangedFile(): string | null;
 }
 
-type SectionKey = "files" | "scripts" | "servers";
+type SectionKey = "files" | "scripts" | "servers" | "git";
 
 export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
   function ProjectSidebar(
@@ -82,6 +92,9 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
       Map<string, ProjectTreeNode[]>
     >(new Map());
     const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
+    const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+    const [gitLoading, setGitLoading] = useState(false);
+    const [gitError, setGitError] = useState<string | null>(null);
 
     const rootRef = useRef<HTMLElement | null>(null);
 
@@ -91,6 +104,23 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
     // stay coherent even if focus slips off (e.g. React re-renders, focus
     // briefly lands on body during a state change).
     const lastFocusedIndexRef = useRef(0);
+
+    const refreshGitChanges = useCallback(() => {
+      if (!cwd) return;
+      setGitLoading(true);
+      setGitError(null);
+      void reportGitEvent("git-refresh", { cwd });
+      loadGitStatus(cwd)
+        .then((status) => {
+          setGitStatus(status);
+        })
+        .catch((e) => {
+          setGitStatus(null);
+          setGitError(String(e));
+          void reportGitEvent("git-status-error", { cwd });
+        })
+        .finally(() => setGitLoading(false));
+    }, [cwd]);
 
     useImperativeHandle(
       ref,
@@ -108,8 +138,19 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
         getTree() {
           return tree;
         },
+        refreshGitChanges() {
+          refreshGitChanges();
+        },
+        openFirstGitChangedFile() {
+          const file = gitStatus?.files[0];
+          if (!file || !gitStatus?.repoRoot) return null;
+          const path = joinPath(gitStatus.repoRoot, file.path);
+          void reportGitEvent("git-file-open", { path });
+          onFileAction(path);
+          return path;
+        },
       }),
-      [focusedSection, tree]
+      [focusedSection, gitStatus, onFileAction, refreshGitChanges, tree]
     );
 
     // If the user pressed ⌘+Left while the tree was still loading, the
@@ -156,6 +197,16 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
         cancelled = true;
       };
     }, [cwd, onToast, open]);
+
+    useEffect(() => {
+      if (!open || !cwd) return;
+      refreshGitChanges();
+    }, [cwd, open, refreshGitChanges]);
+
+    useEffect(() => {
+      if (!open || focusedSection !== "git") return;
+      refreshGitChanges();
+    }, [focusedSection, open, refreshGitChanges]);
 
     const expandTruncated = useCallback(
       (path: string) => {
@@ -434,6 +485,21 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
               onFocus={() => onFocusedSectionChange("servers")}
               onToast={onToast}
             />
+
+            <GitChangesSection
+              status={gitStatus}
+              loading={gitLoading}
+              error={gitError}
+              collapsed={collapsed.has("git")}
+              active={focusedSection === "git"}
+              onToggle={() => toggleSection("git")}
+              onFocus={() => onFocusedSectionChange("git")}
+              onRefresh={refreshGitChanges}
+              onOpenFile={(path) => {
+                void reportGitEvent("git-file-open", { path });
+                onFileAction(path);
+              }}
+            />
           </div>
 
           <div className="sidebar-footer">
@@ -595,6 +661,111 @@ function ServerRow({
   );
 }
 
+function GitChangesSection({
+  status,
+  loading,
+  error,
+  collapsed,
+  active,
+  onToggle,
+  onFocus,
+  onRefresh,
+  onOpenFile,
+}: {
+  status: GitStatus | null;
+  loading: boolean;
+  error: string | null;
+  collapsed: boolean;
+  active: boolean;
+  onToggle: () => void;
+  onFocus: () => void;
+  onRefresh: () => void;
+  onOpenFile: (path: string) => void;
+}) {
+  const files = status?.files ?? [];
+  const meta =
+    status?.isRepo && files.length > 0
+      ? String(files.length)
+      : status?.isRepo
+        ? "clean"
+        : undefined;
+
+  return (
+    <SidebarSection
+      id="git"
+      title="Git Changes"
+      collapsed={collapsed}
+      active={active}
+      meta={meta}
+      onToggle={onToggle}
+      onFocus={onFocus}
+    >
+      <div className="git-summary">
+        <div className="git-branch" title={status?.branch ?? ""}>
+          {status?.isRepo ? (status.branch ?? "detached") : "No Git repo"}
+        </div>
+        <button
+          type="button"
+          className="git-refresh"
+          disabled={loading}
+          onClick={onRefresh}
+          title="Refresh Git Changes"
+          aria-label="Refresh Git Changes"
+        >
+          <RefreshIcon width={13} height={13} />
+        </button>
+      </div>
+      {loading && <div className="sidebar-muted">Loading Git changes…</div>}
+      {!loading && error && (
+        <div className="sidebar-muted">Could not load Git status.</div>
+      )}
+      {!loading && !error && status && !status.isRepo && (
+        <div className="sidebar-muted git-empty">No Git repository found.</div>
+      )}
+      {!loading && !error && status?.isRepo && files.length === 0 && (
+        <div className="sidebar-muted git-empty">Working tree clean.</div>
+      )}
+      {!loading &&
+        !error &&
+        status?.isRepo &&
+        files.map((file) => (
+          <GitChangedFileRow
+            key={`${file.rawStatus}:${file.path}:${file.oldPath ?? ""}`}
+            file={file}
+            repoRoot={status.repoRoot ?? ""}
+            onOpenFile={onOpenFile}
+          />
+        ))}
+    </SidebarSection>
+  );
+}
+
+function GitChangedFileRow({
+  file,
+  repoRoot,
+  onOpenFile,
+}: {
+  file: GitChangedFile;
+  repoRoot: string;
+  onOpenFile: (path: string) => void;
+}) {
+  const path = joinPath(repoRoot, file.path);
+  const label = gitStatusLabel(file.status);
+
+  return (
+    <button
+      type="button"
+      className={`git-row ${file.status}`}
+      title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
+      data-path={path}
+      onClick={() => onOpenFile(path)}
+    >
+      <span className="git-status-chip">{label}</span>
+      <span className="git-path">{shortGitPath(file.path)}</span>
+    </button>
+  );
+}
+
 function FileTree({
   node,
   expanded,
@@ -700,7 +871,7 @@ function FileTree({
 function sidebarFocusableItems(root: HTMLElement): HTMLElement[] {
   return Array.from(
     root.querySelectorAll<HTMLElement>(
-      ".sidebar-section-head, .file-row, .script-row, .server-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
+      ".sidebar-section-head, .file-row, .script-row, .server-row, .git-row, .git-refresh:not(:disabled), .file-load-more, .sidebar-foot-btn:not(:disabled)"
     )
   );
 }
@@ -726,8 +897,15 @@ function firstFocusableForSection(
       sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
     );
   }
+  if (section === "servers") {
+    return (
+      sectionRoot.querySelector<HTMLElement>(".server-row") ??
+      sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
+    );
+  }
   return (
-    sectionRoot.querySelector<HTMLElement>(".server-row") ??
+    sectionRoot.querySelector<HTMLElement>(".git-row") ??
+    sectionRoot.querySelector<HTMLElement>(".git-refresh:not(:disabled)") ??
     sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
   );
 }
@@ -756,6 +934,11 @@ function fileIconFor(name: string) {
 function shortPath(path: string): string {
   if (!path) return "";
   return path.replace(/^\/Users\/[^/]+/, "~");
+}
+
+function joinPath(root: string, path: string): string {
+  if (!root) return path;
+  return `${root.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 
 export function scriptCommandForSidebar(script: PackageScript, scripts: PackageScripts) {

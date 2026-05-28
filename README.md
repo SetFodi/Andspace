@@ -12,7 +12,7 @@ splits, command safety, AI CLI handoff, and a lightweight project sidebar.
 - `Cmd+Shift+I` initializer for `ANDSPACE.md`
 - AI handoff through installed local Claude Code, Codex, or Cursor CLIs
 - Command palette for core workflow actions
-- Optional project sidebar with Files, Scripts, and Servers
+- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes
 - File Actions for Cursor, VS Code, Neovim split, copy path, and Finder reveal
 - Passive localhost server detection from terminal output
 
@@ -74,4 +74,5 @@ src-tauri/target/release/bundle/macos/AndSpace.app
 - [Command Palette](docs/COMMAND_PALETTE.md)
 - [Project Sidebar](docs/PROJECT_SIDEBAR.md)
 - [Servers](docs/SERVERS.md)
+- [Git Changes](docs/GIT_CHANGES.md)
 - [File Actions](docs/FILE_ACTIONS.md)

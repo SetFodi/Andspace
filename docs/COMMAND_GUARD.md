@@ -246,8 +246,8 @@ is pending:
 - The zsh pre-execution gate matches `$BUFFER` before execution.
 - Dangerous commands default to cancel on UI failure or timeout.
 - zsh is still the only fully supported shell integration.
-- There is no settings UI or Git panel. Sidebar file actions and script
-  launch remain separate from Command Guard.
+- There is no settings UI or write-capable Git client. Read-only Git Changes,
+  sidebar file actions, and script launch remain separate from Command Guard.
 - Rust is canonical for app-side matching; zsh matching is temporary for
   blocking.
 - Aliases, shell expansion, command substitution, shell functions, and resolved

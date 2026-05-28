@@ -1,8 +1,8 @@
 # Project Sidebar
 
 The v0.1 project sidebar is optional and hidden by default. It is a small
-terminal companion for **Files, Scripts, and Servers** only — not an IDE
-sidebar.
+terminal companion for **Files, Scripts, Servers, and Git Changes** — not an
+IDE sidebar.
 
 ## Behavior
 
@@ -52,6 +52,21 @@ from terminal text, and **does no port scanning, no polling, and no fetches**.
 Click a row to open in the default browser; right-click or `⌘C` to copy the
 URL. Full behavior in [SERVERS.md](SERVERS.md).
 
+## Git Changes
+
+The Git Changes section is read-only. It walks upward from the project root /
+active cwd to find `.git`, then runs only:
+
+```text
+git status --porcelain=v1 -b
+```
+
+It shows the branch, changed file count, and compact rows for modified, added,
+deleted, renamed, and untracked files. Clicking a changed file opens the
+existing File Actions overlay. There is no diff viewer, staging, commit, push,
+pull, reset, checkout, stash, merge, or rebase UI. Risky Git commands remain
+protected by Command Guard. Full behavior in [GIT_CHANGES.md](GIT_CHANGES.md).
+
 ## Scripts
 
 The Scripts section reads `package.json` in the project root and lists scripts.
@@ -75,6 +90,9 @@ Clicking a script opens a split-right pane and runs it from the project root.
 - `Focus Files`
 - `Focus Scripts`
 - `Focus Servers`
+- `Focus Git Changes`
+- `Refresh Git Changes`
+- `Open Changed File`
 - `Run Script`
 - `Go to File` (compact file picker over the loaded project tree)
 - `Open Localhost Preview`
@@ -103,11 +121,16 @@ file-picker-select path=/repo/src/main.ts
 server-detected url=http://localhost:5173 pane=pane-abc label=Vite
 server-open url=http://localhost:5173
 server-copy url=http://localhost:5173
+git-status-load cwd=/repo result=ok repo=/repo files=3
+git-file-open path=/repo/src/main.ts
+git-refresh
 ```
 
 ## Limits
 
-- No Git panel.
+- Git Changes is read-only.
+- No commit, push, pull, reset, checkout, stash, merge, or rebase UI.
+- No diff viewer.
 - No background server scanning.
 - No embedded server preview.
 - No file editing.

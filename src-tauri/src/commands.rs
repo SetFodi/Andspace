@@ -380,6 +380,16 @@ pub fn report_server_event(
 }
 
 #[tauri::command]
+pub fn load_git_status(cwd: String) -> Result<crate::git_status::GitStatus, String> {
+    crate::git_status::load_git_status(&cwd)
+}
+
+#[tauri::command]
+pub fn report_git_event(event: String, cwd: Option<String>, path: Option<String>) {
+    crate::git_status::report_git_event(&event, cwd.as_deref(), path.as_deref());
+}
+
+#[tauri::command]
 pub fn load_workspace_state() -> Result<Option<crate::workspace::WorkspaceSnapshot>, String> {
     crate::workspace::load_workspace_state()
 }

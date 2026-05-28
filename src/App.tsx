@@ -50,6 +50,7 @@ import {
   openServerUrl,
   useServerStore,
 } from "./terminal/serverStore";
+import { loadGitStatus, reportGitEvent } from "./terminal/gitChanges";
 import {
   reportCommandPaletteOpen,
   reportCommandPaletteRun,
@@ -178,7 +179,7 @@ export default function App() {
   const [keybindsOpen, setKeybindsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarSection, setSidebarSection] = useState<
-    "files" | "scripts" | "servers"
+    "files" | "scripts" | "servers" | "git"
   >("files");
   const sidebarRef = useRef<ProjectSidebarHandle | null>(null);
 
@@ -458,6 +459,41 @@ export default function App() {
       } else if (action.id === "servers.focus") {
         setSidebarSection("servers");
         setSidebarVisible(true);
+      } else if (action.id === "git.focus") {
+        setSidebarSection("git");
+        setSidebarVisible(true);
+      } else if (action.id === "git.refresh") {
+        setSidebarSection("git");
+        setSidebarVisible(true);
+        window.requestAnimationFrame(() => {
+          sidebarRef.current?.refreshGitChanges();
+        });
+      } else if (action.id === "git.openChangedFile") {
+        const cwd = projectRoot ?? activePaneCwd;
+        if (!cwd) {
+          showToast({ tone: "neutral", message: "No Git cwd available" });
+          return;
+        }
+        try {
+          const status = await loadGitStatus(cwd);
+          const file = status.files[0];
+          if (!status.isRepo || !file || !status.repoRoot) {
+            showToast({ tone: "neutral", message: "No changed files found" });
+            setSidebarSection("git");
+            setSidebarVisible(true);
+            return;
+          }
+          const path = `${status.repoRoot.replace(/\/$/, "")}/${file.path.replace(
+            /^\//,
+            ""
+          )}`;
+          await reportGitEvent("git-file-open", { path });
+          setFileActionsPath(path);
+        } catch (e) {
+          setSidebarSection("git");
+          setSidebarVisible(true);
+          showToast({ tone: "error", message: `Could not load Git: ${String(e)}` });
+        }
       } else if (action.id === "workspace.restore") {
         const snapshot = await loadWorkspaceState();
         if (!snapshot) {
@@ -508,6 +544,7 @@ export default function App() {
     },
     [
       activeHandoffRecord,
+      activePaneCwd,
       activePaneId,
       buildPromptForActivePane,
       closeActive,
@@ -515,6 +552,7 @@ export default function App() {
       initRulesForActivePane,
       newTab,
       openGoToFile,
+      projectRoot,
       refocusTerminal,
       restoreWorkspace,
       setSidebarVisible,
@@ -591,12 +629,15 @@ export default function App() {
       disabled.add("sidebar.focusFiles");
       disabled.add("sidebar.focusScripts");
       disabled.add("sidebar.runScript");
+      disabled.add("git.openChangedFile");
     }
     if (!activePaneCwd) {
       disabled.add("project.createAndspace");
       disabled.add("sidebar.focusFiles");
       disabled.add("sidebar.focusScripts");
       disabled.add("sidebar.runScript");
+      disabled.add("git.refresh");
+      disabled.add("git.openChangedFile");
     }
     if (!projectRoot) {
       disabled.add("project.goToFile");

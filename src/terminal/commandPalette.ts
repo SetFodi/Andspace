@@ -16,6 +16,9 @@ export type CommandPaletteActionId =
   | "servers.openPreview"
   | "servers.copyUrl"
   | "servers.focus"
+  | "git.focus"
+  | "git.refresh"
+  | "git.openChangedFile"
   | "workspace.restore"
   | "workspace.reset"
   | "help.showKeybinds";
@@ -27,6 +30,7 @@ export interface CommandPaletteAction {
     | "Terminal"
     | "Project"
     | "Servers"
+    | "Git"
     | "Workspace"
     | "AI / Handoff"
     | "Help";
@@ -131,6 +135,24 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Focus Servers",
     section: "Servers",
     keywords: ["server", "focus", "sidebar", "servers"],
+  },
+  {
+    id: "git.focus",
+    title: "Focus Git Changes",
+    section: "Git",
+    keywords: ["git", "changes", "status", "sidebar", "focus"],
+  },
+  {
+    id: "git.refresh",
+    title: "Refresh Git Changes",
+    section: "Git",
+    keywords: ["git", "changes", "status", "refresh"],
+  },
+  {
+    id: "git.openChangedFile",
+    title: "Open Changed File",
+    section: "Git",
+    keywords: ["git", "changes", "file", "open", "modified"],
   },
   {
     id: "workspace.restore",

@@ -3,8 +3,9 @@
 Target tag: `v0.1.0-alpha.1`
 
 This checklist is for the first usable v0.1-alpha build. It covers release
-readiness only: no Git panel, settings UI, embedded browser preview, file
-editing, search panel, or new sidebar sections.
+readiness only: no write-capable Git client, settings UI, embedded browser
+preview, file editing, search panel, or additional sidebar sections beyond
+Files / Scripts / Servers / Git Changes.
 
 ## Build Checks
 
@@ -111,7 +112,8 @@ must be checked manually in the launched production app:
 - The app bundle is built for local alpha use. Signing, notarization, and
   auto-update are not implemented yet. Current bundle uses an ad-hoc local
   signature with no Team ID.
-- No Git panel yet.
+- Git Changes is read-only; no commit, push, pull, staging, reset, checkout,
+  stash, merge, or rebase UI yet.
 - No embedded browser preview yet.
 - No settings UI yet.
 - No file editing or in-app file preview yet.
@@ -161,7 +163,7 @@ must be checked manually in the launched production app:
 - `ANDSPACE.md` initializer
 - AI CLI handoff through local Claude Code, Codex, and Cursor CLIs
 - Command palette
-- Optional project sidebar with Files, Scripts, and Servers
+- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes
 - File Actions for external editor handoff
 - Passive local server detection from terminal output
 - Shortcut cleanup for v0.1-alpha

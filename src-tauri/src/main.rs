@@ -4,6 +4,7 @@ mod ai_handoff;
 mod command_guard;
 mod commands;
 mod file_actions;
+mod git_status;
 mod project_sidebar;
 mod pty;
 mod rules;
@@ -69,6 +70,8 @@ fn main() {
             build_nvim_split_command,
             report_file_action_event,
             report_server_event,
+            load_git_status,
+            report_git_event,
             load_workspace_state,
             save_workspace_state,
             reset_workspace_state,
