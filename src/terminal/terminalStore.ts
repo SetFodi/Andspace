@@ -10,6 +10,7 @@ import type {
   TabId,
 } from "./types";
 import type { ShellOscEvent } from "./shellIntegration";
+import { loadRulesForCwd, type ResolvedRules } from "./rules";
 
 const MAX_COMMAND_HISTORY = 50;
 
@@ -19,6 +20,7 @@ interface State {
   activePaneByTab: Record<TabId, PaneId>;
   paneMeta: Record<PaneId, PaneMeta>;
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>;
+  resolvedRulesByPane: Record<PaneId, ResolvedRules>;
 
   newTab: () => Promise<void>;
   closeTab: (id: TabId) => Promise<void>;
@@ -31,6 +33,7 @@ interface State {
   prevTab: () => void;
   switchToIndex: (idx: number) => void;
   updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
+  loadRulesForPane: (paneId: PaneId, cwd: string) => Promise<void>;
   handleShellOsc: (
     paneId: PaneId,
     event: ShellOscEvent,
@@ -88,22 +91,30 @@ function collectPanes(node: SplitNode): PaneId[] {
 function initPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  resolvedRulesByPane: Record<PaneId, ResolvedRules>,
   paneId: PaneId
 ) {
   return {
     paneMeta: { ...paneMeta, [paneId]: {} },
     commandHistoryByPane: { ...commandHistoryByPane, [paneId]: [] },
+    resolvedRulesByPane,
   };
 }
 
 function dropPaneShellState(
   paneMeta: Record<PaneId, PaneMeta>,
   commandHistoryByPane: Record<PaneId, CommandHistoryEntry[]>,
+  resolvedRulesByPane: Record<PaneId, ResolvedRules>,
   paneId: PaneId
 ) {
   const { [paneId]: _m, ...restMeta } = paneMeta;
   const { [paneId]: _h, ...restHistory } = commandHistoryByPane;
-  return { paneMeta: restMeta, commandHistoryByPane: restHistory };
+  const { [paneId]: _r, ...restRules } = resolvedRulesByPane;
+  return {
+    paneMeta: restMeta,
+    commandHistoryByPane: restHistory,
+    resolvedRulesByPane: restRules,
+  };
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -112,6 +123,7 @@ export const useStore = create<State>((set, get) => ({
   activePaneByTab: {},
   paneMeta: {},
   commandHistoryByPane: {},
+  resolvedRulesByPane: {},
 
   updatePaneMeta: (paneId, patch) =>
     set((s) => ({
@@ -120,6 +132,20 @@ export const useStore = create<State>((set, get) => ({
         [paneId]: { ...s.paneMeta[paneId], ...patch },
       },
     })),
+
+  loadRulesForPane: async (paneId, cwd) => {
+    try {
+      const resolved = await loadRulesForCwd(cwd);
+      set((s) => ({
+        resolvedRulesByPane: {
+          ...s.resolvedRulesByPane,
+          [paneId]: resolved,
+        },
+      }));
+    } catch (e) {
+      console.warn("Failed to load AndSpace rules", e);
+    }
+  },
 
   handleShellOsc: (paneId, event, outputBoundary) => {
     const meta = get().paneMeta[paneId] ?? {};
@@ -172,7 +198,14 @@ export const useStore = create<State>((set, get) => ({
   },
 
   clearPaneShellState: (paneId) =>
-    set((s) => dropPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId)),
+    set((s) =>
+      dropPaneShellState(
+        s.paneMeta,
+        s.commandHistoryByPane,
+        s.resolvedRulesByPane,
+        paneId
+      )
+    ),
 
   newTab: async () => {
     const paneId = await createPty();
@@ -182,7 +215,12 @@ export const useStore = create<State>((set, get) => ({
       root: { kind: "pane", paneId },
     };
     set((s) => ({
-      ...initPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId),
+      ...initPaneShellState(
+        s.paneMeta,
+        s.commandHistoryByPane,
+        s.resolvedRulesByPane,
+        paneId
+      ),
       tabs: [...s.tabs, tab],
       activeTabId: tab.id,
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: paneId },
@@ -204,12 +242,15 @@ export const useStore = create<State>((set, get) => ({
       const { [id]: _removed, ...rest } = s.activePaneByTab;
       let paneMeta = s.paneMeta;
       let commandHistoryByPane = s.commandHistoryByPane;
+      let resolvedRulesByPane = s.resolvedRulesByPane;
       for (const p of collectPanes(tab.root)) {
-        ({ paneMeta, commandHistoryByPane } = dropPaneShellState(
-          paneMeta,
-          commandHistoryByPane,
-          p
-        ));
+        ({ paneMeta, commandHistoryByPane, resolvedRulesByPane } =
+          dropPaneShellState(
+            paneMeta,
+            commandHistoryByPane,
+            resolvedRulesByPane,
+            p
+          ));
       }
       return {
         tabs: remaining,
@@ -217,6 +258,7 @@ export const useStore = create<State>((set, get) => ({
         activePaneByTab: rest,
         paneMeta,
         commandHistoryByPane,
+        resolvedRulesByPane,
       };
     });
   },
@@ -234,7 +276,12 @@ export const useStore = create<State>((set, get) => ({
       b: { kind: "pane", paneId: newPaneId },
     });
     set((s) => ({
-      ...initPaneShellState(s.paneMeta, s.commandHistoryByPane, newPaneId),
+      ...initPaneShellState(
+        s.paneMeta,
+        s.commandHistoryByPane,
+        s.resolvedRulesByPane,
+        newPaneId
+      ),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: newPaneId },
     }));
@@ -252,7 +299,12 @@ export const useStore = create<State>((set, get) => ({
     }
     const remainingPanes = collectPanes(newRoot);
     set((s) => ({
-      ...dropPaneShellState(s.paneMeta, s.commandHistoryByPane, paneId),
+      ...dropPaneShellState(
+        s.paneMeta,
+        s.commandHistoryByPane,
+        s.resolvedRulesByPane,
+        paneId
+      ),
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: {
         ...s.activePaneByTab,

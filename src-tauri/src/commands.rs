@@ -46,6 +46,11 @@ pub fn report_shell_event(pane_id: String, line: String) {
 }
 
 #[tauri::command]
+pub fn load_rules_for_cwd(cwd: String) -> Result<crate::rules::ResolvedRules, String> {
+    crate::rules::load_rules_for_cwd(&cwd)
+}
+
+#[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     // Use macOS `open` to route to the registered URL handler.
     std::process::Command::new("open")

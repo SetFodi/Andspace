@@ -43,6 +43,11 @@ function StatusBar() {
 export default function App() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
+  const activePaneId = useStore((s) => s.activePaneByTab[s.activeTabId]);
+  const activePaneCwd = useStore((s) => {
+    const paneId = s.activePaneByTab[s.activeTabId];
+    return paneId ? s.paneMeta[paneId]?.cwd : undefined;
+  });
   const newTab = useStore((s) => s.newTab);
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
@@ -50,6 +55,7 @@ export default function App() {
   const nextTab = useStore((s) => s.nextTab);
   const prevTab = useStore((s) => s.prevTab);
   const switchToIndex = useStore((s) => s.switchToIndex);
+  const loadRulesForPane = useStore((s) => s.loadRulesForPane);
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -104,6 +110,12 @@ export default function App() {
     prevTab,
     switchToIndex,
   ]);
+
+  useEffect(() => {
+    if (activePaneId && activePaneCwd) {
+      loadRulesForPane(activePaneId, activePaneCwd);
+    }
+  }, [activePaneId, activePaneCwd, loadRulesForPane]);
 
   return (
     <div className="app">

@@ -2,6 +2,7 @@
 
 mod commands;
 mod pty;
+mod rules;
 
 use commands::*;
 use pty::PtyManager;
@@ -17,6 +18,7 @@ fn main() {
             kill_pty,
             report_renderer,
             report_shell_event,
+            load_rules_for_cwd,
             open_url,
         ])
         .run(tauri::generate_context!())
