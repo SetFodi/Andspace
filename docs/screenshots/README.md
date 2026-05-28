@@ -1,4 +1,4 @@
-# v0.1.0-alpha.2 Screenshot Checklist
+# v0.1.0-alpha.2 Screenshot Capture Plan
 
 Automatic screenshot capture is optional. If UI automation is blocked by macOS
 Accessibility, capture these manually from the packaged app.
@@ -9,23 +9,63 @@ Use the built app:
 src-tauri/target/release/bundle/macos/AndSpace.app
 ```
 
-Recommended filenames and exact states:
+Final captures should be saved in:
+
+```text
+docs/screenshots/final/
+```
+
+## Final Screenshot States
 
 | File | State To Capture |
 | --- | --- |
-| `01-hero-terminal-sidebar.png` | Production app open with the sidebar visible, two terminal panes, Files / Scripts / Servers / Git Changes in view, and no private project names or secrets. |
-| `02-command-guard.png` | Command Guard overlay open for a protected or dangerous command, showing the command and confirmation affordance. |
-| `03-ai-handoff.png` | `Cmd+E` handoff overlay open with a recent terminal command available and the preview/copy/send controls visible. |
+| `01-hero-sidebar.png` | Main AndSpace window with the sidebar open, Files / Scripts / Servers / Git Changes visible, and split terminal panes. Use a non-sensitive project name and terminal output. |
+| `02-command-guard.png` | Command Guard overlay blocking a protected or dangerous command, with the command text and confirmation affordance visible. |
+| `03-ai-handoff.png` | `Cmd+E` Send Context overlay with Preview, Copy, Claude, Codex, and Cursor actions visible. |
 | `04-command-palette.png` | `Cmd+K` command palette open with a few core commands visible, such as New Tab, Split Right, Toggle Sidebar, and Keyboard Shortcuts. |
 | `05-git-diff-preview.png` | Git Changes section visible with a changed tracked file selected and the read-only Git Diff Preview overlay open. |
-| `06-servers-localhost.png` | A dev server running in the terminal and the Servers section showing the detected localhost URL. |
+| `06-servers.png` | Servers section showing a detected localhost URL from terminal output, ideally with the dev server command visible in the terminal. |
 | `07-keyboard-shortcuts.png` | `Cmd+/` keyboard shortcuts overlay open, showing the final v0.1 shortcut scheme. |
 
-Manual capture notes:
+## Manual Capture Setup
 
 - Use a real local project with at least one modified tracked file.
 - Run a dev server (`pnpm dev`, `npm run dev`, or `bun dev`) for the Servers
   screenshot.
+- Create at least two panes so pane borders and focus state are visible.
+- Use `Cmd+B` to keep the sidebar open for sidebar-focused shots.
+- Use `Cmd+K`, `Cmd+E`, and `Cmd+/` for overlay shots instead of opening them
+  through developer tools.
 - Keep screenshots free of secrets, tokens, private repo names, and sensitive
   terminal output.
 - Prefer the packaged app, not `pnpm tauri dev`.
+
+## Capture Commands
+
+If macOS Screen Recording permission is available, capture the AndSpace window
+after staging each state:
+
+```bash
+screencapture -i -w docs/screenshots/final/01-hero-sidebar.png
+```
+
+Then click the AndSpace window. If the command cannot access the window because
+macOS permissions are blocked, use the built-in screenshot UI:
+
+1. Press `Cmd+Shift+5`.
+2. Choose "Capture Selected Window".
+3. Click the AndSpace window.
+4. Save the image into `docs/screenshots/final/`.
+5. Rename it to the matching filename from the table above.
+
+## Capture Status
+
+| File | Status |
+| --- | --- |
+| `01-hero-sidebar.png` | Needs capture |
+| `02-command-guard.png` | Needs capture |
+| `03-ai-handoff.png` | Needs capture |
+| `04-command-palette.png` | Needs capture |
+| `05-git-diff-preview.png` | Needs capture |
+| `06-servers.png` | Needs capture |
+| `07-keyboard-shortcuts.png` | Needs capture |
