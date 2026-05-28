@@ -1,6 +1,6 @@
 # v0.1-alpha Release Checklist
 
-Target tag: `v0.1.0-alpha.1`
+Target tag: `v0.1.0-alpha.2`
 
 This checklist is for the first usable v0.1-alpha build. It covers release
 readiness only: no write-capable Git client, settings UI, embedded browser
@@ -130,12 +130,12 @@ must be checked manually in the launched production app:
 
 ## Current Run Notes
 
-- Automated build checks passed on May 28, 2026.
+- Automated build checks passed on May 29, 2026.
 - `pnpm tauri build` succeeded and produced:
   `src-tauri/target/release/bundle/macos/AndSpace.app`
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
-  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.1`,
-  `CFBundleVersion=0.1.0-alpha.1`,
+  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.2`,
+  `CFBundleVersion=0.1.0-alpha.2`,
   `CFBundleIdentifier=com.andspace.desktop`, and
   `CFBundleIconFile=icon.icns`.
 - Packaged icon is a real macOS `.icns` file at
@@ -169,3 +169,12 @@ must be checked manually in the launched production app:
 - Shortcut cleanup for v0.1-alpha
 - Workspace persistence for tabs, splits, cwd, sidebar state, and window shape
 - Native custom title-bar dragging in the packaged app
+
+### v0.1.0-alpha.2
+
+- Read-only Git Diff Preview
+- Git Changes follows the active pane / tab and refreshes after active command
+  completion
+- Terminal render repair for stale WebGL/font-cell measurement issues
+- Release notes and screenshot checklist for shareable alpha distribution
+- Public README and launch copy for v0.1.0-alpha.2
