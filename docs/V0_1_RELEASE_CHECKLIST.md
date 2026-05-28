@@ -15,6 +15,7 @@ editing, search panel, or new sidebar sections.
 - [x] `scripts/verify-command-guard-zsh.sh`
 - [x] `scripts/test-server-detection.mjs`
 - [x] `scripts/test-pane-navigation.mjs`
+- [x] `scripts/test-workspace-persistence.mjs`
 - [x] `pnpm tauri build`
 
 If `pnpm tauri build` fails because of signing or notarization, record the
@@ -30,10 +31,13 @@ exact error and do not work around it for alpha.
 - [x] Terminal opens with a shell prompt
 - [x] `Cmd+K` opens the command palette
 - [x] `Cmd+B` opens and focuses the sidebar
+- [ ] Holding the custom title bar drags the packaged app window
 
 ## Manual UX Checks
 
 - [ ] App launch opens one tab and one active terminal pane
+- [ ] Holding and dragging the title bar moves the window
+- [ ] Double-clicking the title bar toggles macOS window zoom
 - [ ] `Cmd+T` creates a new tab
 - [ ] `Cmd+W` closes the active pane, or the tab when only one pane exists
 - [ ] `Cmd+[` / `Cmd+]` switch tabs
@@ -51,6 +55,12 @@ exact error and do not work around it for alpha.
 - [ ] Servers section stays quiet when empty
 - [ ] Servers section shows detected localhost URLs from terminal output
 - [ ] Clicking a server row opens the URL in the default browser
+- [ ] Close and relaunch restores tabs, split layout, cwd values, sidebar
+  state, active tab, and active pane.
+- [ ] Restored panes are fresh shells with no old scrollback, command output,
+  AI prompts, secrets, server records, or old processes.
+- [ ] A pane whose saved cwd no longer exists falls back to the home
+  directory.
 - [ ] File Actions opens from a file row and closes with Escape
 - [ ] Missing Cursor / VS Code / Neovim CLIs render disabled, not hidden
 - [ ] Go to File opens from the command palette and closes with Escape
@@ -71,6 +81,8 @@ must be checked manually in the launched production app:
 - [x] `Cmd+K` opens the command palette
 - [x] `Cmd+B` opens and focuses the sidebar
 - [x] `Cmd+E` opens the handoff overlay
+- [ ] Title bar drag moves the app window
+- [ ] Workspace restore recreates layout/cwd/sidebar state with fresh shells
 - [ ] `Cmd+/` opens the keyboard shortcuts overlay
 - [ ] Command Guard overlay works for protected and dangerous commands
 - [ ] File Actions open and run expected external handoff actions
@@ -153,3 +165,5 @@ must be checked manually in the launched production app:
 - File Actions for external editor handoff
 - Passive local server detection from terminal output
 - Shortcut cleanup for v0.1-alpha
+- Workspace persistence for tabs, splits, cwd, sidebar state, and window shape
+- Native custom title-bar dragging in the packaged app

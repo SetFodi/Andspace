@@ -56,15 +56,12 @@ body,
   align-items: center;
   height: 28px;
   background: #0a0a0c;
-  -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
 }
 
-/* Children of the title bar should be transparent to mouse events so every
-   click lands on the .title-bar element (which has data-tauri-drag-region
-   and -webkit-app-region: drag). This makes the full bar grab-able and
-   double-clickable for zoom. */
+/* Children of the title bar are transparent to mouse events so the parent
+   can start a native Tauri drag on mousedown and keep double-click zoom. */
 .title-bar > * {
   pointer-events: none;
 }

@@ -15,6 +15,8 @@ work block without focus bugs, stale UI, or terminal friction?
 ## First 10 Minutes — Terminal Basics
 
 - [ ] App launches to one tab and one active terminal pane.
+- [ ] Holding and dragging the title bar moves the window.
+- [ ] Double-clicking the title bar toggles macOS window zoom.
 - [ ] Shell prompt appears within a few seconds.
 - [ ] Typing feels immediate; no dropped characters.
 - [ ] `Cmd+T` opens a new tab.
@@ -119,10 +121,16 @@ Use a temporary `ANDSPACE.md` rule set if the project has none:
 
 - [ ] Close AndSpace.
 - [ ] Reopen the production app.
-- [ ] Shell prompt appears again.
+- [ ] Previous tabs and split layout are restored.
+- [ ] Previous pane cwd values are restored where the folders still exist.
+- [ ] Shell prompt appears again in every restored pane.
+- [ ] Restored panes are fresh shells, not resumed old processes.
+- [ ] No old command output, secrets, or AI prompts are visible.
 - [ ] Terminal input still feels normal.
 - [ ] Sidebar can reopen and reload the project.
 - [ ] Previously stopped server rows do not persist after relaunch.
+- [ ] `Cmd+K` → `Reset Saved Workspace`, quit, and relaunch.
+- [ ] Confirm reset launch starts clean instead of restoring the old layout.
 
 ## Performance Sanity
 

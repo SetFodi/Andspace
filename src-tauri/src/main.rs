@@ -7,6 +7,7 @@ mod file_actions;
 mod project_sidebar;
 mod pty;
 mod rules;
+mod workspace;
 
 use commands::*;
 use pty::PtyManager;
@@ -23,15 +24,9 @@ fn main() {
             let menu = Menu::default(app)?;
             let split_right =
                 MenuItem::with_id(app, MENU_SPLIT_RIGHT, "Split Right", true, Some("Cmd+O"))?;
-            let split_down = MenuItem::with_id(
-                app,
-                MENU_SPLIT_DOWN,
-                "Split Down",
-                true,
-                Some("Cmd+L"),
-            )?;
-            let pane_menu =
-                Submenu::with_items(app, "Pane", true, &[&split_right, &split_down])?;
+            let split_down =
+                MenuItem::with_id(app, MENU_SPLIT_DOWN, "Split Down", true, Some("Cmd+L"))?;
+            let pane_menu = Submenu::with_items(app, "Pane", true, &[&split_right, &split_down])?;
             menu.insert(&pane_menu, 4)?;
             Ok(menu)
         })
@@ -74,6 +69,9 @@ fn main() {
             build_nvim_split_command,
             report_file_action_event,
             report_server_event,
+            load_workspace_state,
+            save_workspace_state,
+            reset_workspace_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running andspace");

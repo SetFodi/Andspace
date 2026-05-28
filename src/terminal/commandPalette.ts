@@ -16,12 +16,20 @@ export type CommandPaletteActionId =
   | "servers.openPreview"
   | "servers.copyUrl"
   | "servers.focus"
+  | "workspace.restore"
+  | "workspace.reset"
   | "help.showKeybinds";
 
 export interface CommandPaletteAction {
   id: CommandPaletteActionId;
   title: string;
-  section: "Terminal" | "Project" | "Servers" | "AI / Handoff" | "Help";
+  section:
+    | "Terminal"
+    | "Project"
+    | "Servers"
+    | "Workspace"
+    | "AI / Handoff"
+    | "Help";
   keywords: string[];
 }
 
@@ -123,6 +131,18 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Focus Servers",
     section: "Servers",
     keywords: ["server", "focus", "sidebar", "servers"],
+  },
+  {
+    id: "workspace.restore",
+    title: "Restore Last Workspace",
+    section: "Workspace",
+    keywords: ["workspace", "restore", "session", "tabs", "panes"],
+  },
+  {
+    id: "workspace.reset",
+    title: "Reset Saved Workspace",
+    section: "Workspace",
+    keywords: ["workspace", "reset", "clear", "session", "restore"],
   },
   {
     id: "help.showKeybinds",

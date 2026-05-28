@@ -9,8 +9,9 @@ pub fn create_pty(
     state: State<'_, PtyManager>,
     cols: u16,
     rows: u16,
-) -> Result<String, String> {
-    state.create(app, cols, rows)
+    cwd: Option<String>,
+) -> Result<crate::pty::CreatedPty, String> {
+    state.create(app, cols, rows, cwd)
 }
 
 #[tauri::command]
@@ -376,4 +377,19 @@ pub fn report_server_event(
         _ => format!("server-unknown event={}", log_value(&event)),
     };
     crate::pty::diag_log(&line);
+}
+
+#[tauri::command]
+pub fn load_workspace_state() -> Result<Option<crate::workspace::WorkspaceSnapshot>, String> {
+    crate::workspace::load_workspace_state()
+}
+
+#[tauri::command]
+pub fn save_workspace_state(snapshot: crate::workspace::WorkspaceSnapshot) -> Result<(), String> {
+    crate::workspace::save_workspace_state(&snapshot)
+}
+
+#[tauri::command]
+pub fn reset_workspace_state() -> Result<(), String> {
+    crate::workspace::reset_workspace_state()
 }

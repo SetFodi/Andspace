@@ -7,6 +7,7 @@ splits, command safety, AI CLI handoff, and a lightweight project sidebar.
 ## Current v0.1-alpha
 
 - Terminal tabs, splits, and pane focus navigation
+- Workspace restore for tabs, splits, cwd, sidebar state, and window shape
 - Command Guard with project rules from `ANDSPACE.md`
 - `Cmd+Shift+I` initializer for `ANDSPACE.md`
 - AI handoff through installed local Claude Code, Codex, or Cursor CLIs
@@ -67,6 +68,7 @@ src-tauri/target/release/bundle/macos/AndSpace.app
 - [v0.1 status](docs/V0_1.md)
 - [release checklist](docs/V0_1_RELEASE_CHECKLIST.md)
 - [dogfood checklist](docs/DOGFOOD_CHECKLIST.md)
+- [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)
 - [AI handoff](docs/AI_HANDOFF.md)
 - [Command Palette](docs/COMMAND_PALETTE.md)

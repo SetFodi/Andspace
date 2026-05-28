@@ -23,6 +23,8 @@ explorer, or settings UI.
 | Servers      | Open Localhost Preview | Open the most recently detected server    |
 | Servers      | Copy Server URL      | Copy the most recently detected server URL  |
 | Servers      | Focus Servers        | Open the sidebar focused on Servers         |
+| Workspace    | Restore Last Workspace | Recreate tabs/splits/cwds from saved state |
+| Workspace    | Reset Saved Workspace | Delete the saved workspace file             |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
 
 Filtering is simple substring matching over command title, section, id, and
@@ -52,6 +54,7 @@ Diagnostics are written to `/tmp/andspace-diag.log`:
 ```text
 command-palette-open
 command-palette-run action=terminal.splitRight
+command-palette-run action=workspace.restore
 ```
 
 ## Limits
@@ -61,3 +64,5 @@ command-palette-run action=terminal.splitRight
 - No Git panel.
 - No settings UI.
 - No embedded browser preview.
+- Workspace commands restore layout and cwd only; they do not restore
+  scrollback, output, prompts, or old processes.

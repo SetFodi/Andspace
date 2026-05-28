@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
@@ -55,10 +57,35 @@ import {
   type CommandPaletteActionId,
 } from "./terminal/commandPalette";
 import type { PaneFocusDirection } from "./terminal/paneNavigation";
+import { buildWorkspaceSnapshot } from "./terminal/workspaceModel";
+import {
+  applyWindowState,
+  captureWindowState,
+  listenToWindowStateChanges,
+  loadWorkspaceState,
+  resetWorkspaceState,
+  saveWorkspaceState,
+} from "./terminal/workspacePersistence";
 
 function TitleBar() {
+  const startWindowDrag = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || event.detail > 1) return;
+    event.preventDefault();
+    void getCurrentWindow().startDragging().catch(() => {});
+  };
+
+  const toggleWindowZoom = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    void getCurrentWindow().toggleMaximize().catch(() => {});
+  };
+
   return (
-    <div className="title-bar" data-tauri-drag-region>
+    <div
+      className="title-bar"
+      onMouseDown={startWindowDrag}
+      onDoubleClick={toggleWindowZoom}
+    >
       <div className="title-bar-gutter" />
       <div className="title-bar-text">AndSpace</div>
       <div className="title-bar-spacer" />
@@ -130,6 +157,7 @@ export default function App() {
     return paneId ? (s.selectedTextByPane[paneId] ?? "") : "";
   });
   const newTab = useStore((s) => s.newTab);
+  const restoreWorkspace = useStore((s) => s.restoreWorkspace);
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
   const splitActive = useStore((s) => s.splitActive);
@@ -144,6 +172,7 @@ export default function App() {
     (s) => s.respondToGuardConfirmation
   );
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [keybindsOpen, setKeybindsOpen] = useState(false);
@@ -167,6 +196,21 @@ export default function App() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const lastSplitShortcutRef = useRef<{ action: NativeShortcut; at: number } | null>(
     null
+  );
+  const workspaceReadyRef = useRef(false);
+  const saveWorkspaceTimerRef = useRef<number | null>(null);
+  const workspaceFingerprint = useStore((s) =>
+    JSON.stringify({
+      tabs: s.tabs,
+      activeTabId: s.activeTabId,
+      activePaneByTab: s.activePaneByTab,
+      paneCwds: Object.fromEntries(
+        Object.entries(s.paneMeta).map(([paneId, meta]) => [
+          paneId,
+          meta.cwd ?? "",
+        ])
+      ),
+    })
   );
 
   const focusSidebar = useCallback(() => {
@@ -414,6 +458,38 @@ export default function App() {
       } else if (action.id === "servers.focus") {
         setSidebarSection("servers");
         setSidebarVisible(true);
+      } else if (action.id === "workspace.restore") {
+        const snapshot = await loadWorkspaceState();
+        if (!snapshot) {
+          showToast({ tone: "neutral", message: "No saved workspace found" });
+          return;
+        }
+        await applyWindowState(snapshot.window);
+        setSidebarSection(snapshot.sidebar.focusedSection);
+        setSidebarOpen(snapshot.sidebar.open);
+        setProjectRoot(snapshot.projectRoot);
+        const restored = await restoreWorkspace(snapshot);
+        showToast({
+          tone: restored ? "success" : "error",
+          message: restored
+            ? "Restored saved workspace"
+            : "Could not restore saved workspace",
+        });
+        if (restored) refocusTerminal();
+      } else if (action.id === "workspace.reset") {
+        try {
+          if (saveWorkspaceTimerRef.current !== null) {
+            window.clearTimeout(saveWorkspaceTimerRef.current);
+            saveWorkspaceTimerRef.current = null;
+          }
+          await resetWorkspaceState();
+          showToast({ tone: "neutral", message: "Reset saved workspace" });
+        } catch (e) {
+          showToast({
+            tone: "error",
+            message: `Could not reset workspace: ${String(e)}`,
+          });
+        }
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -439,6 +515,8 @@ export default function App() {
       initRulesForActivePane,
       newTab,
       openGoToFile,
+      refocusTerminal,
+      restoreWorkspace,
       setSidebarVisible,
       showToast,
       splitActive,
@@ -539,18 +617,100 @@ export default function App() {
     serverCount,
   ]);
 
-  // Open the first tab on mount. Guard with a ref because React StrictMode
-  // double-invokes effects in dev, and newTab() is async — without this
-  // guard we'd create two PTYs at startup.
+  const saveWorkspaceNow = useCallback(async () => {
+    if (!workspaceReadyRef.current) return;
+    const state = useStore.getState();
+    if (state.tabs.length === 0) return;
+    try {
+      const windowState = await captureWindowState();
+      const snapshot = buildWorkspaceSnapshot({
+        tabs: state.tabs,
+        activeTabId: state.activeTabId,
+        activePaneByTab: state.activePaneByTab,
+        paneMeta: state.paneMeta,
+        sidebarOpen,
+        sidebarSection,
+        projectRoot,
+        window: windowState,
+      });
+      await saveWorkspaceState(snapshot);
+    } catch (e) {
+      console.warn("Failed to save workspace", e);
+    }
+  }, [projectRoot, sidebarOpen, sidebarSection]);
+
+  const scheduleWorkspaceSave = useCallback(() => {
+    if (!workspaceReadyRef.current) return;
+    if (saveWorkspaceTimerRef.current !== null) {
+      window.clearTimeout(saveWorkspaceTimerRef.current);
+    }
+    saveWorkspaceTimerRef.current = window.setTimeout(() => {
+      saveWorkspaceTimerRef.current = null;
+      void saveWorkspaceNow();
+    }, 400);
+  }, [saveWorkspaceNow]);
+
+  // Restore workspace on mount. Guard with a ref because React StrictMode
+  // double-invokes effects in dev, and PTY creation is async.
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
-    if (tabs.length === 0) {
-      newTab();
-    }
+    void (async () => {
+      let restored = false;
+      try {
+        const snapshot = await loadWorkspaceState();
+        if (snapshot) {
+          await applyWindowState(snapshot.window);
+          setSidebarSection(snapshot.sidebar.focusedSection);
+          setSidebarOpen(snapshot.sidebar.open);
+          setProjectRoot(snapshot.projectRoot);
+          restored = await restoreWorkspace(snapshot);
+        }
+      } catch (e) {
+        console.warn("Failed to load workspace", e);
+      }
+      if (!restored && useStore.getState().tabs.length === 0) {
+        await newTab();
+      }
+      workspaceReadyRef.current = true;
+      setWorkspaceReady(true);
+      refocusTerminal();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    workspaceReadyRef.current = workspaceReady;
+  }, [workspaceReady]);
+
+  useEffect(() => {
+    if (!workspaceReady) return;
+    scheduleWorkspaceSave();
+  }, [
+    projectRoot,
+    scheduleWorkspaceSave,
+    sidebarOpen,
+    sidebarSection,
+    workspaceFingerprint,
+    workspaceReady,
+  ]);
+
+  useEffect(() => {
+    if (!workspaceReady) return;
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    listenToWindowStateChanges(scheduleWorkspaceSave)
+      .then((fn) => {
+        if (disposed) fn();
+        else unlisten = fn;
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [scheduleWorkspaceSave, workspaceReady]);
 
   // App-level keyboard shortcuts.
   //

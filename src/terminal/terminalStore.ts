@@ -29,6 +29,11 @@ import {
   findNearestPaneInDirection,
   type PaneFocusDirection,
 } from "./paneNavigation";
+import {
+  collectPersistedPaneIds,
+  remapPersistedSplitNode,
+  type WorkspaceSnapshot,
+} from "./workspaceModel";
 
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
@@ -47,6 +52,7 @@ interface State {
   pendingGuardConfirmation: GuardConfirmationRequest | null;
 
   newTab: () => Promise<PaneId | null>;
+  restoreWorkspace: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
   closeTab: (id: TabId) => Promise<void>;
   splitActive: (direction: SplitDirection) => Promise<PaneId | null>;
   closePane: (paneId: PaneId) => Promise<void>;
@@ -71,12 +77,17 @@ interface State {
   clearPaneShellState: (paneId: PaneId) => void;
 }
 
+interface CreatedPty {
+  paneId: string;
+  cwd: string;
+}
+
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-async function createPty(): Promise<string> {
-  return invoke<string>("create_pty", { cols: 80, rows: 24 });
+async function createPty(cwd?: string): Promise<CreatedPty> {
+  return invoke<CreatedPty>("create_pty", { cols: 80, rows: 24, cwd });
 }
 
 async function killPty(paneId: string) {
@@ -373,7 +384,8 @@ export const useStore = create<State>((set, get) => ({
     ),
 
   newTab: async () => {
-    const paneId = await createPty();
+    const created = await createPty();
+    const paneId = created.paneId;
     const tab: Tab = {
       id: uid(),
       title: "shell",
@@ -394,6 +406,85 @@ export const useStore = create<State>((set, get) => ({
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: paneId },
     }));
     return paneId;
+  },
+
+  restoreWorkspace: async (snapshot) => {
+    const oldPaneIds = get().tabs.flatMap((tab) => collectPanes(tab.root));
+    const oldToNew: Record<PaneId, PaneId> = {};
+    const newPaneMeta: Record<PaneId, PaneMeta> = {};
+    const newCommandHistory: Record<PaneId, CommandHistoryEntry[]> = {};
+    const newHandoffHistory: Record<PaneId, HandoffCommandRecord[]> = {};
+    const newSelectedText: Record<PaneId, string> = {};
+    const newGuardHistory: Record<PaneId, CommandGuardEvaluation[]> = {};
+    const createdPaneIds: PaneId[] = [];
+
+    try {
+      for (const oldPaneId of collectPersistedPaneIds(snapshot)) {
+        const created = await createPty(snapshot.panes[oldPaneId]?.cwd);
+        oldToNew[oldPaneId] = created.paneId;
+        createdPaneIds.push(created.paneId);
+        newPaneMeta[created.paneId] = created.cwd ? { cwd: created.cwd } : {};
+        newCommandHistory[created.paneId] = [];
+        newHandoffHistory[created.paneId] = [];
+        newSelectedText[created.paneId] = "";
+        newGuardHistory[created.paneId] = [];
+      }
+
+      const restoredTabs: Tab[] = [];
+      const activePaneByTab: Record<TabId, PaneId> = {};
+      for (const savedTab of snapshot.tabs) {
+        const root = remapPersistedSplitNode(savedTab.root, oldToNew);
+        if (!root) continue;
+        restoredTabs.push({
+          id: savedTab.id,
+          title: savedTab.title || "shell",
+          root,
+        });
+        const savedActive =
+          snapshot.activePaneByTab[savedTab.id] ??
+          (snapshot.activeTabId === savedTab.id ? snapshot.activePaneId : null);
+        const mappedActive = savedActive ? oldToNew[savedActive] : null;
+        activePaneByTab[savedTab.id] = mappedActive ?? collectPanes(root)[0];
+      }
+
+      if (restoredTabs.length === 0) {
+        throw new Error("workspace contained no restorable tabs");
+      }
+
+      for (const oldPaneId of oldPaneIds) {
+        await killPty(oldPaneId);
+      }
+      for (const oldPaneId of oldPaneIds) {
+        clearOutputCapture(oldPaneId);
+        useServerStore.getState().clearForPane(oldPaneId);
+      }
+
+      const activeTabId =
+        snapshot.activeTabId &&
+        restoredTabs.some((tab) => tab.id === snapshot.activeTabId)
+          ? snapshot.activeTabId
+          : restoredTabs[0].id;
+
+      set({
+        tabs: restoredTabs,
+        activeTabId,
+        activePaneByTab,
+        paneMeta: newPaneMeta,
+        commandHistoryByPane: newCommandHistory,
+        handoffHistoryByPane: newHandoffHistory,
+        selectedTextByPane: newSelectedText,
+        resolvedRulesByPane: {},
+        guardEvaluationsByPane: newGuardHistory,
+        pendingGuardConfirmation: null,
+      });
+      return true;
+    } catch (e) {
+      console.warn("Failed to restore workspace", e);
+      for (const paneId of createdPaneIds) {
+        await killPty(paneId);
+      }
+      return false;
+    }
   },
 
   closeTab: async (id) => {
@@ -453,7 +544,8 @@ export const useStore = create<State>((set, get) => ({
     const tab = tabs.find((t) => t.id === activeTabId);
     const activePane = activePaneByTab[activeTabId];
     if (!tab || !activePane) return null;
-    const newPaneId = await createPty();
+    const created = await createPty();
+    const newPaneId = created.paneId;
     const newRoot = findAndReplace(tab.root, activePane, {
       kind: "split",
       direction,

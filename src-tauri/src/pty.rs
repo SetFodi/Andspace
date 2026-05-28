@@ -34,6 +34,13 @@ struct PtyHandle {
     child: Box<dyn portable_pty::Child + Send + Sync>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedPty {
+    pub pane_id: String,
+    pub cwd: String,
+}
+
 pub struct PtyManager {
     panes: Arc<Mutex<HashMap<String, PtyHandle>>>,
 }
@@ -56,7 +63,8 @@ impl PtyManager {
         app: AppHandle,
         cols: u16,
         rows: u16,
-    ) -> Result<String, String> {
+        cwd: Option<String>,
+    ) -> Result<CreatedPty, String> {
         let pty_system = native_pty_system();
         let pair = pty_system
             .openpty(PtySize {
@@ -69,9 +77,8 @@ impl PtyManager {
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
         let mut cmd = CommandBuilder::new(&shell);
-        if let Ok(home) = std::env::var("HOME") {
-            cmd.cwd(home);
-        }
+        let (initial_cwd, restore_result) = resolve_initial_cwd(cwd.as_deref());
+        cmd.cwd(&initial_cwd);
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
         cmd.env("TERM_PROGRAM", "AndSpace");
@@ -99,6 +106,14 @@ impl PtyManager {
             .map_err(|e| format!("clone_reader failed: {e}"))?;
 
         diag_log(&format!("pty-create pid={child_pid} pane={pane_id}"));
+        if let Some(requested_cwd) = cwd {
+            diag_log(&format!(
+                "workspace-restore-pane requested_cwd={} cwd={} result={}",
+                log_value(&requested_cwd),
+                log_value(&initial_cwd),
+                restore_result
+            ));
+        }
         if let Some((integration, zdotdir)) = zsh_bootstrap {
             diag_log(&format!(
                 "shell-autoload pane={pane_id} integration={integration} zdotdir={zdotdir}"
@@ -142,7 +157,10 @@ impl PtyManager {
         };
         self.panes.lock().insert(pane_id.clone(), handle);
 
-        Ok(pane_id)
+        Ok(CreatedPty {
+            pane_id,
+            cwd: initial_cwd,
+        })
     }
 
     pub fn write(&self, pane_id: &str, data: &str) -> Result<(), String> {
@@ -181,6 +199,31 @@ impl PtyManager {
     }
 }
 
+fn home_dir() -> String {
+    std::env::var("HOME").unwrap_or_else(|_| "/".to_string())
+}
+
+fn resolve_initial_cwd(requested: Option<&str>) -> (String, &'static str) {
+    if let Some(cwd) = requested {
+        let trimmed = cwd.trim();
+        if !trimmed.is_empty() && std::path::Path::new(trimmed).is_dir() {
+            return (trimmed.to_string(), "ok");
+        }
+    }
+    (
+        home_dir(),
+        if requested.is_some() {
+            "fallback-home"
+        } else {
+            "default-home"
+        },
+    )
+}
+
+fn log_value(value: &str) -> String {
+    value.replace('\n', "\\n")
+}
+
 fn shell_integration_dir() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("shell-integration")
 }
@@ -197,9 +240,7 @@ fn zsh_zdotdir_path() -> Option<String> {
 
 fn canonicalize_if_exists(path: &std::path::Path) -> Option<String> {
     if path.exists() {
-        path.canonicalize()
-            .ok()
-            .map(|p| p.display().to_string())
+        path.canonicalize().ok().map(|p| p.display().to_string())
     } else {
         None
     }
@@ -213,10 +254,7 @@ fn is_zsh(shell: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn apply_zsh_bootstrap(
-    cmd: &mut CommandBuilder,
-    shell: &str,
-) -> Option<(String, String)> {
+fn apply_zsh_bootstrap(cmd: &mut CommandBuilder, shell: &str) -> Option<(String, String)> {
     if !is_zsh(shell) {
         return None;
     }
@@ -234,6 +272,40 @@ fn make_id() -> String {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     format!("p-{nanos:x}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_initial_cwd;
+    use std::fs;
+
+    #[test]
+    fn restore_cwd_uses_existing_directory() {
+        let dir = unique_temp_dir("pty-cwd-ok");
+        let (resolved, result) = resolve_initial_cwd(Some(dir.to_str().unwrap()));
+        assert_eq!(resolved, dir.display().to_string());
+        assert_eq!(result, "ok");
+    }
+
+    #[test]
+    fn restore_cwd_falls_back_when_missing() {
+        let missing = unique_temp_dir("pty-cwd-missing").join("gone");
+        let (resolved, result) = resolve_initial_cwd(Some(missing.to_str().unwrap()));
+        assert!(!resolved.is_empty());
+        assert_eq!(result, "fallback-home");
+    }
+
+    fn unique_temp_dir(label: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "andspace-{label}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
 }
 
 impl Drop for PtyManager {
