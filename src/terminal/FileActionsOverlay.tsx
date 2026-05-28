@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ClipboardIcon,
   ExternalLinkIcon,
@@ -29,10 +29,31 @@ export function FileActionsOverlay({
 }: Props) {
   const [selected, setSelected] = useState(0);
   const actions = useMemo(() => actionsForFile(editors), [editors]);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) setSelected(0);
   }, [open, path]);
+
+  // Pull focus into the overlay when it opens so arrow keys / Enter work
+  // without the user having to click first. Also intercept Escape at the
+  // window level so sidebar focus-stealing handlers don't preempt it.
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => rootRef.current?.focus());
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open, onClose]);
 
   if (!open || !path) return null;
 
@@ -41,6 +62,8 @@ export function FileActionsOverlay({
 
   return (
     <div
+      ref={rootRef}
+      tabIndex={-1}
       className="file-actions-overlay"
       role="presentation"
       onMouseDown={(e) => {

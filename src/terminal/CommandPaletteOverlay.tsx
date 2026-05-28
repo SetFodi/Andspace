@@ -32,8 +32,21 @@ export function CommandPaletteOverlay({
       return;
     }
     const id = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, [open]);
+    // Window-level Escape catches the keystroke even if focus is outside the
+    // overlay (e.g. terminal still focused right after ⌘K opens it).
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open, onClose]);
 
   useEffect(() => {
     setSelected(0);

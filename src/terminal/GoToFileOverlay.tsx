@@ -45,8 +45,20 @@ export function GoToFileOverlay({
       void reportFileActionEvent("file-picker-open", { path: cwd });
     }
     const id = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(id);
-  }, [open, cwd]);
+    // Window-level Escape so it works even if focus slips outside the input.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open, cwd, onClose]);
 
   useEffect(() => {
     setSelected(0);
