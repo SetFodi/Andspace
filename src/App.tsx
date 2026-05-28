@@ -7,6 +7,7 @@ import { HandoffOverlay } from "./terminal/HandoffOverlay";
 import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
 import { FileActionsOverlay } from "./terminal/FileActionsOverlay";
 import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
+import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
@@ -127,6 +128,7 @@ export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [keybindsOpen, setKeybindsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarSection, setSidebarSection] = useState<"files" | "scripts">(
     "files"
@@ -182,23 +184,36 @@ export default function App() {
     refocusTerminal();
   }, [refocusTerminal]);
 
+  // Slide focus into the sidebar after it opens. Two rAFs so the layout
+  // settles (open transition applied → first focusable in tree) before we
+  // try to focus, otherwise the call no-ops.
+  const focusSidebarSoon = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        sidebarRef.current?.focus();
+      });
+    });
+  }, []);
+
   const setSidebarVisible = useCallback(
     (next: boolean) => {
       setSidebarOpen(next);
       void reportSidebarEvent(next ? "sidebar-open" : "sidebar-close");
-      if (!next) refocusTerminal();
+      if (next) focusSidebarSoon();
+      else refocusTerminal();
     },
-    [refocusTerminal]
+    [focusSidebarSoon, refocusTerminal]
   );
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((open) => {
       const next = !open;
       void reportSidebarEvent(next ? "sidebar-open" : "sidebar-close");
-      if (!next) refocusTerminal();
+      if (next) focusSidebarSoon();
+      else refocusTerminal();
       return next;
     });
-  }, [refocusTerminal]);
+  }, [focusSidebarSoon, refocusTerminal]);
 
   const buildPromptForActivePane = useCallback(async () => {
     return buildAiHandoffPrompt({
@@ -336,6 +351,8 @@ export default function App() {
         await initRulesForActivePane();
       } else if (action.id === "project.goToFile") {
         await openGoToFile();
+      } else if (action.id === "help.showKeybinds") {
+        setKeybindsOpen(true);
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -504,6 +521,11 @@ export default function App() {
           setPaletteOpen(true);
           void reportCommandPaletteOpen();
         }
+      } else if (k === "/" || k === "?") {
+        e.preventDefault();
+        if (!pendingGuardConfirmation) {
+          setKeybindsOpen(true);
+        }
       } else if (k === "]") {
         e.preventDefault();
         nextTab();
@@ -667,6 +689,13 @@ export default function App() {
           } else {
             setFileActionsPath(entry.path);
           }
+        }}
+      />
+      <KeybindsOverlay
+        open={!pendingGuardConfirmation && keybindsOpen}
+        onClose={() => {
+          setKeybindsOpen(false);
+          refocusTerminal();
         }}
       />
       {toast && (

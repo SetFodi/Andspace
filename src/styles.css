@@ -1879,6 +1879,201 @@ body,
   text-align: center;
 }
 
+/* === Keyboard cheatsheet overlay ======================================== */
+
+.keybinds-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 56;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 78px;
+  background: radial-gradient(
+      ellipse at 50% 32%,
+      rgba(40, 28, 80, 0.16) 0%,
+      transparent 50%
+    ),
+    rgba(2, 3, 6, 0.52);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  animation: palette-overlay-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+}
+
+.keybinds-card {
+  width: min(760px, calc(100vw - 52px));
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(167, 139, 250, 0.07) 0%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, rgba(24, 25, 32, 0.985) 0%, rgba(13, 14, 19, 1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 32px 64px -12px rgba(0, 0, 0, 0.7),
+    0 12px 24px -8px rgba(0, 0, 0, 0.5);
+  animation: palette-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.keybinds-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+}
+
+.keybinds-kicker {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  color: #b39ef9;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.keybinds-head h2 {
+  margin: 0;
+  color: #f6f6f8;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.keybinds-shortcut {
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  color: #c4c4cf;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.keybinds-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px 36px;
+  padding: 6px 22px 18px;
+  animation: palette-content-in 280ms 40ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.keybinds-group-title {
+  margin-bottom: 9px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #8d8f9c;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.keybinds-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.keybinds-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  min-height: 28px;
+}
+
+.keybinds-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 92px;
+}
+
+.keybinds-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  color: #d6d6df;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.keybinds-label {
+  color: #c4c4cf;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+}
+
+.keybinds-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 22px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: #5d5d6a;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.keybinds-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.keybinds-foot-hint {
+  color: #6e6e7c;
+}
+
+.keybinds-footer kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  color: #b8b8c5;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .keybinds-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
 /* === Toast ============================================================== */
 
 .app-toast {

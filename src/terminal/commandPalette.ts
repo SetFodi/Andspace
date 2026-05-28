@@ -13,12 +13,13 @@ export type CommandPaletteActionId =
   | "project.goToFile"
   | "handoff.sendContext"
   | "handoff.copyLastPrompt"
-  | "guard.testProtectedCommand";
+  | "guard.testProtectedCommand"
+  | "help.showKeybinds";
 
 export interface CommandPaletteAction {
   id: CommandPaletteActionId;
   title: string;
-  section: "Terminal" | "Project" | "AI / Handoff" | "Command Guard";
+  section: "Terminal" | "Project" | "AI / Handoff" | "Command Guard" | "Help";
   keywords: string[];
 }
 
@@ -100,6 +101,12 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Test Protected Command",
     section: "Command Guard",
     keywords: ["guard", "protected", "test"],
+  },
+  {
+    id: "help.showKeybinds",
+    title: "Keyboard Shortcuts",
+    section: "Help",
+    keywords: ["help", "keybinds", "shortcuts", "cheatsheet", "hotkeys"],
   },
 ];
 
