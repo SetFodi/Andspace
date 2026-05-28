@@ -87,8 +87,10 @@ the sidebar to pick a specific one.
 
 ## Lifecycle
 
-- Detection is **per pane**. When a pane closes, its servers are removed
-  from the list.
+- Detection is **per pane**. When the foreground command that printed a URL
+  exits, AndSpace removes that pane's detected servers. This prevents stale
+  "running" rows after `Ctrl+C` without adding polling or health checks.
+- When a pane closes, its servers are removed from the list.
 - The list is capped at **16 servers** in memory. Hitting the cap drops the
   oldest entries; in practice you'll never reach this.
 - Duplicate URLs only update `lastSeenAt` — they don't grow the list.

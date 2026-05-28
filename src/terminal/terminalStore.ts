@@ -352,6 +352,10 @@ export const useStore = create<State>((set, get) => ({
           },
         };
       });
+      // Server detection is intentionally passive: if the foreground command
+      // that printed the URL exits, clear that pane's detected URLs instead
+      // of pretending we know the server is still alive.
+      useServerStore.getState().clearForPane(paneId);
     }
   },
 
