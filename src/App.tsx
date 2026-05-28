@@ -367,8 +367,6 @@ export default function App() {
           );
         }
         showToast({ tone: "success", message: "Copied redacted handoff prompt" });
-      } else if (action.id === "guard.testProtectedCommand" && activePaneId) {
-        await writeToPane(activePaneId, "sudo echo andspace-protected-test\n");
       }
     },
     [
@@ -451,7 +449,6 @@ export default function App() {
       disabled.add("terminal.splitDown");
       disabled.add("terminal.closePane");
       disabled.add("handoff.copyLastPrompt");
-      disabled.add("guard.testProtectedCommand");
       disabled.add("sidebar.focusFiles");
       disabled.add("sidebar.focusScripts");
       disabled.add("sidebar.runScript");
@@ -485,9 +482,23 @@ export default function App() {
   }, []);
 
   // App-level keyboard shortcuts.
+  //
+  // Priority model:
+  //  1. Command Guard pending → block ALL Cmd shortcuts; only Guard's own
+  //     buttons / Enter / Esc work.
+  //  2. Any other overlay open → block all Cmd shortcuts so users can't
+  //     stack overlays. Each overlay owns its own Escape handler.
+  //  3. Otherwise → fire the matching shortcut.
+  const anyOverlayOpen =
+    handoffOpen ||
+    paletteOpen ||
+    keybindsOpen ||
+    fileActionsPath !== null ||
+    goToFileOpen;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.metaKey || e.ctrlKey || e.altKey) return;
+      if (pendingGuardConfirmation || anyOverlayOpen) return;
       const k = e.key;
       if (k === "t") {
         e.preventDefault();
@@ -509,23 +520,17 @@ export default function App() {
         void initRulesForActivePane();
       } else if (k.toLowerCase() === "e" && !e.shiftKey) {
         e.preventDefault();
-        if (!pendingGuardConfirmation && !paletteOpen) {
-          setHandoffOpen(true);
-        }
+        setHandoffOpen(true);
       } else if (k === "ArrowLeft" && !e.shiftKey) {
         e.preventDefault();
         focusSidebar();
       } else if (k.toLowerCase() === "k" && !e.shiftKey) {
         e.preventDefault();
-        if (!pendingGuardConfirmation && !handoffOpen) {
-          setPaletteOpen(true);
-          void reportCommandPaletteOpen();
-        }
+        setPaletteOpen(true);
+        void reportCommandPaletteOpen();
       } else if (k === "/" || k === "?") {
         e.preventDefault();
-        if (!pendingGuardConfirmation) {
-          setKeybindsOpen(true);
-        }
+        setKeybindsOpen(true);
       } else if (k === "]") {
         e.preventDefault();
         nextTab();
@@ -543,7 +548,7 @@ export default function App() {
     activeTabId,
     activePaneCwd,
     activePaneId,
-    handoffOpen,
+    anyOverlayOpen,
     initRulesForActivePane,
     newTab,
     closeTab,
@@ -555,7 +560,6 @@ export default function App() {
     prevTab,
     switchToIndex,
     loadRulesForPane,
-    paletteOpen,
     pendingGuardConfirmation,
     showToast,
   ]);
@@ -647,7 +651,12 @@ export default function App() {
         onToast={(message, tone) => showToast({ message, tone })}
       />
       <CommandPaletteOverlay
-        open={!pendingGuardConfirmation && !handoffOpen && paletteOpen}
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !keybindsOpen &&
+          paletteOpen
+        }
         disabledActions={disabledPaletteActions}
         onRun={runPaletteAction}
         onClose={closePalette}
@@ -657,6 +666,7 @@ export default function App() {
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
+          !keybindsOpen &&
           fileActionsPath !== null
         }
         path={fileActionsPath}
@@ -674,6 +684,7 @@ export default function App() {
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
+          !keybindsOpen &&
           fileActionsPath === null &&
           goToFileOpen
         }

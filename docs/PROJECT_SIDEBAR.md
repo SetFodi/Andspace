@@ -5,8 +5,14 @@ terminal companion for Files and Scripts only, not an IDE sidebar.
 
 ## Behavior
 
-- `Cmd+B` toggles the sidebar.
-- `Cmd+Left` focuses the sidebar; `Esc` returns focus to the terminal.
+- `Cmd+B` toggles the sidebar **and focuses the first file row** so arrow
+  keys work immediately. Pressing `Cmd+B` again closes it and returns
+  focus to the terminal.
+- `Cmd+Left` focuses an already-open sidebar without toggling.
+- `Esc` returns focus to the terminal.
+- Inside the sidebar: `↑` / `↓` walk rows (wraps, scrolls into view),
+  `→` / `←` expand / collapse a directory, `Home` / `End` jump to first /
+  last row.
 - The sidebar walks upward from the active pane cwd looking for a project
   marker (`package.json`, `pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`,
   `Cargo.toml`, `.git`) and uses the first match as the displayed root. If

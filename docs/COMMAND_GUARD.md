@@ -223,6 +223,20 @@ For initializer verification:
 3. Press `Cmd+Shift+I` again and confirm the file is not overwritten.
 4. Add test rules and verify protected/dangerous/allowed overlay behavior.
 
+## Overlay priority
+
+Command Guard is the **highest priority overlay**. While a guard confirmation
+is pending:
+
+- All `Cmd`-shortcuts are ignored (`Cmd+K`, `Cmd+E`, `Cmd+B`, `Cmd+/`, etc.).
+- No other overlay can open. The Keyboard Shortcuts overlay, Command Palette,
+  AI Handoff, File Actions, and Go to File overlays all check
+  `!pendingGuardConfirmation` before rendering.
+- The terminal stops accepting input until the user responds (Allow / Deny)
+  or the 60 s timeout fires.
+- Pressing Escape sends `cancel` to the guard so the protected command is
+  not executed. Closing the overlay never silently allows the command.
+
 ## Limits
 
 - Pre-execution blocking is zsh only.

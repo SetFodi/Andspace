@@ -1721,6 +1721,36 @@ body,
   border-color: rgba(167, 139, 250, 0.22);
 }
 
+.file-actions-item.disabled,
+.file-actions-item:disabled {
+  cursor: not-allowed;
+  color: #5a5c6a;
+  background: transparent;
+}
+
+.file-actions-item.disabled:hover,
+.file-actions-item:disabled:hover {
+  background: transparent;
+}
+
+.file-actions-item.disabled .file-actions-item-icon,
+.file-actions-item:disabled .file-actions-item-icon {
+  color: #4d4f5b;
+}
+
+.file-actions-item.disabled .file-actions-item-label,
+.file-actions-item:disabled .file-actions-item-label {
+  color: #6e6e7c;
+}
+
+.file-actions-item.disabled .file-actions-item-hint,
+.file-actions-item:disabled .file-actions-item-hint {
+  color: #6e6e7c;
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(255, 255, 255, 0.05);
+  font-style: italic;
+}
+
 /* === Go-to-File picker overlay ========================================= */
 
 .picker-overlay {

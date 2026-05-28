@@ -29,7 +29,11 @@ always-available actions at the bottom:
 | Reveal in Finder | — | macOS `open -R <file>` |
 
 If `cursor` / `code` / `nvim` is not on `PATH`, the corresponding action is
-hidden from the menu — no dead UI.
+still listed but rendered greyed out with a `not installed` chip and a
+tooltip explaining how to add it (e.g. "Install Cursor's `cursor` CLI from
+Cursor → Install command in PATH"). Arrow keys skip disabled entries and
+Enter on one is a no-op — the action is visible so users learn what's
+possible, but it can't be invoked.
 
 ## Default file action
 

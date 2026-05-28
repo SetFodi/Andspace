@@ -31,9 +31,18 @@ export function FileActionsOverlay({
   const actions = useMemo(() => actionsForFile(editors), [editors]);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Enabled indices only — arrow keys skip disabled (missing-CLI) entries.
+  const enabledIndices = useMemo(
+    () =>
+      actions
+        .map((action, idx) => (isActionDisabled(action) ? -1 : idx))
+        .filter((idx) => idx !== -1),
+    [actions]
+  );
+
   useEffect(() => {
-    if (open) setSelected(0);
-  }, [open, path]);
+    if (open) setSelected(enabledIndices[0] ?? 0);
+  }, [open, path, enabledIndices]);
 
   // Pull focus into the overlay when it opens so arrow keys / Enter work
   // without the user having to click first. Also intercept Escape at the
@@ -76,16 +85,14 @@ export function FileActionsOverlay({
           onClose();
         } else if (e.key === "ArrowDown") {
           e.preventDefault();
-          setSelected((idx) => (actions.length ? (idx + 1) % actions.length : 0));
+          setSelected((idx) => nextEnabled(enabledIndices, idx, 1));
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          setSelected((idx) =>
-            actions.length ? (idx - 1 + actions.length) % actions.length : 0
-          );
+          setSelected((idx) => nextEnabled(enabledIndices, idx, -1));
         } else if (e.key === "Enter") {
           e.preventDefault();
           const action = actions[selected];
-          if (action) onAction(action);
+          if (action && !isActionDisabled(action)) onAction(action);
         }
       }}
     >
@@ -121,18 +128,29 @@ export function FileActionsOverlay({
           {actions.map((action, idx) => {
             const key = actionKey(action);
             const active = idx === selected;
+            const disabled = isActionDisabled(action);
             return (
               <button
                 key={key}
-                className={`file-actions-item ${active ? "active" : ""}`}
-                onMouseEnter={() => setSelected(idx)}
-                onClick={() => onAction(action)}
+                className={`file-actions-item ${active ? "active" : ""} ${
+                  disabled ? "disabled" : ""
+                }`}
+                disabled={disabled}
+                onMouseEnter={() => {
+                  if (!disabled) setSelected(idx);
+                }}
+                onClick={() => {
+                  if (!disabled) onAction(action);
+                }}
+                title={disabled ? missingHint(action) : undefined}
               >
                 <span className="file-actions-item-icon" aria-hidden>
                   {actionIcon(action)}
                 </span>
                 <span className="file-actions-item-label">{action.label}</span>
-                <kbd className="file-actions-item-hint">{actionHint(action)}</kbd>
+                <kbd className="file-actions-item-hint">
+                  {disabled ? "not installed" : actionHint(action)}
+                </kbd>
               </button>
             );
           })}
@@ -178,4 +196,36 @@ function actionHint(action: FileAction): string {
 
 function shorten(p: string): string {
   return p.replace(/^\/Users\/[^/]+/, "~");
+}
+
+function isActionDisabled(action: FileAction): boolean {
+  return (
+    (action.type === "open" || action.type === "nvim-split") &&
+    Boolean(action.disabled)
+  );
+}
+
+function nextEnabled(
+  enabled: number[],
+  current: number,
+  delta: 1 | -1
+): number {
+  if (enabled.length === 0) return current;
+  const pos = enabled.indexOf(current);
+  if (pos === -1) return enabled[0];
+  const len = enabled.length;
+  return enabled[(pos + delta + len) % len];
+}
+
+function missingHint(action: FileAction): string {
+  if (action.type === "open" && action.tool === "cursor") {
+    return "Install Cursor's `cursor` CLI from Cursor → Install command in PATH";
+  }
+  if (action.type === "open" && action.tool === "code") {
+    return "Install VS Code's `code` CLI from VS Code → Shell Command: Install 'code' in PATH";
+  }
+  if (action.type === "nvim-split") {
+    return "Install Neovim (`brew install neovim`) to enable this action";
+  }
+  return "";
 }

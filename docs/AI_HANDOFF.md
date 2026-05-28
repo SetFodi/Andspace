@@ -82,7 +82,12 @@ Press `Cmd+E` to open a compact `Send context` overlay. It includes:
 
 `Preview prompt` shows the redacted prompt in a scrollable panel. `Copy prompt`
 copies the same redacted prompt to the clipboard. Send buttons launch only local
-installed CLIs. Escape closes the overlay.
+installed CLIs. Escape closes the overlay and returns focus to the terminal.
+
+The handoff overlay sits below Command Guard in the priority stack — if Guard
+is waiting for confirmation, `Cmd+E` is suppressed. While the handoff overlay
+is open, no other overlay can open and `Cmd`-shortcuts are inactive until it
+closes.
 
 ## Diagnostics
 

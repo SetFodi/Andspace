@@ -15,8 +15,13 @@ export interface ResolvedProjectRoot {
 }
 
 export type FileAction =
-  | { type: "open"; tool: "cursor" | "code"; label: string }
-  | { type: "nvim-split"; label: string }
+  | {
+      type: "open";
+      tool: "cursor" | "code";
+      label: string;
+      disabled?: boolean;
+    }
+  | { type: "nvim-split"; label: string; disabled?: boolean }
   | { type: "copy"; label: string }
   | { type: "reveal"; label: string };
 
@@ -54,23 +59,32 @@ export function reportFileActionEvent(
   });
 }
 
-/// Build the list of actions available for a file given which editors are
-/// detected. Cursor/Code/Nvim entries only appear when the tool is on PATH;
-/// Copy/Reveal are always present. Order matches the menu the user sees.
+/// Build the list of actions available for a file. All editor entries are
+/// always shown so users can see what AndSpace can do — entries whose CLI
+/// isn't on PATH come back as `disabled: true` and render greyed out with
+/// a "Not installed" hint, instead of disappearing silently.
 export function actionsForFile(editors: AvailableEditors): FileAction[] {
-  const actions: FileAction[] = [];
-  if (editors.cursor) {
-    actions.push({ type: "open", tool: "cursor", label: "Open in Cursor" });
-  }
-  if (editors.code) {
-    actions.push({ type: "open", tool: "code", label: "Open in VS Code" });
-  }
-  if (editors.nvim) {
-    actions.push({ type: "nvim-split", label: "Open in Neovim split" });
-  }
-  actions.push({ type: "copy", label: "Copy path" });
-  actions.push({ type: "reveal", label: "Reveal in Finder" });
-  return actions;
+  return [
+    {
+      type: "open",
+      tool: "cursor",
+      label: "Open in Cursor",
+      disabled: !editors.cursor,
+    },
+    {
+      type: "open",
+      tool: "code",
+      label: "Open in VS Code",
+      disabled: !editors.code,
+    },
+    {
+      type: "nvim-split",
+      label: "Open in Neovim split",
+      disabled: !editors.nvim,
+    },
+    { type: "copy", label: "Copy path" },
+    { type: "reveal", label: "Reveal in Finder" },
+  ];
 }
 
 /// Default action used by Cmd+Enter. Cursor > Code > Neovim > Copy.

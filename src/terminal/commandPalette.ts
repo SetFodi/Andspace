@@ -13,13 +13,12 @@ export type CommandPaletteActionId =
   | "project.goToFile"
   | "handoff.sendContext"
   | "handoff.copyLastPrompt"
-  | "guard.testProtectedCommand"
   | "help.showKeybinds";
 
 export interface CommandPaletteAction {
   id: CommandPaletteActionId;
   title: string;
-  section: "Terminal" | "Project" | "AI / Handoff" | "Command Guard" | "Help";
+  section: "Terminal" | "Project" | "AI / Handoff" | "Help";
   keywords: string[];
 }
 
@@ -95,12 +94,6 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Copy Last Prompt",
     section: "AI / Handoff",
     keywords: ["copy", "prompt", "handoff"],
-  },
-  {
-    id: "guard.testProtectedCommand",
-    title: "Test Protected Command",
-    section: "Command Guard",
-    keywords: ["guard", "protected", "test"],
   },
   {
     id: "help.showKeybinds",
