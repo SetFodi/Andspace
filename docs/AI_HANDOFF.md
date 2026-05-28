@@ -1,11 +1,11 @@
 # AI Handoff
 
-Milestone 9 adds the foundation for `⌘E` handoff. It does not launch Claude,
-Codex, Cursor, or any other AI CLI yet. There is no provider integration, chat
-history, streaming response, sidebar, command palette, file explorer, or
-settings UI.
+Milestone 9 added the foundation for `⌘E` handoff. The v0.1 sprint extends it
+to local CLI handoff for installed tools only. There is no provider API
+integration, API key management, provider billing, chat history, streaming
+response, sidebar, file explorer, or settings UI.
 
-The current flow is capture → redact → prompt → copy/preview.
+The current flow is capture → redact → prompt → copy/preview/send to local CLI.
 
 ## Capture
 
@@ -53,17 +53,36 @@ The generated prompt includes:
 If no completed command or output is available, the prompt uses a clear fallback
 instead of failing.
 
+## Local CLI Handoff
+
+AndSpace detects local tools with PATH lookup:
+
+- `claude` for Claude Code
+- `codex` for Codex
+- `cursor-agent` for Cursor CLI
+
+Missing tools are disabled in the overlay. AndSpace does not check API keys and
+does not call Anthropic, OpenAI, or Cursor APIs directly.
+
+When sending to a CLI, AndSpace writes the redacted prompt to a temporary file,
+opens a split-right pane, and runs the selected CLI with stdin redirected from
+that file. The shell command includes only the temp file path, not the prompt
+body, so the prompt is not written into shell history.
+
 ## UI
 
-Press `Cmd+E` to open a compact `Send context` overlay. For Milestone 9 it has
-only:
+Press `Cmd+E` to open a compact `Send context` overlay. It includes:
 
 - `Copy prompt`
 - `Preview prompt`
+- `Send to Claude`
+- `Send to Codex`
+- `Send to Cursor`
 - `Cancel`
 
 `Preview prompt` shows the redacted prompt in a scrollable panel. `Copy prompt`
-copies the same redacted prompt to the clipboard. Escape closes the overlay.
+copies the same redacted prompt to the clipboard. Send buttons launch only local
+installed CLIs. Escape closes the overlay.
 
 ## Diagnostics
 
@@ -73,6 +92,9 @@ Diagnostics are written to `/tmp/andspace-diag.log`:
 handoff-open pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0
 handoff-preview pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0
 handoff-copy pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0
+handoff-send pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0 target=claude
+handoff-send-success pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0 target=claude
+handoff-send-error pane=p-... command=echo hello exit_code=0 output_line_count=1 redaction_count=0 target=codex error=...
 ```
 
 ## Manual Verification
@@ -84,11 +106,14 @@ handoff-copy pane=p-... command=echo hello exit_code=0 output_line_count=1 redac
 5. Run `false`, press `Cmd+E`, and confirm `Exit code: 1`.
 6. Run `echo "API_KEY=abc123 Bearer test.token.value"`.
 7. Press `Cmd+E` and confirm the secret values are redacted.
+8. If a supported CLI is installed, click its send button and confirm a
+   split-right pane opens with the CLI launched from a temp prompt file.
 
 ## Limits
 
-- Copy/preview only; no AI process is launched.
-- No provider buttons yet.
+- Local CLI launch only; no direct provider API calls.
+- No multi-CLI fanout or answer comparison.
 - Captured output is terminal text, not a structured process transcript.
 - Redaction can miss novel secret formats.
 - Command Guard remains separate from handoff.
+- zsh is still the only fully supported shell integration.

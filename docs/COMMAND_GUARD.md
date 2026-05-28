@@ -8,9 +8,9 @@ Command Guard has two v0.1 paths:
 - Milestone 7: native AndSpace confirmation UI for protected/dangerous commands.
 - Milestone 8: initializer shortcut and small UX hardening.
 
-The zsh gate can stop protected and dangerous commands before execution, but it
-is still scoped to Command Guard only: no sidebar, command palette, project UI,
-or AI handoff.
+The zsh gate can stop protected and dangerous commands before execution. It
+remains scoped to Command Guard behavior and is separate from AI handoff,
+command palette actions, sidebar, project UI, and file exploration.
 
 ## Source Of Truth
 
@@ -76,6 +76,9 @@ Dangerous commands show a stronger overlay with:
 Escape cancels. Dangerous commands cannot run until exact `run` is typed.
 While the overlay is open it captures keyboard events, so terminal input should
 not leak through to the shell.
+
+Command Guard has top overlay priority. If a confirmation is open, `Cmd+E` and
+`Cmd+K` should not take focus.
 
 This milestone uses a small shell-side matcher so the gate can make a
 synchronous decision inside ZLE. It intentionally mirrors the Rust matching
@@ -224,12 +227,12 @@ For initializer verification:
 
 - Pre-execution blocking is zsh only.
 - The native confirmation overlay is intentionally small and Command Guard-only.
-- No AI handoff yet.
+- AI handoff and command palette do not bypass Command Guard.
 - Matching uses the command text reported by shell integration.
 - The zsh pre-execution gate matches `$BUFFER` before execution.
 - Dangerous commands default to cancel on UI failure or timeout.
-- The initializer is exposed only as `Cmd+Shift+I` for now; there is no command
-  palette or settings UI.
+- zsh is still the only fully supported shell integration.
+- There is no settings UI, Git panel, sidebar, or file explorer.
 - Rust is canonical for app-side matching; zsh matching is temporary for
   blocking.
 - Aliases, shell expansion, command substitution, shell functions, and resolved

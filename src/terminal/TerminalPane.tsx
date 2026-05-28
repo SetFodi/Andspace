@@ -31,6 +31,7 @@ function isAppShortcut(e: KeyboardEvent): boolean {
   return (
     k === "t" ||
     k === "w" ||
+    k.toLowerCase() === "k" ||
     k.toLowerCase() === "e" ||
     (e.shiftKey && k.toLowerCase() === "i") ||
     k === "[" ||
@@ -196,6 +197,12 @@ export function TerminalPane({ paneId, tabId }: Props) {
     // React to OS-level window focus changes.
     window.addEventListener("focus", evaluateBlink);
     window.addEventListener("blur", evaluateBlink);
+    const onRefocusTerminal = () => {
+      if (isActiveRef.current && document.hasFocus()) {
+        term.focus();
+      }
+    };
+    window.addEventListener("andspace-refocus-terminal", onRefocusTerminal);
 
     // Initial state
     evaluateBlink();
@@ -256,6 +263,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       window.clearInterval(blinkInterval);
       window.removeEventListener("focus", evaluateBlink);
       window.removeEventListener("blur", evaluateBlink);
+      window.removeEventListener("andspace-refocus-terminal", onRefocusTerminal);
       dataDisposable.dispose();
       selectionDisposable.dispose();
       shellIntegration.dispose();

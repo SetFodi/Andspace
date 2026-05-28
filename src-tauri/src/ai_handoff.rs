@@ -1,5 +1,6 @@
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 const DEFAULT_OUTPUT_LINES: usize = 80;
 const MAX_OUTPUT_BYTES: usize = 32 * 1024;
@@ -22,6 +23,32 @@ pub struct HandoffPrompt {
     pub prompt: String,
     pub redaction_count: usize,
     pub output_line_count: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AiCliTarget {
+    Claude,
+    Codex,
+    Cursor,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiCliTool {
+    pub target: AiCliTarget,
+    pub label: String,
+    pub command: String,
+    pub available: bool,
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreparedAiHandoff {
+    pub target: AiCliTarget,
+    pub prompt_path: String,
+    pub shell_command: String,
 }
 
 pub fn build_handoff_prompt(input: HandoffPromptInput) -> HandoffPrompt {
@@ -86,6 +113,33 @@ pub fn build_handoff_prompt(input: HandoffPromptInput) -> HandoffPrompt {
             output_line_count,
         }
     }
+}
+
+pub fn detect_ai_cli_tools() -> Vec<AiCliTool> {
+    let paths = std::env::var_os("PATH")
+        .map(|path| std::env::split_paths(&path).collect::<Vec<PathBuf>>())
+        .unwrap_or_default();
+    detect_ai_cli_tools_in_paths(&paths)
+}
+
+pub fn prepare_ai_cli_handoff(
+    target: AiCliTarget,
+    prompt: &str,
+) -> Result<PreparedAiHandoff, String> {
+    if prompt.trim().is_empty() {
+        return Err("prompt is empty".to_string());
+    }
+
+    let path = handoff_prompt_path(target);
+    std::fs::write(&path, prompt).map_err(|e| format!("write prompt file failed: {e}"))?;
+
+    let command = command_for_target(target);
+    let quoted_path = shell_quote(&path.display().to_string());
+    Ok(PreparedAiHandoff {
+        target,
+        prompt_path: path.display().to_string(),
+        shell_command: format!("{command} < {quoted_path}; rm -f {quoted_path}"),
+    })
 }
 
 pub fn redact_text(input: &str) -> (String, usize) {
@@ -168,6 +222,81 @@ fn joined_len(lines: &[String]) -> usize {
     lines.iter().map(|line| line.len()).sum::<usize>() + lines.len().saturating_sub(1)
 }
 
+fn detect_ai_cli_tools_in_paths(paths: &[PathBuf]) -> Vec<AiCliTool> {
+    tool_specs()
+        .into_iter()
+        .map(|(target, label, command)| {
+            let path = find_executable(paths, command);
+            AiCliTool {
+                target,
+                label: label.to_string(),
+                command: command.to_string(),
+                available: path.is_some(),
+                path: path.map(|path| path.display().to_string()),
+            }
+        })
+        .collect()
+}
+
+fn tool_specs() -> Vec<(AiCliTarget, &'static str, &'static str)> {
+    vec![
+        (AiCliTarget::Claude, "Claude Code", "claude"),
+        (AiCliTarget::Codex, "Codex", "codex"),
+        (AiCliTarget::Cursor, "Cursor CLI", "cursor-agent"),
+    ]
+}
+
+fn find_executable(paths: &[PathBuf], command: &str) -> Option<PathBuf> {
+    paths
+        .iter()
+        .map(|path| path.join(command))
+        .find(|candidate| is_executable(candidate))
+}
+
+#[cfg(unix)]
+fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    path.is_file()
+        && path
+            .metadata()
+            .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable(path: &Path) -> bool {
+    path.is_file()
+}
+
+fn command_for_target(target: AiCliTarget) -> &'static str {
+    match target {
+        AiCliTarget::Claude => "claude",
+        AiCliTarget::Codex => "codex",
+        AiCliTarget::Cursor => "cursor-agent",
+    }
+}
+
+fn handoff_prompt_path(target: AiCliTarget) -> PathBuf {
+    let target = match target {
+        AiCliTarget::Claude => "claude",
+        AiCliTarget::Codex => "codex",
+        AiCliTarget::Cursor => "cursor",
+    };
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+    std::env::temp_dir().join(format!(
+        "andspace-handoff-{target}-{}-{millis}.md",
+        std::process::id()
+    ))
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,6 +376,50 @@ mod tests {
         assert!(result.prompt.contains("selected line"));
     }
 
+    #[test]
+    fn detects_available_cli_tools_from_path() {
+        let root = unique_temp_dir("cli-detect");
+        std::fs::create_dir_all(&root).unwrap();
+        make_executable(&root.join("claude"));
+        make_executable(&root.join("cursor-agent"));
+
+        let tools = detect_ai_cli_tools_in_paths(&[root.clone()]);
+        let claude = tools
+            .iter()
+            .find(|tool| tool.target == AiCliTarget::Claude)
+            .unwrap();
+        let codex = tools
+            .iter()
+            .find(|tool| tool.target == AiCliTarget::Codex)
+            .unwrap();
+        let cursor = tools
+            .iter()
+            .find(|tool| tool.target == AiCliTarget::Cursor)
+            .unwrap();
+
+        assert!(claude.available);
+        assert!(!codex.available);
+        assert!(cursor.available);
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn prepares_prompt_file_without_putting_prompt_in_shell_command() {
+        let prompt = "secret prompt body";
+        let prepared = prepare_ai_cli_handoff(AiCliTarget::Claude, prompt).unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(&prepared.prompt_path).unwrap(),
+            prompt
+        );
+        assert!(prepared.shell_command.contains("claude < "));
+        assert!(prepared.shell_command.contains("rm -f"));
+        assert!(!prepared.shell_command.contains(prompt));
+
+        std::fs::remove_file(prepared.prompt_path).unwrap();
+    }
+
     fn input_with_output(output_lines: Vec<String>) -> HandoffPromptInput {
         HandoffPromptInput {
             cwd: "/tmp/project".to_string(),
@@ -256,6 +429,25 @@ mod tests {
             project_context: vec![],
             selected_text: None,
             redact: None,
+        }
+    }
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("andspace-handoff-{label}-{nanos}"))
+    }
+
+    fn make_executable(path: &Path) {
+        std::fs::write(path, "#!/bin/sh\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(path).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(path, permissions).unwrap();
         }
     }
 }

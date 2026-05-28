@@ -41,9 +41,9 @@ interface State {
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>;
   pendingGuardConfirmation: GuardConfirmationRequest | null;
 
-  newTab: () => Promise<void>;
+  newTab: () => Promise<PaneId | null>;
   closeTab: (id: TabId) => Promise<void>;
-  splitActive: (direction: SplitDirection) => Promise<void>;
+  splitActive: (direction: SplitDirection) => Promise<PaneId | null>;
   closePane: (paneId: PaneId) => Promise<void>;
   closeActive: () => Promise<void>;
   setActivePane: (tabId: TabId, paneId: PaneId) => void;
@@ -53,6 +53,7 @@ interface State {
   switchToIndex: (idx: number) => void;
   updatePaneMeta: (paneId: PaneId, patch: Partial<PaneMeta>) => void;
   setPaneSelectedText: (paneId: PaneId, text: string) => void;
+  writeToPane: (paneId: PaneId, data: string) => Promise<void>;
   loadRulesForPane: (paneId: PaneId, cwd: string) => Promise<void>;
   evaluateGuardForPane: (paneId: PaneId, command: string) => Promise<void>;
   respondToGuardConfirmation: (action: "run" | "cancel") => Promise<void>;
@@ -182,6 +183,10 @@ export const useStore = create<State>((set, get) => ({
         [paneId]: text,
       },
     })),
+
+  writeToPane: async (paneId, data) => {
+    await invoke("write_to_pty", { paneId, data });
+  },
 
   loadRulesForPane: async (paneId, cwd) => {
     try {
@@ -375,6 +380,7 @@ export const useStore = create<State>((set, get) => ({
       activeTabId: tab.id,
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: paneId },
     }));
+    return paneId;
   },
 
   closeTab: async (id) => {
@@ -433,7 +439,7 @@ export const useStore = create<State>((set, get) => ({
     const { activeTabId, activePaneByTab, tabs } = get();
     const tab = tabs.find((t) => t.id === activeTabId);
     const activePane = activePaneByTab[activeTabId];
-    if (!tab || !activePane) return;
+    if (!tab || !activePane) return null;
     const newPaneId = await createPty();
     const newRoot = findAndReplace(tab.root, activePane, {
       kind: "split",
@@ -454,6 +460,7 @@ export const useStore = create<State>((set, get) => ({
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: newPaneId },
     }));
+    return newPaneId;
   },
 
   closePane: async (paneId) => {

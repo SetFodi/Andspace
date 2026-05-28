@@ -65,6 +65,19 @@ pub fn build_ai_handoff_prompt(
 }
 
 #[tauri::command]
+pub fn detect_ai_cli_tools() -> Result<Vec<crate::ai_handoff::AiCliTool>, String> {
+    Ok(crate::ai_handoff::detect_ai_cli_tools())
+}
+
+#[tauri::command]
+pub fn prepare_ai_cli_handoff(
+    target: crate::ai_handoff::AiCliTarget,
+    prompt: String,
+) -> Result<crate::ai_handoff::PreparedAiHandoff, String> {
+    crate::ai_handoff::prepare_ai_cli_handoff(target, &prompt)
+}
+
+#[tauri::command]
 pub fn report_ai_handoff_event(
     event: String,
     pane_id: String,
@@ -72,10 +85,17 @@ pub fn report_ai_handoff_event(
     exit_code: Option<i32>,
     output_line_count: usize,
     redaction_count: usize,
+    target: Option<String>,
+    error: Option<String>,
 ) {
     let event = if matches!(
         event.as_str(),
-        "handoff-open" | "handoff-copy" | "handoff-preview"
+        "handoff-open"
+            | "handoff-copy"
+            | "handoff-preview"
+            | "handoff-send"
+            | "handoff-send-error"
+            | "handoff-send-success"
     ) {
         event
     } else {
@@ -85,10 +105,28 @@ pub fn report_ai_handoff_event(
     let exit_code = exit_code
         .map(|code| code.to_string())
         .unwrap_or_else(|| "unknown".to_string());
-    crate::pty::diag_log(&format!(
+    let mut line = format!(
         "{event} pane={pane_id} command={} exit_code={exit_code} output_line_count={output_line_count} redaction_count={redaction_count}",
         log_value(&command)
-    ));
+    );
+    if let Some(target) = target {
+        line.push_str(&format!(" target={}", log_value(&target)));
+    }
+    if let Some(error) = error {
+        line.push_str(&format!(" error={}", log_value(&error)));
+    }
+    crate::pty::diag_log(&line);
+}
+
+#[tauri::command]
+pub fn report_command_palette_event(action: Option<String>) {
+    match action {
+        Some(action) => crate::pty::diag_log(&format!(
+            "command-palette-run action={}",
+            log_value(&action)
+        )),
+        None => crate::pty::diag_log("command-palette-open"),
+    }
 }
 
 #[tauri::command]

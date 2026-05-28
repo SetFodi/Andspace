@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildAiHandoffPrompt,
+  detectAiCliTools,
   reportAiHandoffEvent,
+  type AiCliTarget,
+  type AiCliTool,
   type HandoffCommandRecord,
   type HandoffPrompt,
 } from "./aiHandoff";
@@ -13,6 +16,11 @@ interface Props {
   record: HandoffCommandRecord | null;
   projectContext: string[];
   selectedText: string;
+  onSendToCli: (
+    target: AiCliTarget,
+    prompt: HandoffPrompt,
+    record: HandoffCommandRecord | null
+  ) => Promise<void>;
   onClose: () => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
@@ -24,6 +32,7 @@ export function HandoffOverlay({
   record,
   projectContext,
   selectedText,
+  onSendToCli,
   onClose,
   onToast,
 }: Props) {
@@ -31,6 +40,8 @@ export function HandoffOverlay({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [tools, setTools] = useState<AiCliTool[]>([]);
+  const [sendingTarget, setSendingTarget] = useState<AiCliTarget | null>(null);
   const copyRef = useRef<HTMLButtonElement>(null);
 
   const input = useMemo(
@@ -55,9 +66,10 @@ export function HandoffOverlay({
     }
 
     setLoading(true);
-    buildAiHandoffPrompt(input)
-      .then((next) => {
+    Promise.all([buildAiHandoffPrompt(input), detectAiCliTools()])
+      .then(([next, detectedTools]) => {
         setPrompt(next);
+        setTools(detectedTools);
         if (paneId) {
           void reportAiHandoffEvent("handoff-open", paneId, next, record);
         }
@@ -106,6 +118,16 @@ export function HandoffOverlay({
     await reportAiHandoffEvent("handoff-preview", paneId, prompt, record);
   };
 
+  const sendPrompt = async (target: AiCliTarget) => {
+    if (!prompt) return;
+    setSendingTarget(target);
+    try {
+      await onSendToCli(target, prompt, record);
+    } finally {
+      setSendingTarget(null);
+    }
+  };
+
   return (
     <div
       className="handoff-overlay"
@@ -130,7 +152,7 @@ export function HandoffOverlay({
             <div className="handoff-kicker">⌘E handoff</div>
             <h2 id="handoff-title">Send context</h2>
           </div>
-          <span className="handoff-chip">copy only</span>
+          <span className="handoff-chip">local CLI</span>
         </div>
 
         <div className="handoff-summary">
@@ -152,8 +174,8 @@ export function HandoffOverlay({
 
         <p className="handoff-note">
           Builds a redacted prompt from the last command, recent output, selected
-          terminal text, and `ANDSPACE.md` Project Context. No AI CLI is
-          launched.
+          terminal text, and `ANDSPACE.md` Project Context. Local CLI handoff
+          uses installed tools only.
         </p>
 
         {previewOpen && prompt && (
@@ -176,6 +198,28 @@ export function HandoffOverlay({
           >
             Preview prompt
           </button>
+          {tools.map((tool) => (
+            <button
+              key={tool.target}
+              className="handoff-button secondary"
+              disabled={
+                loading ||
+                !prompt ||
+                !tool.available ||
+                sendingTarget === tool.target
+              }
+              title={
+                tool.available
+                  ? tool.path ?? tool.command
+                  : `${tool.command} not found in PATH`
+              }
+              onClick={() => sendPrompt(tool.target)}
+            >
+              {sendingTarget === tool.target
+                ? `Sending to ${tool.label}`
+                : `Send to ${tool.label.replace(" Code", "")}`}
+            </button>
+          ))}
           <button className="handoff-button ghost" onClick={onClose}>
             Cancel
           </button>

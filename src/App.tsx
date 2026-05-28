@@ -4,7 +4,22 @@ import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
 import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
 import { HandoffOverlay } from "./terminal/HandoffOverlay";
+import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
 import { initAndspaceRules } from "./terminal/rules";
+import {
+  buildAiHandoffPrompt,
+  prepareAiCliHandoff,
+  reportAiHandoffEvent,
+  type AiCliTarget,
+  type HandoffCommandRecord,
+  type HandoffPrompt,
+} from "./terminal/aiHandoff";
+import {
+  reportCommandPaletteOpen,
+  reportCommandPaletteRun,
+  type CommandPaletteAction,
+  type CommandPaletteActionId,
+} from "./terminal/commandPalette";
 
 function TitleBar() {
   return (
@@ -73,6 +88,7 @@ export default function App() {
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
   const splitActive = useStore((s) => s.splitActive);
+  const writeToPane = useStore((s) => s.writeToPane);
   const nextTab = useStore((s) => s.nextTab);
   const prevTab = useStore((s) => s.prevTab);
   const switchToIndex = useStore((s) => s.switchToIndex);
@@ -83,6 +99,7 @@ export default function App() {
   );
   const [toast, setToast] = useState<ToastState | null>(null);
   const [handoffOpen, setHandoffOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const showToast = useCallback((next: ToastState) => {
     setToast(next);
@@ -93,6 +110,173 @@ export default function App() {
     () => activeRules?.projectContext.map((item) => item.value) ?? [],
     [activeRules]
   );
+
+  const refocusTerminal = useCallback(() => {
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event("andspace-refocus-terminal"));
+    }, 0);
+  }, []);
+
+  const closeHandoff = useCallback(() => {
+    setHandoffOpen(false);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const closePalette = useCallback(() => {
+    setPaletteOpen(false);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const buildPromptForActivePane = useCallback(async () => {
+    return buildAiHandoffPrompt({
+      cwd: activeHandoffRecord?.cwd || activePaneCwd || "~",
+      command: activeHandoffRecord?.command || null,
+      exitCode: activeHandoffRecord?.exitCode ?? null,
+      outputLines: activeHandoffRecord?.outputLines ?? [],
+      projectContext: handoffProjectContext,
+      selectedText: activeSelectedText || null,
+      redact: true,
+    });
+  }, [
+    activeHandoffRecord,
+    activePaneCwd,
+    activeSelectedText,
+    handoffProjectContext,
+  ]);
+
+  const sendPromptToCli = useCallback(
+    async (
+      target: AiCliTarget,
+      prompt: HandoffPrompt,
+      record: HandoffCommandRecord | null
+    ) => {
+      if (!activePaneId) return;
+      await reportAiHandoffEvent("handoff-send", activePaneId, prompt, record, {
+        target,
+      });
+      try {
+        const prepared = await prepareAiCliHandoff(target, prompt.prompt);
+        const paneId = await splitActive("row");
+        if (!paneId) throw new Error("could not create handoff pane");
+        await writeToPane(paneId, `${prepared.shellCommand}\n`);
+        await reportAiHandoffEvent(
+          "handoff-send-success",
+          activePaneId,
+          prompt,
+          record,
+          { target }
+        );
+        setHandoffOpen(false);
+        showToast({ tone: "success", message: `Sent prompt to ${target}` });
+      } catch (e) {
+        const message = String(e);
+        await reportAiHandoffEvent(
+          "handoff-send-error",
+          activePaneId,
+          prompt,
+          record,
+          { target, error: message }
+        );
+        showToast({
+          tone: "error",
+          message: `Could not send to ${target}: ${message}`,
+        });
+      }
+    },
+    [activePaneId, showToast, splitActive, writeToPane]
+  );
+
+  const initRulesForActivePane = useCallback(async () => {
+    if (!activePaneCwd) {
+      showToast({
+        tone: "error",
+        message: "No active cwd yet. Run a command or wait for shell init.",
+      });
+      return;
+    }
+    try {
+      const result = await initAndspaceRules(activePaneCwd);
+      if (activePaneId) {
+        loadRulesForPane(activePaneId, activePaneCwd);
+      }
+      showToast({
+        tone: result.result === "created" ? "success" : "neutral",
+        message:
+          result.result === "created"
+            ? "Created ANDSPACE.md"
+            : "ANDSPACE.md already exists",
+      });
+    } catch (e) {
+      showToast({
+        tone: "error",
+        message: `Could not initialize ANDSPACE.md: ${String(e)}`,
+      });
+    }
+  }, [activePaneCwd, activePaneId, loadRulesForPane, showToast]);
+
+  const runPaletteAction = useCallback(
+    async (action: CommandPaletteAction) => {
+      await reportCommandPaletteRun(action.id);
+      closePalette();
+      if (action.id === "terminal.newTab") {
+        await newTab();
+      } else if (action.id === "terminal.splitRight") {
+        await splitActive("row");
+      } else if (action.id === "terminal.splitDown") {
+        await splitActive("column");
+      } else if (action.id === "terminal.closePane") {
+        await closeActive();
+      } else if (action.id === "project.createAndspace") {
+        await initRulesForActivePane();
+      } else if (action.id === "handoff.sendContext") {
+        setHandoffOpen(true);
+      } else if (action.id === "handoff.copyLastPrompt") {
+        const prompt = await buildPromptForActivePane();
+        await navigator.clipboard.writeText(prompt.prompt);
+        if (activePaneId) {
+          await reportAiHandoffEvent(
+            "handoff-copy",
+            activePaneId,
+            prompt,
+            activeHandoffRecord
+          );
+        }
+        showToast({ tone: "success", message: "Copied redacted handoff prompt" });
+      } else if (action.id === "guard.testProtectedCommand" && activePaneId) {
+        await writeToPane(activePaneId, "sudo echo andspace-protected-test\n");
+      }
+    },
+    [
+      activeHandoffRecord,
+      activePaneId,
+      buildPromptForActivePane,
+      closeActive,
+      closePalette,
+      initRulesForActivePane,
+      newTab,
+      showToast,
+      splitActive,
+      writeToPane,
+    ]
+  );
+
+  const disabledPaletteActions = useMemo(() => {
+    const disabled = new Set<CommandPaletteActionId>();
+    if (!activePaneId) {
+      disabled.add("terminal.splitRight");
+      disabled.add("terminal.splitDown");
+      disabled.add("terminal.closePane");
+      disabled.add("handoff.copyLastPrompt");
+      disabled.add("guard.testProtectedCommand");
+    }
+    if (!activePaneCwd) {
+      disabled.add("project.createAndspace");
+    }
+    if (!activeHandoffRecord) {
+      disabled.add("handoff.copyLastPrompt");
+    }
+    return disabled;
+  }, [activeHandoffRecord, activePaneCwd, activePaneId]);
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -126,35 +310,18 @@ export default function App() {
         splitActive("column");
       } else if (k.toLowerCase() === "i" && e.shiftKey) {
         e.preventDefault();
-        if (!activePaneCwd) {
-          showToast({
-            tone: "error",
-            message: "No active cwd yet. Run a command or wait for shell init.",
-          });
-          return;
-        }
-        initAndspaceRules(activePaneCwd)
-          .then((result) => {
-            if (activePaneId) {
-              loadRulesForPane(activePaneId, activePaneCwd);
-            }
-            showToast({
-              tone: result.result === "created" ? "success" : "neutral",
-              message:
-                result.result === "created"
-                  ? "Created ANDSPACE.md"
-                  : "ANDSPACE.md already exists",
-            });
-          })
-          .catch((e) =>
-            showToast({
-              tone: "error",
-              message: `Could not initialize ANDSPACE.md: ${String(e)}`,
-            })
-          );
+        void initRulesForActivePane();
       } else if (k.toLowerCase() === "e" && !e.shiftKey) {
         e.preventDefault();
-        setHandoffOpen(true);
+        if (!pendingGuardConfirmation && !paletteOpen) {
+          setHandoffOpen(true);
+        }
+      } else if (k.toLowerCase() === "k" && !e.shiftKey) {
+        e.preventDefault();
+        if (!pendingGuardConfirmation && !handoffOpen) {
+          setPaletteOpen(true);
+          void reportCommandPaletteOpen();
+        }
       } else if (k === "]") {
         e.preventDefault();
         nextTab();
@@ -172,6 +339,8 @@ export default function App() {
     activeTabId,
     activePaneCwd,
     activePaneId,
+    handoffOpen,
+    initRulesForActivePane,
     newTab,
     closeTab,
     closeActive,
@@ -180,6 +349,8 @@ export default function App() {
     prevTab,
     switchToIndex,
     loadRulesForPane,
+    paletteOpen,
+    pendingGuardConfirmation,
     showToast,
   ]);
 
@@ -208,14 +379,21 @@ export default function App() {
         onRespond={respondToGuardConfirmation}
       />
       <HandoffOverlay
-        open={handoffOpen}
+        open={!pendingGuardConfirmation && handoffOpen}
         paneId={activePaneId}
         cwd={activePaneCwd}
         record={activeHandoffRecord}
         projectContext={handoffProjectContext}
         selectedText={activeSelectedText}
-        onClose={() => setHandoffOpen(false)}
+        onSendToCli={sendPromptToCli}
+        onClose={closeHandoff}
         onToast={(message, tone) => showToast({ message, tone })}
+      />
+      <CommandPaletteOverlay
+        open={!pendingGuardConfirmation && !handoffOpen && paletteOpen}
+        disabledActions={disabledPaletteActions}
+        onRun={runPaletteAction}
+        onClose={closePalette}
       />
       {toast && (
         <div className={`app-toast ${toast.tone}`} role="status">

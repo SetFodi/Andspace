@@ -35,6 +35,22 @@ export interface HandoffPrompt {
   outputLineCount: number;
 }
 
+export type AiCliTarget = "claude" | "codex" | "cursor";
+
+export interface AiCliTool {
+  target: AiCliTarget;
+  label: string;
+  command: string;
+  available: boolean;
+  path: string | null;
+}
+
+export interface PreparedAiHandoff {
+  target: AiCliTarget;
+  promptPath: string;
+  shellCommand: string;
+}
+
 const captures = new Map<string, OutputCapture>();
 
 export function startOutputCapture(paneId: string) {
@@ -84,11 +100,32 @@ export function buildAiHandoffPrompt(
   return invoke<HandoffPrompt>("build_ai_handoff_prompt", { input });
 }
 
+export function detectAiCliTools(): Promise<AiCliTool[]> {
+  return invoke<AiCliTool[]>("detect_ai_cli_tools");
+}
+
+export function prepareAiCliHandoff(
+  target: AiCliTarget,
+  prompt: string
+): Promise<PreparedAiHandoff> {
+  return invoke<PreparedAiHandoff>("prepare_ai_cli_handoff", {
+    target,
+    prompt,
+  });
+}
+
 export function reportAiHandoffEvent(
-  event: "handoff-open" | "handoff-copy" | "handoff-preview",
+  event:
+    | "handoff-open"
+    | "handoff-copy"
+    | "handoff-preview"
+    | "handoff-send"
+    | "handoff-send-error"
+    | "handoff-send-success",
   paneId: string,
   prompt: HandoffPrompt,
-  record: HandoffCommandRecord | null
+  record: HandoffCommandRecord | null,
+  options?: { target?: AiCliTarget; error?: string }
 ): Promise<void> {
   return invoke("report_ai_handoff_event", {
     event,
@@ -97,6 +134,8 @@ export function reportAiHandoffEvent(
     exitCode: record?.exitCode ?? null,
     outputLineCount: prompt.outputLineCount,
     redactionCount: prompt.redactionCount,
+    target: options?.target ?? null,
+    error: options?.error ?? null,
   });
 }
 
