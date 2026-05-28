@@ -62,10 +62,11 @@ git status --porcelain=v1 -b
 ```
 
 It shows the branch, changed file count, and compact rows for modified, added,
-deleted, renamed, and untracked files. Clicking a changed file opens the
-existing File Actions overlay. There is no diff viewer, staging, commit, push,
-pull, reset, checkout, stash, merge, or rebase UI. Risky Git commands remain
-protected by Command Guard. Full behavior in [GIT_CHANGES.md](GIT_CHANGES.md).
+deleted, renamed, and untracked files. Clicking a changed file opens a
+read-only diff preview. Right-click or `Cmd+Enter` opens the existing File
+Actions overlay. There is no staging, commit, push, pull, reset, checkout,
+stash, merge, or rebase UI. Risky Git commands remain protected by Command
+Guard. Full behavior in [GIT_CHANGES.md](GIT_CHANGES.md).
 
 ## Scripts
 
@@ -92,6 +93,8 @@ Clicking a script opens a split-right pane and runs it from the project root.
 - `Focus Servers`
 - `Focus Git Changes`
 - `Refresh Git Changes`
+- `Open Git Diff`
+- `Copy Git Diff`
 - `Open Changed File`
 - `Run Script`
 - `Go to File` (compact file picker over the loaded project tree)
@@ -122,6 +125,8 @@ server-detected url=http://localhost:5173 pane=pane-abc label=Vite
 server-open url=http://localhost:5173
 server-copy url=http://localhost:5173
 git-status-load cwd=/repo result=ok repo=/repo files=3
+git-diff-load path=src/main.ts result=ok bytes=1234
+git-diff-copy path=/repo/src/main.ts
 git-file-open path=/repo/src/main.ts
 git-refresh
 ```
@@ -130,7 +135,7 @@ git-refresh
 
 - Git Changes is read-only.
 - No commit, push, pull, reset, checkout, stash, merge, or rebase UI.
-- No diff viewer.
+- Diff preview is read-only and capped; no diff editor.
 - No background server scanning.
 - No embedded server preview.
 - No file editing.

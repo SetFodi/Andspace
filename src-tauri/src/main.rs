@@ -71,6 +71,7 @@ fn main() {
             report_file_action_event,
             report_server_event,
             load_git_status,
+            load_git_diff,
             report_git_event,
             load_workspace_state,
             save_workspace_state,

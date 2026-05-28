@@ -11,6 +11,7 @@ import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
 import { FileActionsOverlay } from "./terminal/FileActionsOverlay";
 import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
 import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
+import { GitDiffOverlay } from "./terminal/GitDiffOverlay";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
@@ -50,7 +51,15 @@ import {
   openServerUrl,
   useServerStore,
 } from "./terminal/serverStore";
-import { loadGitStatus, reportGitEvent } from "./terminal/gitChanges";
+import {
+  absoluteGitPath,
+  loadGitDiff,
+  loadGitStatus,
+  reportGitEvent,
+  type GitChangedFile,
+  type GitDiffPreview,
+  type GitStatus,
+} from "./terminal/gitChanges";
 import {
   reportCommandPaletteOpen,
   reportCommandPaletteRun,
@@ -192,6 +201,15 @@ export default function App() {
   const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
   const serverCount = useServerStore((s) => s.servers.length);
   const [fileActionsPath, setFileActionsPath] = useState<string | null>(null);
+  const [gitDiffOpen, setGitDiffOpen] = useState(false);
+  const [gitDiffPreview, setGitDiffPreview] = useState<GitDiffPreview | null>(
+    null
+  );
+  const [gitDiffLoading, setGitDiffLoading] = useState(false);
+  const [gitDiffError, setGitDiffError] = useState<string | null>(null);
+  const lastGitFileRef = useRef<{ file: GitChangedFile; cwd: string } | null>(
+    null
+  );
   const [goToFileOpen, setGoToFileOpen] = useState(false);
   const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
   const [pickerLoading, setPickerLoading] = useState(false);
@@ -403,6 +421,111 @@ export default function App() {
     }
   }, [projectRoot, showToast]);
 
+  const closeGitDiff = useCallback(() => {
+    setGitDiffOpen(false);
+    setGitDiffLoading(false);
+    setGitDiffError(null);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const openGitDiff = useCallback(
+    async (file: GitChangedFile, status: GitStatus) => {
+      const cwd = status.repoRoot ?? projectRoot ?? activePaneCwd;
+      if (!cwd) {
+        showToast({ tone: "neutral", message: "No Git cwd available" });
+        return;
+      }
+      lastGitFileRef.current = { file, cwd };
+      setGitDiffOpen(true);
+      setGitDiffPreview(null);
+      setGitDiffError(null);
+      setGitDiffLoading(true);
+      try {
+        const preview = await loadGitDiff(cwd, file);
+        setGitDiffPreview(preview);
+      } catch (e) {
+        setGitDiffError(String(e));
+      } finally {
+        setGitDiffLoading(false);
+      }
+    },
+    [activePaneCwd, projectRoot, showToast]
+  );
+
+  const loadFirstGitDiffTarget = useCallback(async () => {
+    const existing = lastGitFileRef.current;
+    if (existing) return existing;
+    const cwd = projectRoot ?? activePaneCwd;
+    if (!cwd) return null;
+    const status = await loadGitStatus(cwd);
+    const file = status.files[0];
+    if (!status.isRepo || !file) return null;
+    const target = { file, cwd: status.repoRoot ?? cwd };
+    lastGitFileRef.current = target;
+    return target;
+  }, [activePaneCwd, projectRoot]);
+
+  const openGitDiffFromPalette = useCallback(async () => {
+    try {
+      const target = await loadFirstGitDiffTarget();
+      if (!target) {
+        showToast({ tone: "neutral", message: "No changed files found" });
+        setSidebarSection("git");
+        setSidebarVisible(true);
+        return;
+      }
+      await openGitDiff(target.file, {
+        isRepo: true,
+        repoRoot: target.cwd,
+        branch: null,
+        files: [target.file],
+      });
+    } catch (e) {
+      setSidebarSection("git");
+      setSidebarVisible(true);
+      showToast({ tone: "error", message: `Could not load Git diff: ${String(e)}` });
+    }
+  }, [loadFirstGitDiffTarget, openGitDiff, setSidebarVisible, showToast]);
+
+  const copyGitDiff = useCallback(
+    async (preview: GitDiffPreview | null = gitDiffPreview) => {
+      if (!preview?.diff || preview.tooLarge) {
+        showToast({ tone: "neutral", message: "No diff available to copy" });
+        return;
+      }
+      await navigator.clipboard.writeText(preview.diff);
+      await reportGitEvent("git-diff-copy", {
+        path: absoluteGitPath(preview.repoRoot, preview.path),
+      });
+      showToast({ tone: "success", message: "Copied Git diff" });
+    },
+    [gitDiffPreview, showToast]
+  );
+
+  const copyGitDiffFromPalette = useCallback(async () => {
+    try {
+      const target = await loadFirstGitDiffTarget();
+      if (!target) {
+        showToast({ tone: "neutral", message: "No changed files found" });
+        setSidebarSection("git");
+        setSidebarVisible(true);
+        return;
+      }
+      const preview = await loadGitDiff(target.cwd, target.file);
+      if (!preview.diff || preview.tooLarge) {
+        showToast({
+          tone: "neutral",
+          message:
+            preview.message ?? "No diff available to copy. Open the file instead.",
+        });
+        return;
+      }
+      await copyGitDiff(preview);
+    } catch (e) {
+      showToast({ tone: "error", message: `Could not copy Git diff: ${String(e)}` });
+    }
+  }, [copyGitDiff, loadFirstGitDiffTarget, setSidebarVisible, showToast]);
+
   const runPaletteAction = useCallback(
     async (action: CommandPaletteAction) => {
       await reportCommandPaletteRun(action.id);
@@ -468,6 +591,10 @@ export default function App() {
         window.requestAnimationFrame(() => {
           sidebarRef.current?.refreshGitChanges();
         });
+      } else if (action.id === "git.openDiff") {
+        await openGitDiffFromPalette();
+      } else if (action.id === "git.copyDiff") {
+        await copyGitDiffFromPalette();
       } else if (action.id === "git.openChangedFile") {
         const cwd = projectRoot ?? activePaneCwd;
         if (!cwd) {
@@ -483,10 +610,7 @@ export default function App() {
             setSidebarVisible(true);
             return;
           }
-          const path = `${status.repoRoot.replace(/\/$/, "")}/${file.path.replace(
-            /^\//,
-            ""
-          )}`;
+          const path = absoluteGitPath(status.repoRoot, file.path);
           await reportGitEvent("git-file-open", { path });
           setFileActionsPath(path);
         } catch (e) {
@@ -551,6 +675,8 @@ export default function App() {
       closePalette,
       initRulesForActivePane,
       newTab,
+      copyGitDiffFromPalette,
+      openGitDiffFromPalette,
       openGoToFile,
       projectRoot,
       refocusTerminal,
@@ -630,6 +756,8 @@ export default function App() {
       disabled.add("sidebar.focusScripts");
       disabled.add("sidebar.runScript");
       disabled.add("git.openChangedFile");
+      disabled.add("git.openDiff");
+      disabled.add("git.copyDiff");
     }
     if (!activePaneCwd) {
       disabled.add("project.createAndspace");
@@ -638,6 +766,8 @@ export default function App() {
       disabled.add("sidebar.runScript");
       disabled.add("git.refresh");
       disabled.add("git.openChangedFile");
+      disabled.add("git.openDiff");
+      disabled.add("git.copyDiff");
     }
     if (!projectRoot) {
       disabled.add("project.goToFile");
@@ -759,13 +889,15 @@ export default function App() {
   //  1. Command Guard pending → block ALL Cmd shortcuts; only Guard's own
   //     buttons / Enter / Esc work.
   //  2. Any other overlay open → block all Cmd shortcuts so users can't
-  //     stack overlays. Each overlay owns its own Escape handler.
+  //     stack overlays. Each overlay, including Git Diff, owns its own
+  //     Escape handler.
   //  3. Otherwise → fire the matching shortcut.
   const anyOverlayOpen =
     handoffOpen ||
     paletteOpen ||
     keybindsOpen ||
     fileActionsPath !== null ||
+    gitDiffOpen ||
     goToFileOpen;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -933,6 +1065,7 @@ export default function App() {
           onFileDefault={(path) => {
             void runFileAction(defaultActionFor(editors), path);
           }}
+          onGitDiff={openGitDiff}
           onToast={(message, tone) => showToast({ message, tone })}
         />
         <div className="terminal-area">
@@ -966,6 +1099,7 @@ export default function App() {
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !keybindsOpen &&
+          !gitDiffOpen &&
           paletteOpen
         }
         disabledActions={disabledPaletteActions}
@@ -978,6 +1112,7 @@ export default function App() {
           !handoffOpen &&
           !paletteOpen &&
           !keybindsOpen &&
+          !gitDiffOpen &&
           fileActionsPath !== null
         }
         path={fileActionsPath}
@@ -990,12 +1125,33 @@ export default function App() {
           closeFileActions();
         }}
       />
+      <GitDiffOverlay
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          !keybindsOpen &&
+          fileActionsPath === null &&
+          gitDiffOpen
+        }
+        preview={gitDiffPreview}
+        loading={gitDiffLoading}
+        error={gitDiffError}
+        onCopy={() => void copyGitDiff()}
+        onOpenExternal={() => {
+          if (!gitDiffPreview) return;
+          setGitDiffOpen(false);
+          setFileActionsPath(absoluteGitPath(gitDiffPreview.repoRoot, gitDiffPreview.path));
+        }}
+        onClose={closeGitDiff}
+      />
       <GoToFileOverlay
         open={
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
           !keybindsOpen &&
+          !gitDiffOpen &&
           fileActionsPath === null &&
           goToFileOpen
         }
@@ -1014,7 +1170,15 @@ export default function App() {
         }}
       />
       <KeybindsOverlay
-        open={!pendingGuardConfirmation && keybindsOpen}
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          fileActionsPath === null &&
+          !gitDiffOpen &&
+          !goToFileOpen &&
+          keybindsOpen
+        }
         onClose={() => {
           setKeybindsOpen(false);
           refocusTerminal();

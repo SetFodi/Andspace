@@ -79,6 +79,7 @@ work block without focus bugs, stale UI, or terminal friction?
 - [ ] Command Palette runs New Tab / Split Right / Split Down / Close Pane.
 - [ ] Command Palette can focus Files / Scripts / Servers / Git Changes.
 - [ ] Command Palette can refresh Git Changes.
+- [ ] Command Palette can open and copy a Git diff when one exists.
 - [ ] Command Palette can open a changed file when one exists.
 - [ ] Command Palette disables server actions when no server is known.
 - [ ] `Cmd+E` opens AI Handoff.

@@ -385,6 +385,14 @@ pub fn load_git_status(cwd: String) -> Result<crate::git_status::GitStatus, Stri
 }
 
 #[tauri::command]
+pub fn load_git_diff(
+    cwd: String,
+    file: crate::git_status::GitChangedFile,
+) -> Result<crate::git_status::GitDiffPreview, String> {
+    crate::git_status::load_git_diff(&cwd, file)
+}
+
+#[tauri::command]
 pub fn report_git_event(event: String, cwd: Option<String>, path: Option<String>) {
     crate::git_status::report_git_event(&event, cwd.as_deref(), path.as_deref());
 }

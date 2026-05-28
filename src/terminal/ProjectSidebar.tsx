@@ -33,6 +33,7 @@ import {
   type ProjectTreeNode,
 } from "./projectSidebarData";
 import {
+  absoluteGitPath,
   gitStatusLabel,
   loadGitStatus,
   reportGitEvent,
@@ -56,6 +57,7 @@ interface Props {
   onRunScript: (script: PackageScript, scripts: PackageScripts) => void;
   onFileAction: (path: string) => void;
   onFileDefault: (path: string) => void;
+  onGitDiff: (file: GitChangedFile, status: GitStatus) => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
 
@@ -64,6 +66,7 @@ export interface ProjectSidebarHandle {
   getTree(): ProjectTree | null;
   refreshGitChanges(): void;
   openFirstGitChangedFile(): string | null;
+  openFirstGitDiff(): boolean;
 }
 
 type SectionKey = "files" | "scripts" | "servers" | "git";
@@ -78,6 +81,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
       onRunScript,
       onFileAction,
       onFileDefault,
+      onGitDiff,
       onToast,
     },
     ref
@@ -144,13 +148,19 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
         openFirstGitChangedFile() {
           const file = gitStatus?.files[0];
           if (!file || !gitStatus?.repoRoot) return null;
-          const path = joinPath(gitStatus.repoRoot, file.path);
+          const path = absoluteGitPath(gitStatus.repoRoot, file.path);
           void reportGitEvent("git-file-open", { path });
           onFileAction(path);
           return path;
         },
+        openFirstGitDiff() {
+          const file = gitStatus?.files[0];
+          if (!file || !gitStatus) return false;
+          onGitDiff(file, gitStatus);
+          return true;
+        },
       }),
-      [focusedSection, gitStatus, onFileAction, refreshGitChanges, tree]
+      [focusedSection, gitStatus, onFileAction, onGitDiff, refreshGitChanges, tree]
     );
 
     // If the user pressed ⌘+Left while the tree was still loading, the
@@ -499,6 +509,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
                 void reportGitEvent("git-file-open", { path });
                 onFileAction(path);
               }}
+              onViewDiff={onGitDiff}
             />
           </div>
 
@@ -671,6 +682,7 @@ function GitChangesSection({
   onFocus,
   onRefresh,
   onOpenFile,
+  onViewDiff,
 }: {
   status: GitStatus | null;
   loading: boolean;
@@ -681,6 +693,7 @@ function GitChangesSection({
   onFocus: () => void;
   onRefresh: () => void;
   onOpenFile: (path: string) => void;
+  onViewDiff: (file: GitChangedFile, status: GitStatus) => void;
 }) {
   const files = status?.files ?? [];
   const meta =
@@ -734,6 +747,7 @@ function GitChangesSection({
             file={file}
             repoRoot={status.repoRoot ?? ""}
             onOpenFile={onOpenFile}
+            onViewDiff={() => onViewDiff(file, status)}
           />
         ))}
     </SidebarSection>
@@ -744,21 +758,37 @@ function GitChangedFileRow({
   file,
   repoRoot,
   onOpenFile,
+  onViewDiff,
 }: {
   file: GitChangedFile;
   repoRoot: string;
   onOpenFile: (path: string) => void;
+  onViewDiff: () => void;
 }) {
-  const path = joinPath(repoRoot, file.path);
+  const path = absoluteGitPath(repoRoot, file.path);
   const label = gitStatusLabel(file.status);
 
   return (
     <button
       type="button"
       className={`git-row ${file.status}`}
-      title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}
+      title={
+        file.oldPath
+          ? `${file.oldPath} → ${file.path} — Click to view diff · ⌘↵ or right-click for file actions`
+          : `${file.path} — Click to view diff · ⌘↵ or right-click for file actions`
+      }
       data-path={path}
-      onClick={() => onOpenFile(path)}
+      onClick={onViewDiff}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onOpenFile(path);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.metaKey) {
+          e.preventDefault();
+          onOpenFile(path);
+        }
+      }}
     >
       <span className="git-status-chip">{label}</span>
       <span className="git-path">{shortGitPath(file.path)}</span>
@@ -934,11 +964,6 @@ function fileIconFor(name: string) {
 function shortPath(path: string): string {
   if (!path) return "";
   return path.replace(/^\/Users\/[^/]+/, "~");
-}
-
-function joinPath(root: string, path: string): string {
-  if (!root) return path;
-  return `${root.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 
 export function scriptCommandForSidebar(script: PackageScript, scripts: PackageScripts) {

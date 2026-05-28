@@ -112,8 +112,8 @@ must be checked manually in the launched production app:
 - The app bundle is built for local alpha use. Signing, notarization, and
   auto-update are not implemented yet. Current bundle uses an ad-hoc local
   signature with no Team ID.
-- Git Changes is read-only; no commit, push, pull, staging, reset, checkout,
-  stash, merge, or rebase UI yet.
+- Git Changes is read-only; diff preview is capped and there is no commit,
+  push, pull, staging, reset, checkout, stash, merge, or rebase UI yet.
 - No embedded browser preview yet.
 - No settings UI yet.
 - No file editing or in-app file preview yet.
@@ -163,7 +163,7 @@ must be checked manually in the launched production app:
 - `ANDSPACE.md` initializer
 - AI CLI handoff through local Claude Code, Codex, and Cursor CLIs
 - Command palette
-- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes
+- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes / diff preview
 - File Actions for external editor handoff
 - Passive local server detection from terminal output
 - Shortcut cleanup for v0.1-alpha

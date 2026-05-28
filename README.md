@@ -12,7 +12,7 @@ splits, command safety, AI CLI handoff, and a lightweight project sidebar.
 - `Cmd+Shift+I` initializer for `ANDSPACE.md`
 - AI handoff through installed local Claude Code, Codex, or Cursor CLIs
 - Command palette for core workflow actions
-- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes
+- Optional project sidebar with Files, Scripts, Servers, and read-only Git Changes / diff preview
 - File Actions for Cursor, VS Code, Neovim split, copy path, and Finder reveal
 - Passive localhost server detection from terminal output
 

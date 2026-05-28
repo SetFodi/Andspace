@@ -25,6 +25,8 @@ explorer, or settings UI.
 | Servers      | Focus Servers        | Open the sidebar focused on Servers         |
 | Git          | Focus Git Changes    | Open the sidebar focused on Git Changes     |
 | Git          | Refresh Git Changes  | Refresh read-only Git status                |
+| Git          | Open Git Diff        | Open a read-only diff for a changed file    |
+| Git          | Copy Git Diff        | Copy the selected / first changed file diff |
 | Git          | Open Changed File    | Open File Actions for the first changed file |
 | Workspace    | Restore Last Workspace | Recreate tabs/splits/cwds from saved state |
 | Workspace    | Reset Saved Workspace | Delete the saved workspace file             |
@@ -65,8 +67,9 @@ command-palette-run action=git.refresh
 
 - The palette stays lightweight; it should not become a dashboard.
 - Sidebar commands only focus or toggle Files / Scripts / Servers / Git Changes.
-- Git Changes actions are read-only: no commit, push, pull, staging, reset,
-  checkout, stash, merge, or rebase actions.
+- Git Changes actions are read-only: status, diff preview, copy diff, and
+  external File Actions only. There is no commit, push, pull, staging, reset,
+  checkout, stash, merge, or rebase action.
 - No settings UI.
 - No embedded browser preview.
 - Workspace commands restore layout and cwd only; they do not restore

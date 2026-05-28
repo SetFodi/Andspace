@@ -33,7 +33,7 @@ const GROUPS: Group[] = [
       { keys: ["⌘", "→"], label: "Return to pane" },
       { keys: ["↑", "↓"], label: "Navigate rows" },
       { keys: ["←", "→"], label: "Collapse / expand folder" },
-      { keys: ["↵"], label: "Open file actions" },
+      { keys: ["↵"], label: "Activate focused row" },
       { keys: ["⌘", "↵"], label: "Run default action" },
     ],
   },

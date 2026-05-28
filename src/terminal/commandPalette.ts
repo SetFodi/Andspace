@@ -18,6 +18,8 @@ export type CommandPaletteActionId =
   | "servers.focus"
   | "git.focus"
   | "git.refresh"
+  | "git.openDiff"
+  | "git.copyDiff"
   | "git.openChangedFile"
   | "workspace.restore"
   | "workspace.reset"
@@ -147,6 +149,18 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Refresh Git Changes",
     section: "Git",
     keywords: ["git", "changes", "status", "refresh"],
+  },
+  {
+    id: "git.openDiff",
+    title: "Open Git Diff",
+    section: "Git",
+    keywords: ["git", "diff", "preview", "changes", "modified"],
+  },
+  {
+    id: "git.copyDiff",
+    title: "Copy Git Diff",
+    section: "Git",
+    keywords: ["git", "diff", "copy", "patch", "clipboard"],
   },
   {
     id: "git.openChangedFile",

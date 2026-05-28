@@ -1,8 +1,11 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+const MAX_DIFF_BYTES: usize = 300 * 1024;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitStatus {
     pub is_repo: bool,
@@ -11,7 +14,7 @@ pub struct GitStatus {
     pub files: Vec<GitChangedFile>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitChangedFile {
     pub path: String,
@@ -20,7 +23,7 @@ pub struct GitChangedFile {
     pub raw_status: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GitFileStatus {
     Modified,
@@ -28,6 +31,21 @@ pub enum GitFileStatus {
     Deleted,
     Renamed,
     Untracked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitDiffPreview {
+    pub repo_root: String,
+    pub path: String,
+    pub old_path: Option<String>,
+    pub status: GitFileStatus,
+    pub raw_status: String,
+    pub branch: Option<String>,
+    pub diff: String,
+    pub too_large: bool,
+    pub message: Option<String>,
+    pub bytes: usize,
 }
 
 pub fn load_git_status(cwd: &str) -> Result<GitStatus, String> {
@@ -78,6 +96,91 @@ pub fn load_git_status(cwd: &str) -> Result<GitStatus, String> {
     Ok(status)
 }
 
+pub fn load_git_diff(cwd: &str, file: GitChangedFile) -> Result<GitDiffPreview, String> {
+    let root = match find_git_root(cwd) {
+        Some(root) => root,
+        None => {
+            crate::pty::diag_log(&format!(
+                "git-diff-error path={} cwd={}",
+                log_value(&file.path),
+                log_value(cwd)
+            ));
+            return Err("No Git repository found".to_string());
+        }
+    };
+
+    let branch = read_branch(&root);
+    let repo_root = root.display().to_string();
+
+    if file.status == GitFileStatus::Untracked {
+        crate::pty::diag_log(&format!(
+            "git-diff-load path={} result=ok bytes=0",
+            log_value(&file.path)
+        ));
+        return Ok(GitDiffPreview {
+            repo_root,
+            path: file.path,
+            old_path: file.old_path,
+            status: file.status,
+            raw_status: file.raw_status,
+            branch,
+            diff: String::new(),
+            too_large: false,
+            message: Some("Untracked file — no git diff yet. Open file instead.".to_string()),
+            bytes: 0,
+        });
+    }
+
+    let plan = match diff_command_for_file(&file) {
+        Some(plan) => plan,
+        None => {
+            crate::pty::diag_log(&format!("git-diff-error path={}", log_value(&file.path)));
+            return Err("No diff is available for this file".to_string());
+        }
+    };
+
+    match run_diff_command(&root, &plan, &file.path)? {
+        BoundedDiffOutput::TooLarge { bytes } => {
+            crate::pty::diag_log(&format!(
+                "git-diff-too-large path={} bytes={}",
+                log_value(&file.path),
+                bytes
+            ));
+            Ok(GitDiffPreview {
+                repo_root,
+                path: file.path,
+                old_path: file.old_path,
+                status: file.status,
+                raw_status: file.raw_status,
+                branch,
+                diff: String::new(),
+                too_large: true,
+                message: Some("Diff too large to preview. Open in external editor.".to_string()),
+                bytes,
+            })
+        }
+        BoundedDiffOutput::Ok { diff, bytes } => {
+            crate::pty::diag_log(&format!(
+                "git-diff-load path={} result=ok bytes={}",
+                log_value(&file.path),
+                bytes
+            ));
+            Ok(GitDiffPreview {
+                repo_root,
+                path: file.path,
+                old_path: file.old_path,
+                status: file.status,
+                raw_status: file.raw_status,
+                branch,
+                diff,
+                too_large: false,
+                message: None,
+                bytes,
+            })
+        }
+    }
+}
+
 pub fn report_git_event(event: &str, cwd: Option<&str>, path: Option<&str>) {
     match event {
         "git-refresh" => crate::pty::diag_log("git-refresh"),
@@ -89,8 +192,146 @@ pub fn report_git_event(event: &str, cwd: Option<&str>, path: Option<&str>) {
             "git-status-error cwd={}",
             log_value(cwd.unwrap_or(""))
         )),
+        "git-diff-copy" => crate::pty::diag_log(&format!(
+            "git-diff-copy path={}",
+            log_value(path.unwrap_or(""))
+        )),
         _ => crate::pty::diag_log(&format!("git-unknown event={}", log_value(event))),
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DiffCommandPlan {
+    cached: bool,
+    path: String,
+}
+
+enum BoundedDiffOutput {
+    Ok { diff: String, bytes: usize },
+    TooLarge { bytes: usize },
+}
+
+fn diff_command_for_file(file: &GitChangedFile) -> Option<DiffCommandPlan> {
+    if file.status == GitFileStatus::Untracked {
+        return None;
+    }
+    Some(DiffCommandPlan {
+        cached: has_staged_status(&file.raw_status),
+        path: file.path.clone(),
+    })
+}
+
+fn has_staged_status(raw_status: &str) -> bool {
+    raw_status
+        .chars()
+        .next()
+        .is_some_and(|c| c != ' ' && c != '?')
+}
+
+fn diff_is_too_large(bytes: usize) -> bool {
+    bytes > MAX_DIFF_BYTES
+}
+
+fn run_diff_command(
+    root: &Path,
+    plan: &DiffCommandPlan,
+    log_path: &str,
+) -> Result<BoundedDiffOutput, String> {
+    let mut command = Command::new("git");
+    command.args(["diff", "--no-ext-diff"]);
+    if plan.cached {
+        command.arg("--cached");
+    }
+    command
+        .arg("--")
+        .arg(&plan.path)
+        .current_dir(root)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let mut child = command.spawn().map_err(|e| {
+        crate::pty::diag_log(&format!(
+            "git-diff-error path={} error={}",
+            log_value(log_path),
+            log_value(&e.to_string())
+        ));
+        format!("git diff failed: {e}")
+    })?;
+
+    let Some(mut stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        crate::pty::diag_log(&format!("git-diff-error path={}", log_value(log_path)));
+        return Err("git diff stdout unavailable".to_string());
+    };
+
+    let mut data = Vec::new();
+    let mut buffer = [0_u8; 8192];
+    loop {
+        let read = stdout.read(&mut buffer).map_err(|e| {
+            let _ = child.kill();
+            crate::pty::diag_log(&format!(
+                "git-diff-error path={} error={}",
+                log_value(log_path),
+                log_value(&e.to_string())
+            ));
+            format!("git diff read failed: {e}")
+        })?;
+        if read == 0 {
+            break;
+        }
+        data.extend_from_slice(&buffer[..read]);
+        if diff_is_too_large(data.len()) {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Ok(BoundedDiffOutput::TooLarge { bytes: data.len() });
+        }
+    }
+
+    let mut stderr = String::new();
+    if let Some(mut pipe) = child.stderr.take() {
+        let _ = pipe.read_to_string(&mut stderr);
+    }
+    let status = child.wait().map_err(|e| {
+        crate::pty::diag_log(&format!(
+            "git-diff-error path={} error={}",
+            log_value(log_path),
+            log_value(&e.to_string())
+        ));
+        format!("git diff failed: {e}")
+    })?;
+
+    if !status.success() {
+        let error = stderr.trim().to_string();
+        crate::pty::diag_log(&format!(
+            "git-diff-error path={} error={}",
+            log_value(log_path),
+            log_value(&error)
+        ));
+        return Err(if error.is_empty() {
+            "git diff failed".to_string()
+        } else {
+            error
+        });
+    }
+
+    let bytes = data.len();
+    let diff = String::from_utf8_lossy(&data).to_string();
+    Ok(BoundedDiffOutput::Ok { diff, bytes })
+}
+
+fn read_branch(root: &Path) -> Option<String> {
+    let output = Command::new("git")
+        .args(["status", "--porcelain=v1", "-b"])
+        .current_dir(root)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("## ").and_then(parse_branch))
 }
 
 fn parse_git_status(raw: &str, repo_root: String) -> GitStatus {
@@ -250,6 +491,86 @@ R  before.rs -> after.rs
         assert_eq!(map_status("RD"), GitFileStatus::Renamed);
         assert_eq!(map_status(" D"), GitFileStatus::Deleted);
         assert_eq!(map_status("??"), GitFileStatus::Untracked);
+    }
+
+    #[test]
+    fn builds_worktree_diff_for_unstaged_files() {
+        let file = GitChangedFile {
+            path: "src/App.tsx".to_string(),
+            old_path: None,
+            status: GitFileStatus::Modified,
+            raw_status: " M".to_string(),
+        };
+
+        assert_eq!(
+            diff_command_for_file(&file),
+            Some(DiffCommandPlan {
+                cached: false,
+                path: "src/App.tsx".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn builds_cached_diff_for_staged_files() {
+        let file = GitChangedFile {
+            path: "docs/GIT_CHANGES.md".to_string(),
+            old_path: None,
+            status: GitFileStatus::Added,
+            raw_status: "A ".to_string(),
+        };
+
+        assert_eq!(
+            diff_command_for_file(&file),
+            Some(DiffCommandPlan {
+                cached: true,
+                path: "docs/GIT_CHANGES.md".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn does_not_build_diff_command_for_untracked_files() {
+        let file = GitChangedFile {
+            path: "scratch.md".to_string(),
+            old_path: None,
+            status: GitFileStatus::Untracked,
+            raw_status: "??".to_string(),
+        };
+
+        assert_eq!(diff_command_for_file(&file), None);
+    }
+
+    #[test]
+    fn returns_untracked_diff_fallback_without_running_git_diff() {
+        let root = unique_temp_dir("untracked-diff");
+        fs::create_dir_all(root.join(".git")).unwrap();
+        let preview = load_git_diff(
+            root.to_str().unwrap(),
+            GitChangedFile {
+                path: "scratch.md".to_string(),
+                old_path: None,
+                status: GitFileStatus::Untracked,
+                raw_status: "??".to_string(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(preview.path, "scratch.md");
+        assert_eq!(preview.status, GitFileStatus::Untracked);
+        assert_eq!(preview.diff, "");
+        assert!(!preview.too_large);
+        assert_eq!(preview.bytes, 0);
+        assert_eq!(
+            preview.message.as_deref(),
+            Some("Untracked file — no git diff yet. Open file instead.")
+        );
+    }
+
+    #[test]
+    fn enforces_diff_size_cap() {
+        assert!(!diff_is_too_large(MAX_DIFF_BYTES));
+        assert!(diff_is_too_large(MAX_DIFF_BYTES + 1));
     }
 
     #[test]
