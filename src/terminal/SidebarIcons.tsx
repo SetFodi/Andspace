@@ -127,6 +127,99 @@ export function RefreshIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ExternalLinkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path
+        d="M9.5 2.5h4v4M13.5 2.5 7.8 8.2M11.5 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1h3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function TerminalSquareIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...baseProps} {...props}>
+      <rect
+        x="2"
+        y="3"
+        width="12"
+        height="10"
+        rx="1.6"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <path
+        d="m5 6.5 2.2 1.5L5 9.5M8.5 10h2.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function ClipboardIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path
+        d="M5.5 3.5h5M4.5 4h7a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="5.5"
+        y="2"
+        width="5"
+        height="2.5"
+        rx="0.6"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+    </svg>
+  );
+}
+
+export function FolderRevealIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...baseProps} {...props}>
+      <path
+        d="M2 5a1.5 1.5 0 0 1 1.5-1.5h2.2c.3 0 .58.1.8.28l1.2 1c.22.19.5.29.8.29h3.5A1.5 1.5 0 0 1 13.5 6.6V12a1.5 1.5 0 0 1-1.5 1.5H3.5A1.5 1.5 0 0 1 2 12V5Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m8 8.5 2 1.5-2 1.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function SearchIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...baseProps} {...props}>
+      <circle cx="7" cy="7" r="4.4" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="m10.2 10.2 3 3"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function ChevronIcon({
   open,
   ...rest

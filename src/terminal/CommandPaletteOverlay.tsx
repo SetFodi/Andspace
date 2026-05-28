@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SearchIcon } from "./SidebarIcons";
 import {
   filterCommandPaletteActions,
   type CommandPaletteAction,
@@ -80,22 +81,35 @@ export function CommandPaletteOverlay({
       >
         <div className="palette-head">
           <div>
-            <div className="palette-kicker">Command Palette</div>
+            <div className="palette-kicker">
+              <span className="kicker-dot" aria-hidden />
+              COMMAND PALETTE
+            </div>
             <h2 id="palette-title">Run a workflow action</h2>
           </div>
-          <span className="palette-shortcut">⌘K</span>
+          <kbd className="palette-shortcut">⌘K</kbd>
         </div>
 
-        <input
-          ref={inputRef}
-          className="palette-input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Type a command..."
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+        <div className="palette-input-wrap">
+          <span className="palette-input-icon" aria-hidden>
+            <SearchIcon width={14} height={14} />
+          </span>
+          <input
+            ref={inputRef}
+            className="palette-input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Type a command…"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          {runnableActions.length > 0 && (
+            <span className="palette-input-count">
+              {runnableActions.length} action{runnableActions.length === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
 
         <div className="palette-list" role="listbox">
           {actions.length === 0 && (
@@ -119,11 +133,23 @@ export function CommandPaletteOverlay({
                   if (!disabled) onRun(action);
                 }}
               >
-                <span>{action.title}</span>
-                <em>{action.section}</em>
+                <span className="palette-item-title">{action.title}</span>
+                <em className="palette-item-section">{action.section}</em>
               </button>
             );
           })}
+        </div>
+
+        <div className="palette-footer">
+          <span>
+            <kbd>↑↓</kbd> Navigate
+          </span>
+          <span>
+            <kbd>↵</kbd> Run
+          </span>
+          <span>
+            <kbd>Esc</kbd> Close
+          </span>
         </div>
       </section>
     </div>

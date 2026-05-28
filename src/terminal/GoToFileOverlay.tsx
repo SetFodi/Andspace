@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SearchIcon } from "./SidebarIcons";
 import {
   filterPickerEntries,
   flattenTreeFiles,
@@ -97,28 +98,41 @@ export function GoToFileOverlay({
       >
         <div className="picker-head">
           <div>
-            <div className="picker-kicker">Go to File</div>
+            <div className="picker-kicker">
+              <span className="kicker-dot" aria-hidden />
+              GO TO FILE
+            </div>
             <h2 id="picker-title">Project files</h2>
           </div>
-          <span className="picker-shortcut">⌘K · Go to File</span>
+          <kbd className="picker-shortcut">⌘K</kbd>
         </div>
 
-        <input
-          ref={inputRef}
-          className="picker-input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={
-            loading
-              ? "Loading project files…"
-              : entries.length === 0
-              ? "No files in the loaded tree"
-              : "Type a filename…"
-          }
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+        <div className="picker-input-wrap">
+          <span className="picker-input-icon" aria-hidden>
+            <SearchIcon width={14} height={14} />
+          </span>
+          <input
+            ref={inputRef}
+            className="picker-input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              loading
+                ? "Loading project files…"
+                : entries.length === 0
+                ? "No files in the loaded tree"
+                : "Type a filename…"
+            }
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          {filtered.length > 0 && (
+            <span className="picker-input-count">
+              {filtered.length} result{filtered.length === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
 
         <div className="picker-list" role="listbox">
           {filtered.length === 0 && !loading && (
@@ -143,6 +157,21 @@ export function GoToFileOverlay({
               </button>
             );
           })}
+        </div>
+
+        <div className="picker-footer">
+          <span>
+            <kbd>↑↓</kbd> Navigate
+          </span>
+          <span>
+            <kbd>↵</kbd> Open
+          </span>
+          <span>
+            <kbd>⌘↵</kbd> Default
+          </span>
+          <span>
+            <kbd>Esc</kbd> Close
+          </span>
         </div>
       </section>
     </div>

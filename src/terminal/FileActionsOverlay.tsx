@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  ClipboardIcon,
+  ExternalLinkIcon,
+  FileIcon,
+  FolderRevealIcon,
+  TerminalSquareIcon,
+} from "./SidebarIcons";
 import {
   actionsForFile,
   type AvailableEditors,
@@ -66,16 +73,26 @@ export function FileActionsOverlay({
         aria-labelledby="file-actions-title"
       >
         <div className="file-actions-head">
-          <div className="file-actions-kicker">File</div>
-          <h2 id="file-actions-title" title={path}>
-            {displayName}
-          </h2>
+          <div className="file-actions-kicker">
+            <span className="kicker-dot" aria-hidden />
+            FILE
+          </div>
+          <div className="file-actions-title-row">
+            <span className="file-actions-title-icon" aria-hidden>
+              <FileIcon width={15} height={15} />
+            </span>
+            <h2 id="file-actions-title" title={path}>
+              {displayName}
+            </h2>
+          </div>
           {displayDir && (
             <div className="file-actions-sub" title={displayDir}>
               {shorten(displayDir)}
             </div>
           )}
         </div>
+
+        <div className="file-actions-divider" aria-hidden />
 
         <div className="file-actions-list" role="listbox">
           {actions.map((action, idx) => {
@@ -88,11 +105,29 @@ export function FileActionsOverlay({
                 onMouseEnter={() => setSelected(idx)}
                 onClick={() => onAction(action)}
               >
-                <span>{action.label}</span>
-                <em>{actionHint(action)}</em>
+                <span className="file-actions-item-icon" aria-hidden>
+                  {actionIcon(action)}
+                </span>
+                <span className="file-actions-item-label">{action.label}</span>
+                <kbd className="file-actions-item-hint">{actionHint(action)}</kbd>
               </button>
             );
           })}
+        </div>
+
+        <div className="file-actions-footer">
+          <span>
+            <kbd>↑↓</kbd> Navigate
+          </span>
+          <span>
+            <kbd>↵</kbd> Open
+          </span>
+          <span>
+            <kbd>⌘↵</kbd> Default
+          </span>
+          <span>
+            <kbd>Esc</kbd> Close
+          </span>
         </div>
       </section>
     </div>
@@ -104,10 +139,17 @@ function actionKey(action: FileAction): string {
   return action.type;
 }
 
+function actionIcon(action: FileAction): ReactNode {
+  if (action.type === "open") return <ExternalLinkIcon />;
+  if (action.type === "nvim-split") return <TerminalSquareIcon />;
+  if (action.type === "copy") return <ClipboardIcon />;
+  return <FolderRevealIcon />;
+}
+
 function actionHint(action: FileAction): string {
   if (action.type === "open") return action.tool === "cursor" ? "cursor" : "code";
-  if (action.type === "nvim-split") return "split + nvim";
-  if (action.type === "copy") return "clipboard";
+  if (action.type === "nvim-split") return "split";
+  if (action.type === "copy") return "⌘C";
   return "finder";
 }
 
