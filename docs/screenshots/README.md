@@ -62,10 +62,14 @@ macOS permissions are blocked, use the built-in screenshot UI:
 
 | File | Status |
 | --- | --- |
-| `01-hero-sidebar.png` | Needs capture |
+| `01-hero-sidebar.png` | Seeded from website public asset |
 | `02-command-guard.png` | Needs capture |
 | `03-ai-handoff.png` | Needs capture |
-| `04-command-palette.png` | Needs capture |
+| `04-command-palette.png` | Seeded from website public asset |
 | `05-git-diff-preview.png` | Needs capture |
-| `06-servers.png` | Needs capture |
-| `07-keyboard-shortcuts.png` | Needs capture |
+| `06-servers.png` | Seeded from website public asset |
+| `07-keyboard-shortcuts.png` | Seeded from website public asset |
+
+The seeded assets came from `/Users/lukafartenadze/Desktop/andspace-web/public`.
+They are good enough for README/release placeholders, but the three overlay
+states still need fresh capture from the packaged app.

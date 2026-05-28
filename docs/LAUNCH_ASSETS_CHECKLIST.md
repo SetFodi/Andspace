@@ -10,13 +10,13 @@ docs/screenshots/final/
 
 | Asset | Status |
 | --- | --- |
-| `01-hero-sidebar.png` | Needs capture |
+| `01-hero-sidebar.png` | Seeded from website public asset |
 | `02-command-guard.png` | Needs capture |
 | `03-ai-handoff.png` | Needs capture |
-| `04-command-palette.png` | Needs capture |
+| `04-command-palette.png` | Seeded from website public asset |
 | `05-git-diff-preview.png` | Needs capture |
-| `06-servers.png` | Needs capture |
-| `07-keyboard-shortcuts.png` | Needs capture |
+| `06-servers.png` | Seeded from website public asset |
+| `07-keyboard-shortcuts.png` | Seeded from website public asset |
 
 ## Demo Video
 
@@ -30,8 +30,8 @@ docs/screenshots/final/
 
 | Item | Status |
 | --- | --- |
-| README screenshot placeholders | Ready |
-| README final screenshots inserted | Pending screenshot capture |
+| README screenshot placeholders | Replaced with seeded screenshots |
+| README final screenshots inserted | Partial: hero, command palette, keyboard shortcuts |
 | GitHub release screenshots added | Optional after capture |
 | GitHub release demo video added | Optional after recording |
 | Release link verified | Ready: `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.2` |
@@ -56,8 +56,9 @@ captured app screenshots:
 | `components/KeyboardSection.tsx` | `/58d6436a-6ea9-474b-84f1-4113ad10737b.png` | `07-keyboard-shortcuts.png` |
 | `app/layout.tsx` | `/app-hero.png` social preview | Final hero/social screenshot after capture |
 
-Do not replace website images until the real screenshots are captured and
-cropped consistently.
+The website already uses these seeded assets. Replace them later only when the
+missing Command Guard, AI Handoff, and Git Diff Preview screenshots are captured
+and cropped consistently.
 
 ## Final Review
 
