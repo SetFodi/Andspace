@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
 import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
+import { initAndspaceRules } from "./terminal/rules";
 
 function TitleBar() {
   return (
@@ -41,6 +42,11 @@ function StatusBar() {
   );
 }
 
+interface ToastState {
+  message: string;
+  tone: "success" | "neutral" | "error";
+}
+
 export default function App() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
@@ -61,6 +67,12 @@ export default function App() {
   const respondToGuardConfirmation = useStore(
     (s) => s.respondToGuardConfirmation
   );
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const showToast = (next: ToastState) => {
+    setToast(next);
+    window.setTimeout(() => setToast(null), 2800);
+  };
 
   // Open the first tab on mount. Guard with a ref because React StrictMode
   // double-invokes effects in dev, and newTab() is async — without this
@@ -92,6 +104,34 @@ export default function App() {
       } else if (k === "ArrowDown" && !e.shiftKey) {
         e.preventDefault();
         splitActive("column");
+      } else if (k.toLowerCase() === "i" && e.shiftKey) {
+        e.preventDefault();
+        if (!activePaneCwd) {
+          showToast({
+            tone: "error",
+            message: "No active cwd yet. Run a command or wait for shell init.",
+          });
+          return;
+        }
+        initAndspaceRules(activePaneCwd)
+          .then((result) => {
+            if (activePaneId) {
+              loadRulesForPane(activePaneId, activePaneCwd);
+            }
+            showToast({
+              tone: result.result === "created" ? "success" : "neutral",
+              message:
+                result.result === "created"
+                  ? "Created ANDSPACE.md"
+                  : "ANDSPACE.md already exists",
+            });
+          })
+          .catch((e) =>
+            showToast({
+              tone: "error",
+              message: `Could not initialize ANDSPACE.md: ${String(e)}`,
+            })
+          );
       } else if (k === "]") {
         e.preventDefault();
         nextTab();
@@ -107,6 +147,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [
     activeTabId,
+    activePaneCwd,
+    activePaneId,
     newTab,
     closeTab,
     closeActive,
@@ -114,6 +156,7 @@ export default function App() {
     nextTab,
     prevTab,
     switchToIndex,
+    loadRulesForPane,
   ]);
 
   useEffect(() => {
@@ -140,6 +183,11 @@ export default function App() {
         request={pendingGuardConfirmation}
         onRespond={respondToGuardConfirmation}
       />
+      {toast && (
+        <div className={`app-toast ${toast.tone}`} role="status">
+          {toast.message}
+        </div>
+      )}
       <StatusBar />
     </div>
   );

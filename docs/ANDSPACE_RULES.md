@@ -1,8 +1,8 @@
 # ANDSPACE Rules
 
 AndSpace v0.1 loads command safety rules as data for Command Guard. The zsh
-pre-execution gate is active, but there is still no final modal UI, sidebar,
-command palette, or AI handoff.
+pre-execution gate and compact confirmation overlay are active, but there is no
+sidebar, command palette, settings UI, file explorer, or AI handoff.
 
 ## File Locations
 
@@ -15,6 +15,33 @@ command:
 
 The frontend requests resolved rules for the active pane cwd and stores them in
 memory only.
+
+## Initializing A Project
+
+Press `Cmd+Shift+I` in an active pane to create `ANDSPACE.md` in that pane's
+current working directory. The initializer never overwrites an existing file.
+
+Results are shown as a small toast:
+
+- `created`: wrote a new `ANDSPACE.md`
+- `exists`: left the existing `ANDSPACE.md` untouched
+- `error`: failed to create the file
+
+Initializer diagnostics are written to `/tmp/andspace-diag.log`:
+
+```text
+andspace-rules-init cwd=/repo result=created path=/repo/ANDSPACE.md
+andspace-rules-init cwd=/repo result=exists path=/repo/ANDSPACE.md
+andspace-rules-init cwd=/repo result=error path=/repo/ANDSPACE.md error=...
+```
+
+The generated template includes all recognized sections, short comments for how
+to use them, and the version marker:
+
+```md
+# ANDSPACE.md
+<!-- andspace:version 1 -->
+```
 
 ## Source Of Truth
 
@@ -59,18 +86,32 @@ Command Guard checks `Allowed` first, then `Dangerous Commands`, then
 
 ## Rule Format
 
-Rules use Markdown list items only:
+Rules use Markdown list items only. The initializer writes a starter template
+like this:
 
 ```md
+# ANDSPACE.md
+<!-- andspace:version 1 -->
+
 ## Protected Commands
+<!-- Commands that should ask for confirmation before running. One rule per list item. -->
 - git push --force
-- /kubectl\s+delete/
+- npm publish
+- pnpm publish
 
 ## Dangerous Commands
+- rm -rf /
 - DROP TABLE
+- dropdb
 
 ## Allowed
 - git push --force-with-lease # this comment is ignored
+
+## AI Handoff
+- Include cwd, command, exit code, and recent terminal output.
+
+## Project Context
+Describe what this project does and any local safety constraints.
 ```
 
 Normal rules use substring matching. Regex rules use `/regex/` form. The parser

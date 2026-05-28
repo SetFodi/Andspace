@@ -52,7 +52,17 @@ export function GuardConfirmationOverlay({ request, onRespond }: Props) {
   if (!request) return null;
 
   return (
-    <div className="guard-overlay" role="presentation">
+    <div
+      className="guard-overlay"
+      role="presentation"
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Escape") {
+          e.preventDefault();
+          onRespond("cancel");
+        }
+      }}
+    >
       <section
         className={`guard-card ${isDangerous ? "dangerous" : "protected"}`}
         role="dialog"

@@ -53,6 +53,11 @@ pub fn load_rules_for_cwd(cwd: String) -> Result<crate::rules::ResolvedRules, St
 }
 
 #[tauri::command]
+pub fn init_andspace_rules(cwd: String) -> Result<crate::rules::InitRulesResult, String> {
+    crate::rules::init_andspace_rules(&cwd)
+}
+
+#[tauri::command]
 pub fn evaluate_command_guard(
     pane_id: String,
     command: String,

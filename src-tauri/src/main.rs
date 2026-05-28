@@ -20,6 +20,7 @@ fn main() {
             report_renderer,
             report_shell_event,
             load_rules_for_cwd,
+            init_andspace_rules,
             evaluate_command_guard,
             report_command_guard_ui_request,
             respond_command_guard,

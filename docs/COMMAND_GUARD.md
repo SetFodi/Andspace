@@ -6,6 +6,7 @@ Command Guard has two v0.1 paths:
 - Milestone 5: zsh pre-execution proof gate using an `accept-line` widget.
 - Milestone 6: hardening and parity checks for the temporary zsh matcher.
 - Milestone 7: native AndSpace confirmation UI for protected/dangerous commands.
+- Milestone 8: initializer shortcut and small UX hardening.
 
 The zsh gate can stop protected and dangerous commands before execution, but it
 is still scoped to Command Guard only: no sidebar, command palette, project UI,
@@ -44,6 +45,10 @@ Pre-execution UI flow:
 If the UI bridge fails or times out, zsh defaults to cancel.
 The frontend also auto-cancels stale confirmations before the shell-side timeout.
 
+Project rules can be bootstrapped with `Cmd+Shift+I`. This creates
+`ANDSPACE.md` in the active pane cwd if missing and never overwrites an existing
+file.
+
 ## zsh Pre-Execution Gate
 
 For zsh panes, `src-tauri/shell-integration/andspace.zsh` wraps the current
@@ -69,6 +74,8 @@ Dangerous commands show a stronger overlay with:
 - `Cancel` and `Run command`
 
 Escape cancels. Dangerous commands cannot run until exact `run` is typed.
+While the overlay is open it captures keyboard events, so terminal input should
+not leak through to the shell.
 
 This milestone uses a small shell-side matcher so the gate can make a
 synchronous decision inside ZLE. It intentionally mirrors the Rust matching
@@ -151,6 +158,13 @@ command-guard-ui-request pane=p-... request_id=p-... decision=dangerous severity
 command-guard-ui-action pane=p-... request_id=p-... decision=dangerous action=cancel matched_rule=rm -rf ./fake-folder matched_source=project command=rm -rf ./fake-folder
 ```
 
+Milestone 8 adds initializer diagnostics:
+
+```text
+andspace-rules-init cwd=/repo result=created path=/repo/ANDSPACE.md
+andspace-rules-init cwd=/repo result=exists path=/repo/ANDSPACE.md
+```
+
 ## Manual Verification
 
 Use a temporary `ANDSPACE.md` in the repo:
@@ -199,6 +213,13 @@ zsh matcher and a controlling-PTY ZLE flow:
 scripts/verify-command-guard-zsh.sh
 ```
 
+For initializer verification:
+
+1. In a pane with a cwd, press `Cmd+Shift+I`.
+2. Confirm `ANDSPACE.md` appears.
+3. Press `Cmd+Shift+I` again and confirm the file is not overwritten.
+4. Add test rules and verify protected/dangerous/allowed overlay behavior.
+
 ## Limits
 
 - Pre-execution blocking is zsh only.
@@ -207,6 +228,8 @@ scripts/verify-command-guard-zsh.sh
 - Matching uses the command text reported by shell integration.
 - The zsh pre-execution gate matches `$BUFFER` before execution.
 - Dangerous commands default to cancel on UI failure or timeout.
+- The initializer is exposed only as `Cmd+Shift+I` for now; there is no command
+  palette or settings UI.
 - Rust is canonical for app-side matching; zsh matching is temporary for
   blocking.
 - Aliases, shell expansion, command substitution, shell functions, and resolved

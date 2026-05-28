@@ -27,6 +27,17 @@ export interface ResolvedRules {
   projectContext: ResolvedText[];
 }
 
+export type InitRulesStatus = "created" | "exists";
+
+export interface InitRulesResult {
+  result: InitRulesStatus;
+  path: string;
+}
+
 export function loadRulesForCwd(cwd: string): Promise<ResolvedRules> {
   return invoke<ResolvedRules>("load_rules_for_cwd", { cwd });
+}
+
+export function initAndspaceRules(cwd: string): Promise<InitRulesResult> {
+  return invoke<InitRulesResult>("init_andspace_rules", { cwd });
 }

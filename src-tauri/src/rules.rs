@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
+use std::io::ErrorKind;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -52,6 +54,20 @@ pub struct ResolvedRules {
     pub allowed: Vec<ResolvedRule>,
     pub ai_handoff: Vec<ResolvedText>,
     pub project_context: Vec<ResolvedText>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InitRulesResult {
+    pub result: InitRulesStatus,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum InitRulesStatus {
+    Created,
+    Exists,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,6 +142,64 @@ pub fn load_rules_for_cwd(cwd: &str) -> Result<ResolvedRules, String> {
     ));
 
     Ok(resolved)
+}
+
+pub fn init_andspace_rules(cwd: &str) -> Result<InitRulesResult, String> {
+    if cwd.trim().is_empty() {
+        return Err("cwd is empty".to_string());
+    }
+
+    let path = PathBuf::from(cwd).join("ANDSPACE.md");
+    if path.exists() {
+        crate::pty::diag_log(&format!(
+            "andspace-rules-init cwd={} result=exists path={}",
+            cwd,
+            path.display()
+        ));
+        return Ok(InitRulesResult {
+            result: InitRulesStatus::Exists,
+            path: path.display().to_string(),
+        });
+    }
+
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .and_then(|mut file| file.write_all(ANDSPACE_RULES_TEMPLATE.as_bytes()))
+    {
+        Ok(()) => {
+            crate::pty::diag_log(&format!(
+                "andspace-rules-init cwd={} result=created path={}",
+                cwd,
+                path.display()
+            ));
+            Ok(InitRulesResult {
+                result: InitRulesStatus::Created,
+                path: path.display().to_string(),
+            })
+        }
+        Err(e) if e.kind() == ErrorKind::AlreadyExists => {
+            crate::pty::diag_log(&format!(
+                "andspace-rules-init cwd={} result=exists path={}",
+                cwd,
+                path.display()
+            ));
+            Ok(InitRulesResult {
+                result: InitRulesStatus::Exists,
+                path: path.display().to_string(),
+            })
+        }
+        Err(e) => {
+            crate::pty::diag_log(&format!(
+                "andspace-rules-init cwd={} result=error path={} error={}",
+                cwd,
+                path.display(),
+                e
+            ));
+            Err(format!("create {} failed: {e}", path.display()))
+        }
+    }
 }
 
 fn read_document(source: RuleSource, path: PathBuf) -> Result<RuleDocument, String> {
@@ -387,6 +461,35 @@ fn substring_rule(pattern: &str) -> ParsedRule {
     }
 }
 
+const ANDSPACE_RULES_TEMPLATE: &str = r#"# ANDSPACE.md
+<!-- andspace:version 1 -->
+
+## Protected Commands
+<!-- Commands that should ask for confirmation before running. One rule per list item. -->
+<!-- Substring rules are plain text; regex rules use /regex/. -->
+- git push --force
+- npm publish
+- pnpm publish
+
+## Dangerous Commands
+<!-- Commands that should require typing "run" before execution. -->
+- rm -rf /
+- DROP TABLE
+- dropdb
+
+## Allowed
+<!-- Commands that should bypass Protected/Dangerous matches. Useful for safe variants. -->
+- git push --force-with-lease
+
+## AI Handoff
+<!-- Notes for future AI handoff context. This section is parsed but not used yet. -->
+- Include cwd, command, exit code, and recent terminal output.
+
+## Project Context
+<!-- Freeform project notes for future AndSpace features. -->
+Describe what this project does, how to run it, and any local safety constraints.
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -585,6 +688,42 @@ Temporary project context.
             resolved.project_context[0].value,
             "Temporary project context."
         );
+    }
+
+    #[test]
+    fn init_rules_creates_file_with_version_marker() {
+        let root = unique_temp_dir("init-create");
+        fs::create_dir_all(&root).unwrap();
+
+        let result = init_andspace_rules(root.to_str().unwrap()).unwrap();
+        let contents = fs::read_to_string(root.join("ANDSPACE.md")).unwrap();
+
+        assert_eq!(result.result, InitRulesStatus::Created);
+        assert!(contents.contains("# ANDSPACE.md"));
+        assert!(contents.contains("<!-- andspace:version 1 -->"));
+        assert!(contents.contains("## Protected Commands"));
+        assert!(contents.contains("## Dangerous Commands"));
+        assert!(contents.contains("## Allowed"));
+        assert!(contents.contains("## AI Handoff"));
+        assert!(contents.contains("## Project Context"));
+
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn init_rules_refuses_to_overwrite_existing_file() {
+        let root = unique_temp_dir("init-existing");
+        fs::create_dir_all(&root).unwrap();
+        let path = root.join("ANDSPACE.md");
+        fs::write(&path, "keep me").unwrap();
+
+        let result = init_andspace_rules(root.to_str().unwrap()).unwrap();
+        let contents = fs::read_to_string(path).unwrap();
+
+        assert_eq!(result.result, InitRulesStatus::Exists);
+        assert_eq!(contents, "keep me");
+
+        fs::remove_dir_all(&root).unwrap();
     }
 
     fn unique_temp_dir(label: &str) -> PathBuf {
