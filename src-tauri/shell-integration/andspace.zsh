@@ -1,7 +1,7 @@
 # AndSpace zsh shell integration — OSC lifecycle for v0.1
-# Source manually:  source "$ANDSPACE_ZSH_INTEGRATION"
-# Or:             source /path/to/andspace.zsh
+# Auto-loaded via ZDOTDIR bootstrap when spawned from AndSpace (see zdotdir/.zshrc).
 
+[[ "$TERM_PROGRAM" == "AndSpace" ]] || return 0
 [[ -n "$ANDSPACE_SHELL_INTEGRATION" || -n "$ANDSPACE_ZSH_INTEGRATION" ]] || return 0
 
 __andspace_osc() {
@@ -35,8 +35,8 @@ __andspace_preexec() {
   __andspace_osc "cmd|$(__andspace_b64 "$cmd")"
 }
 
-if [[ -o zle ]]; then
-  autoload -Uz add-zsh-hook
+if [[ -o interactive ]]; then
+  autoload -Uz add-zsh-hook 2>/dev/null
   add-zsh-hook precmd __andspace_precmd
   add-zsh-hook preexec __andspace_preexec
 fi

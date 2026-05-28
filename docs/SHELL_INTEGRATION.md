@@ -4,13 +4,48 @@ AndSpace learns shell state via **OSC sequences** emitted from zsh hooks.
 The terminal consumes them in xterm.js before rendering; they never appear
 on screen.
 
+## Bootstrap strategy (v0.1 milestone 2)
+
+AndSpace does **not** modify `~/.zshrc` or any file in the user's home
+directory. Instead, when the PTY spawns **zsh**, Rust sets:
+
+| Variable | Purpose |
+|---|---|
+| `ZDOTDIR` | Points at `src-tauri/shell-integration/zdotdir/` |
+| `TERM_PROGRAM` | `AndSpace` — guards integration to this app only |
+| `ANDSPACE_ZSH_INTEGRATION` | Path to `andspace.zsh` |
+| `ANDSPACE_ZDOTDIR` | Same as `ZDOTDIR` (diagnostic / future use) |
+
+zsh reads **`$ZDOTDIR/.zshenv`** then **`$ZDOTDIR/.zshrc`** instead of the
+user's `~/.zshenv` / `~/.zshrc` paths directly. Our bootstrap files:
+
+1. Source the user's real `~/.zshenv` / `~/.zshrc` if they exist on disk (prompt, zle, aliases).
+2. Source `andspace.zsh` (OSC hooks — after zle is available).
+
+The user's on-disk config is **read-only sourced**, never written. Aliases,
+prompt, and plugins from `~/.zshrc` still load after integration hooks
+register.
+
+Non-zsh shells (`bash`, `fish`) are unchanged — no `ZDOTDIR` override.
+
+### Why not edit `~/.zshrc` yet?
+
+- Avoid surprising global shell changes outside AndSpace.
+- Avoid installer/diff complexity before Command Guard needs it.
+- `ZDOTDIR` is the standard zsh mechanism for isolated startup files.
+
+A future milestone may offer optional user-level install; v0.1 uses PTY-only
+bootstrap.
+
 ## Files
 
 | File | Role |
 |---|---|
-| `src-tauri/shell-integration/andspace.zsh` | zsh `precmd` / `preexec` hooks |
-| `src-tauri/shell-integration/bash.placeholder` | Not implemented in v0.1 |
-| `src-tauri/shell-integration/fish.placeholder` | Not implemented in v0.1 |
+| `src-tauri/shell-integration/andspace.zsh` | zsh `precmd` / `preexec` OSC hooks |
+| `src-tauri/shell-integration/zdotdir/.zshenv` | Bootstrap → user's `~/.zshenv` |
+| `src-tauri/shell-integration/zdotdir/.zshrc` | Bootstrap → `andspace.zsh` → user's `~/.zshrc` |
+| `src-tauri/shell-integration/bash.placeholder` | Not implemented |
+| `src-tauri/shell-integration/fish.placeholder` | Not implemented |
 | `src/terminal/shellIntegration.ts` | OSC parsers + xterm handler registration |
 | `src/terminal/terminalStore.ts` | `paneMeta`, `commandHistoryByPane` |
 
@@ -20,17 +55,8 @@ on screen.
 |---|---|
 | `TERM_PROGRAM` | `AndSpace` |
 | `ANDSPACE_SHELL_INTEGRATION` | `1` |
-| `ANDSPACE_ZSH_INTEGRATION` | Absolute path to `andspace.zsh` (when bundled path exists) |
-
-## Enable in a pane
-
-After launching AndSpace (or `pnpm tauri dev`):
-
-```zsh
-source "$ANDSPACE_ZSH_INTEGRATION"
-# or, if unset:
-source /Users/you/Desktop/Andspace/src-tauri/shell-integration/andspace.zsh
-```
+| `ANDSPACE_ZSH_INTEGRATION` | Absolute path to `andspace.zsh` (zsh only) |
+| `ZDOTDIR` | Absolute path to `zdotdir/` (zsh only) |
 
 ## OSC protocol
 
@@ -59,63 +85,45 @@ zsh order per command: `start` → `cmd` → … run … → `end` (in next `pre
 
 Per pane (`paneId` from Rust):
 
-**`paneMeta`**
+**`paneMeta`** — cwd, last command, exit code, output boundary, timestamps.
 
-- `cwd`
-- `lastCommand`
-- `lastExitCode`
-- `lastCommandStartedAt` / `lastCommandEndedAt` (ms)
-- `outputBoundary` (xterm buffer line index at command start)
-- `commandRunning`
-
-**`commandHistoryByPane`**
-
-- Up to 50 `CommandHistoryEntry` objects per pane
+**`commandHistoryByPane`** — up to 50 entries per pane.
 
 ## Diagnostics
 
-Each OSC event invokes `report_shell_event` → append to
-`/tmp/andspace-diag.log`:
+On zsh PTY create:
+
+```
+<ms> shell-autoload pane=p-… integration=/…/andspace.zsh zdotdir=/…/zdotdir
+```
+
+Each OSC event:
 
 ```
 <ms> shell pane=p-abc osc kind=start boundary=42 ...
 ```
 
-## Manual verification
+## Verification
 
-1. Launch AndSpace (`pnpm tauri dev` or the release `.app` after `pnpm tauri build`).
-2. In a pane: `source "$ANDSPACE_ZSH_INTEGRATION"`.
+1. Launch AndSpace once (`pnpm tauri dev` or the release app). Do **not** leave
+   a hot-reload dev session running while editing Rust — each rebuild respawns
+   the app and creates new PTYs.
+2. Open one tab. Do **not** run `source` manually.
 3. Run `pwd`, `echo hello`, `false`.
-4. Inspect log:
+4. Check diagnostics:
 
 ```bash
-tail -20 /tmp/andspace-diag.log
+grep -E 'shell-autoload|kind=' /tmp/andspace-diag.log | tail -20
 ```
 
-Expect lines containing `kind=cwd`, `kind=start`, `kind=cmd`, `kind=end`
-with `exit=0` or `exit=1`.
-
-5. Status bar (bottom right) should show the current directory after `pwd`.
-
-## Automated verification (dev)
-
-When keyboard automation cannot focus the WebView, use the env-gated PTY
-injector (dev builds only):
-
-```bash
-: > /tmp/andspace-diag.log
-ANDSPACE_RUN_SHELL_TEST=1 pnpm tauri dev
-# wait ~8s, then:
-grep 'shell pane=' /tmp/andspace-diag.log
-```
-
-Expect `shell-test-inject`, then `kind=start` / `kind=cmd` / `kind=end`
-for `pwd`, `echo hello`, and `false` (`exit=1`).
+Expect `shell-autoload pane=…` on PTY create, then `kind=cwd`, `kind=start`,
+`kind=cmd`, `kind=end` with `exit=0` and `exit=1`.
 
 ## Limitations (v0.1)
 
 - zsh only; bash/fish are placeholders.
-- Integration is **not** auto-sourced; user must `source` once per shell session.
+- Login-only files (`~/.zprofile`, `~/.zlogin`) are not chained yet unless
+  added to `zdotdir/` in a later milestone.
 - Output boundary is a buffer **line index**, not byte offset.
-- Command text may be truncated in diag logs (80 chars) for safety.
-- OSC handlers consume sequences; malformed payloads are ignored.
+- OSC 7 cwd parsing on `file://hostname/path` URLs may truncate on some hosts;
+  OSC 9001 `cwd|base64` is authoritative.

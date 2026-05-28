@@ -3,7 +3,7 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Append a single timestamped line to /tmp/andspace-diag.log. Used to verify
 /// PTY lifecycle (create / kill / natural exit) and renderer choice without
@@ -68,7 +68,7 @@ impl PtyManager {
             .map_err(|e| format!("openpty failed: {e}"))?;
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-        let mut cmd = CommandBuilder::new(shell);
+        let mut cmd = CommandBuilder::new(&shell);
         if let Ok(home) = std::env::var("HOME") {
             cmd.cwd(home);
         }
@@ -76,9 +76,9 @@ impl PtyManager {
         cmd.env("COLORTERM", "truecolor");
         cmd.env("TERM_PROGRAM", "AndSpace");
         cmd.env("ANDSPACE_SHELL_INTEGRATION", "1");
-        if let Some(path) = zsh_integration_path() {
-            cmd.env("ANDSPACE_ZSH_INTEGRATION", path);
-        }
+
+        let pane_id = make_id();
+        let zsh_bootstrap = apply_zsh_bootstrap(&mut cmd, &shell);
 
         let child = pair
             .slave
@@ -97,8 +97,12 @@ impl PtyManager {
             .try_clone_reader()
             .map_err(|e| format!("clone_reader failed: {e}"))?;
 
-        let pane_id = make_id();
         diag_log(&format!("pty-create pid={child_pid} pane={pane_id}"));
+        if let Some((integration, zdotdir)) = zsh_bootstrap {
+            diag_log(&format!(
+                "shell-autoload pane={pane_id} integration={integration} zdotdir={zdotdir}"
+            ));
+        }
 
         let pane_id_for_thread = pane_id.clone();
         let pid_for_thread = child_pid;
@@ -136,27 +140,6 @@ impl PtyManager {
             child,
         };
         self.panes.lock().insert(pane_id.clone(), handle);
-
-        if std::env::var("ANDSPACE_RUN_SHELL_TEST").is_ok() {
-            if let Some(path) = zsh_integration_path() {
-                let pane_for_test = pane_id.clone();
-                let panes_for_test = self.panes.clone();
-                thread::spawn(move || {
-                    thread::sleep(Duration::from_secs(4));
-                    let script = format!(
-                        "source '{path}'\npwd\necho hello\nfalse\n"
-                    );
-                    if let Some(h) = panes_for_test.lock().get_mut(&pane_for_test) {
-                        diag_log(&format!(
-                            "shell-test-inject pane={pane_for_test} bytes={}",
-                            script.len()
-                        ));
-                        let _ = h.writer.write_all(script.as_bytes());
-                        let _ = h.writer.flush();
-                    }
-                });
-            }
-        }
 
         Ok(pane_id)
     }
@@ -197,9 +180,21 @@ impl PtyManager {
     }
 }
 
+fn shell_integration_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("shell-integration")
+}
+
 fn zsh_integration_path() -> Option<String> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("shell-integration/andspace.zsh");
+    let path = shell_integration_dir().join("andspace.zsh");
+    canonicalize_if_exists(&path)
+}
+
+fn zsh_zdotdir_path() -> Option<String> {
+    let path = shell_integration_dir().join("zdotdir");
+    canonicalize_if_exists(&path)
+}
+
+fn canonicalize_if_exists(path: &std::path::Path) -> Option<String> {
     if path.exists() {
         path.canonicalize()
             .ok()
@@ -207,6 +202,29 @@ fn zsh_integration_path() -> Option<String> {
     } else {
         None
     }
+}
+
+fn is_zsh(shell: &str) -> bool {
+    std::path::Path::new(shell)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| n == "zsh" || n.starts_with("zsh-"))
+        .unwrap_or(false)
+}
+
+fn apply_zsh_bootstrap(
+    cmd: &mut CommandBuilder,
+    shell: &str,
+) -> Option<(String, String)> {
+    if !is_zsh(shell) {
+        return None;
+    }
+    let integration = zsh_integration_path()?;
+    let zdotdir = zsh_zdotdir_path()?;
+    cmd.env("ZDOTDIR", &zdotdir);
+    cmd.env("ANDSPACE_ZDOTDIR", &zdotdir);
+    cmd.env("ANDSPACE_ZSH_INTEGRATION", &integration);
+    Some((integration, zdotdir))
 }
 
 fn make_id() -> String {
