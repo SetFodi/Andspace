@@ -3,6 +3,7 @@
 mod ai_handoff;
 mod command_guard;
 mod commands;
+mod project_sidebar;
 mod pty;
 mod rules;
 
@@ -27,6 +28,9 @@ fn main() {
             prepare_ai_cli_handoff,
             report_ai_handoff_event,
             report_command_palette_event,
+            load_project_tree,
+            load_package_scripts,
+            report_sidebar_event,
             evaluate_command_guard,
             report_command_guard_ui_request,
             respond_command_guard,

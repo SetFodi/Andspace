@@ -31,6 +31,7 @@ function isAppShortcut(e: KeyboardEvent): boolean {
   return (
     k === "t" ||
     k === "w" ||
+    k.toLowerCase() === "b" ||
     k.toLowerCase() === "k" ||
     k.toLowerCase() === "e" ||
     (e.shiftKey && k.toLowerCase() === "i") ||

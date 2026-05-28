@@ -1,7 +1,7 @@
 # Command Palette
 
 `Cmd+K` opens the v0.1 command palette. It is a small keyboard-first overlay for
-terminal workflow actions, not a sidebar, project explorer, file explorer, or
+terminal workflow actions, not a dashboard, project explorer, file explorer, or
 settings UI.
 
 ## Commands
@@ -12,6 +12,10 @@ Initial actions:
 - `Split Right`
 - `Split Down`
 - `Close Pane`
+- `Toggle Sidebar`
+- `Focus Files`
+- `Focus Scripts`
+- `Run Script`
 - `Create ANDSPACE.md`
 - `Send Context`
 - `Copy Last Prompt`
@@ -44,8 +48,8 @@ command-palette-run action=terminal.splitRight
 
 ## Limits
 
-- No sidebar.
-- No file explorer.
+- The palette stays lightweight; it should not become a dashboard.
+- Sidebar commands only focus or toggle the Files/Scripts sidebar.
 - No Git panel.
 - No settings UI.
 - No server detection.

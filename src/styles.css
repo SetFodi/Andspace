@@ -219,8 +219,214 @@ body,
 
 /* === Terminal area ======================================================= */
 
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+
+.project-sidebar {
+  width: 0;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-right: 1px solid transparent;
+  background: #0a0a0c;
+  transition: width 180ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 180ms ease;
+}
+
+.project-sidebar.open {
+  width: 264px;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.project-sidebar-inner {
+  width: 264px;
+  height: 100%;
+  padding: 12px 10px 10px;
+  overflow: auto;
+  background: linear-gradient(180deg, #101116 0%, #0b0c10 100%);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 160ms ease, transform 180ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.project-sidebar.open .project-sidebar-inner {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 2px 2px 0;
+}
+
+.sidebar-kicker {
+  color: #8d7bf2;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.sidebar-head h2 {
+  margin: 0;
+  max-width: 190px;
+  overflow: hidden;
+  color: #f4f4f6;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-refresh {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a7a8b3;
+  cursor: pointer;
+}
+
+.sidebar-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.sidebar-section {
+  margin-top: 12px;
+  padding: 8px 6px 7px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+}
+
+.sidebar-section.active {
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.25);
+}
+
+.sidebar-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 7px;
+}
+
+.sidebar-section-head h3 {
+  margin: 0;
+  color: #bfc0ca;
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-section-head span {
+  color: #777986;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sidebar-muted,
+.file-truncated {
+  padding: 8px 5px;
+  color: #777986;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.file-row,
+.script-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #d8d8df;
+  font: inherit;
+  cursor: pointer;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  border-radius: 7px;
+  padding-top: 3px;
+  padding-right: 6px;
+  padding-bottom: 3px;
+  text-align: left;
+}
+
+.file-row:hover,
+.script-row:hover {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.file-chevron {
+  width: 11px;
+  color: #777986;
+  font-size: 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.file-row.directory .file-name {
+  color: #eeeeF3;
+  font-weight: 620;
+}
+
+.script-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 7px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.script-row span {
+  overflow: hidden;
+  color: #f1f1f4;
+  font-size: 12px;
+  font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.script-row code {
+  overflow: hidden;
+  color: #8d8f9d;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .terminal-area {
   flex: 1;
+  min-width: 0;
   position: relative;
   background: #0a0a0c;
   overflow: hidden;

@@ -5,6 +5,10 @@ export type CommandPaletteActionId =
   | "terminal.splitRight"
   | "terminal.splitDown"
   | "terminal.closePane"
+  | "sidebar.toggle"
+  | "sidebar.focusFiles"
+  | "sidebar.focusScripts"
+  | "sidebar.runScript"
   | "project.createAndspace"
   | "handoff.sendContext"
   | "handoff.copyLastPrompt"
@@ -41,6 +45,30 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Close Pane",
     section: "Terminal",
     keywords: ["close", "pane"],
+  },
+  {
+    id: "sidebar.toggle",
+    title: "Toggle Sidebar",
+    section: "Project",
+    keywords: ["sidebar", "project", "files", "scripts"],
+  },
+  {
+    id: "sidebar.focusFiles",
+    title: "Focus Files",
+    section: "Project",
+    keywords: ["sidebar", "files", "tree"],
+  },
+  {
+    id: "sidebar.focusScripts",
+    title: "Focus Scripts",
+    section: "Project",
+    keywords: ["sidebar", "scripts", "package"],
+  },
+  {
+    id: "sidebar.runScript",
+    title: "Run Script",
+    section: "Project",
+    keywords: ["sidebar", "scripts", "run", "package"],
   },
   {
     id: "project.createAndspace",

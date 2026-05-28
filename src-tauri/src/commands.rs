@@ -130,6 +130,44 @@ pub fn report_command_palette_event(action: Option<String>) {
 }
 
 #[tauri::command]
+pub fn load_project_tree(cwd: String) -> Result<crate::project_sidebar::ProjectTree, String> {
+    let result = crate::project_sidebar::load_project_tree(&cwd);
+    if result.is_ok() {
+        crate::pty::diag_log(&format!("project-tree-load cwd={}", log_value(&cwd)));
+    }
+    result
+}
+
+#[tauri::command]
+pub fn load_package_scripts(cwd: String) -> Result<crate::project_sidebar::PackageScripts, String> {
+    let result = crate::project_sidebar::load_package_scripts(&cwd);
+    if result.is_ok() {
+        crate::pty::diag_log(&format!("package-scripts-load cwd={}", log_value(&cwd)));
+    }
+    result
+}
+
+#[tauri::command]
+pub fn report_sidebar_event(
+    event: String,
+    cwd: Option<String>,
+    name: Option<String>,
+    package_manager: Option<String>,
+) {
+    match event.as_str() {
+        "sidebar-open" | "sidebar-close" => crate::pty::diag_log(&event),
+        "script-run" => crate::pty::diag_log(&format!(
+            "script-run name={} package_manager={}{}",
+            log_value(name.as_deref().unwrap_or("")),
+            log_value(package_manager.as_deref().unwrap_or("")),
+            cwd.map(|cwd| format!(" cwd={}", log_value(&cwd)))
+                .unwrap_or_default()
+        )),
+        _ => crate::pty::diag_log(&format!("sidebar-unknown event={}", log_value(&event))),
+    }
+}
+
+#[tauri::command]
 pub fn evaluate_command_guard(
     pane_id: String,
     command: String,

@@ -5,6 +5,10 @@ import { SplitTree } from "./terminal/SplitTree";
 import { GuardConfirmationOverlay } from "./terminal/GuardConfirmationOverlay";
 import { HandoffOverlay } from "./terminal/HandoffOverlay";
 import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
+import {
+  ProjectSidebar,
+  scriptCommandForSidebar,
+} from "./terminal/ProjectSidebar";
 import { initAndspaceRules } from "./terminal/rules";
 import {
   buildAiHandoffPrompt,
@@ -14,6 +18,11 @@ import {
   type HandoffCommandRecord,
   type HandoffPrompt,
 } from "./terminal/aiHandoff";
+import {
+  reportSidebarEvent,
+  type PackageScript,
+  type PackageScripts,
+} from "./terminal/projectSidebarData";
 import {
   reportCommandPaletteOpen,
   reportCommandPaletteRun,
@@ -100,6 +109,10 @@ export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarSection, setSidebarSection] = useState<"files" | "scripts">(
+    "files"
+  );
 
   const showToast = useCallback((next: ToastState) => {
     setToast(next);
@@ -125,6 +138,24 @@ export default function App() {
   const closePalette = useCallback(() => {
     setPaletteOpen(false);
     refocusTerminal();
+  }, [refocusTerminal]);
+
+  const setSidebarVisible = useCallback(
+    (next: boolean) => {
+      setSidebarOpen(next);
+      void reportSidebarEvent(next ? "sidebar-open" : "sidebar-close");
+      if (!next) refocusTerminal();
+    },
+    [refocusTerminal]
+  );
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((open) => {
+      const next = !open;
+      void reportSidebarEvent(next ? "sidebar-open" : "sidebar-close");
+      if (!next) refocusTerminal();
+      return next;
+    });
   }, [refocusTerminal]);
 
   const buildPromptForActivePane = useCallback(async () => {
@@ -226,6 +257,17 @@ export default function App() {
         await splitActive("column");
       } else if (action.id === "terminal.closePane") {
         await closeActive();
+      } else if (action.id === "sidebar.toggle") {
+        toggleSidebar();
+      } else if (action.id === "sidebar.focusFiles") {
+        setSidebarSection("files");
+        setSidebarVisible(true);
+      } else if (action.id === "sidebar.focusScripts") {
+        setSidebarSection("scripts");
+        setSidebarVisible(true);
+      } else if (action.id === "sidebar.runScript") {
+        setSidebarSection("scripts");
+        setSidebarVisible(true);
       } else if (action.id === "project.createAndspace") {
         await initRulesForActivePane();
       } else if (action.id === "handoff.sendContext") {
@@ -254,10 +296,24 @@ export default function App() {
       closePalette,
       initRulesForActivePane,
       newTab,
+      setSidebarVisible,
       showToast,
       splitActive,
+      toggleSidebar,
       writeToPane,
     ]
+  );
+
+  const runProjectScript = useCallback(
+    async (script: PackageScript, scripts: PackageScripts) => {
+      const paneId = await splitActive("row");
+      if (!paneId) {
+        showToast({ tone: "error", message: "Could not open script pane" });
+        return;
+      }
+      await writeToPane(paneId, `${scriptCommandForSidebar(script, scripts)}\n`);
+    },
+    [showToast, splitActive, writeToPane]
   );
 
   const disabledPaletteActions = useMemo(() => {
@@ -268,9 +324,15 @@ export default function App() {
       disabled.add("terminal.closePane");
       disabled.add("handoff.copyLastPrompt");
       disabled.add("guard.testProtectedCommand");
+      disabled.add("sidebar.focusFiles");
+      disabled.add("sidebar.focusScripts");
+      disabled.add("sidebar.runScript");
     }
     if (!activePaneCwd) {
       disabled.add("project.createAndspace");
+      disabled.add("sidebar.focusFiles");
+      disabled.add("sidebar.focusScripts");
+      disabled.add("sidebar.runScript");
     }
     if (!activeHandoffRecord) {
       disabled.add("handoff.copyLastPrompt");
@@ -302,6 +364,9 @@ export default function App() {
       } else if (k === "w") {
         e.preventDefault();
         closeActive();
+      } else if (k.toLowerCase() === "b" && !e.shiftKey) {
+        e.preventDefault();
+        toggleSidebar();
       } else if (k === "ArrowRight" && !e.shiftKey) {
         e.preventDefault();
         splitActive("row");
@@ -345,6 +410,7 @@ export default function App() {
     closeTab,
     closeActive,
     splitActive,
+    toggleSidebar,
     nextTab,
     prevTab,
     switchToIndex,
@@ -364,15 +430,25 @@ export default function App() {
     <div className="app">
       <TitleBar />
       <TabStrip />
-      <div className="terminal-area">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={`tab-content ${tab.id === activeTabId ? "active" : ""}`}
-          >
-            <SplitTree node={tab.root} tabId={tab.id} />
-          </div>
-        ))}
+      <div className={`workspace ${sidebarOpen ? "sidebar-open" : ""}`}>
+        <ProjectSidebar
+          open={sidebarOpen}
+          cwd={activePaneCwd}
+          focusedSection={sidebarSection}
+          onFocusedSectionChange={setSidebarSection}
+          onRunScript={runProjectScript}
+          onToast={(message, tone) => showToast({ message, tone })}
+        />
+        <div className="terminal-area">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              className={`tab-content ${tab.id === activeTabId ? "active" : ""}`}
+            >
+              <SplitTree node={tab.root} tabId={tab.id} />
+            </div>
+          ))}
+        </div>
       </div>
       <GuardConfirmationOverlay
         request={pendingGuardConfirmation}
