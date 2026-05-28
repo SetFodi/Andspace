@@ -551,9 +551,9 @@ body,
 .handoff-card {
   position: relative;
   overflow: hidden;
-  width: min(620px, calc(100vw - 52px));
+  width: min(820px, calc(100vw - 52px));
   max-height: min(78vh, 720px);
-  padding: 18px;
+  padding: 20px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(27, 28, 35, 0.98), #101116);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -620,8 +620,8 @@ body,
 
 .handoff-summary {
   display: grid;
-  grid-template-columns: 1.4fr 1.4fr 0.45fr;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.65fr) 90px;
+  gap: 10px;
   margin-top: 16px;
 }
 
@@ -681,7 +681,7 @@ body,
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 9px;
   margin-top: 16px;
 }
 
@@ -689,7 +689,7 @@ body,
   height: 34px;
   border: 0;
   border-radius: 9px;
-  padding: 0 13px;
+  padding: 0 14px;
   color: #f4f4f6;
   font: inherit;
   font-size: 12px;
