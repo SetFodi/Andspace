@@ -35,7 +35,7 @@ Accessibility permission on the **app running the bash script** (see
 |---|---|---|---|
 | 5 | `yes hello` throughput | `./scripts/benchmark.sh yh [N]` | Launches app, types `/tmp/yh-bench.sh`, parses `/usr/bin/time -p`, computes lines/sec |
 | 6 | `cat /tmp/200mb.log` time | `./scripts/benchmark.sh cat` | Launches app, types `/tmp/cat-bench.sh`, reports real time |
-| 10 | Two panes `tail -f` busy logs | `./scripts/benchmark.sh tails` | Launches, runs tail in pane 1, ⌘→ to split, runs tail in pane 2, samples CPU |
+| 10 | Two panes `tail -f` busy logs | `./scripts/benchmark.sh tails` | Launches, runs tail in pane 1, ⌘O to split, runs tail in pane 2, samples CPU |
 | 11 | Background-tab `tail -f` | `./scripts/benchmark.sh bgtab` | Foreground vs background CPU comparison; switches focus to Finder for the background phase |
 | 16 | Rapid tab switching | `./scripts/benchmark.sh tabswitch` | ⌘T × 8, then ⌘1..⌘9 × 10 rounds, wall-clock timed |
 
@@ -235,7 +235,7 @@ In AndSpace:
    ```
    tail -f /var/log/system.log
    ```
-2. Press `⌘→` to split right (now you have two panes).
+2. Press `⌘O` to split right (now you have two panes).
 3. In the new pane:
    ```
    tail -f /var/log/system.log

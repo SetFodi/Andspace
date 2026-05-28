@@ -98,7 +98,7 @@ export function TabStrip() {
         <button
           className="strip-icon"
           onClick={() => splitActive("row")}
-          title="Split right (⌘→)"
+          title="Split right (⌘O)"
           aria-label="Split right"
         >
           <SplitRightIcon />
@@ -106,7 +106,7 @@ export function TabStrip() {
         <button
           className="strip-icon"
           onClick={() => splitActive("column")}
-          title="Split down (⌘↓)"
+          title="Split down (⌘L)"
           aria-label="Split down"
         >
           <SplitDownIcon />

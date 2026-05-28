@@ -19,7 +19,7 @@ gate in `BENCHMARKS.md`.
 - React + TypeScript frontend
 - xterm.js terminal with WebGL renderer (DOM fallback if WebGL fails)
 - Tabs (⌘T new, ⌘W close, ⌘[ / ⌘] cycle, ⌘1–⌘9 jump)
-- Horizontal split (⌘D split right) and vertical split (⌘⇧D split down)
+- Horizontal split (⌘O split right) and vertical split (⌘L split down)
 - Per-pane PTY processes
 - Resize propagation from UI to PTY
 - Default shell from `$SHELL`

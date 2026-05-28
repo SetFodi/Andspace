@@ -68,7 +68,7 @@ Open AndSpace with 1 tab idle, lock screen at mid brightness.
 Return after 1 hour. Record battery % drop.
 
 ### #10 Two `tail -f` (reference)
-Open two panes side-by-side (⌘→). In each:
+Open two panes side-by-side (⌘O). In each:
 ```
 tail -f /var/log/system.log
 ```

@@ -241,7 +241,7 @@ EOF
 
 # ---------------------------------------------------------------------------
 # #10 two panes tail -f, combined CPU
-# Order matters: type tail in pane 1 first, then ⌘→ to split right (which
+# Order matters: type tail in pane 1 first, then ⌘O to split right (which
 # moves focus to pane 2), then type tail in pane 2.
 bench_tails() {
     require_accessibility || return 1
@@ -254,7 +254,7 @@ bench_tails() {
     sleep 1
 
     # Split right (creates pane 2, focuses it)
-    send_keycode_with_mods 124 "command"
+    send_keystroke_with_mods "o" "command"
     sleep 1
 
     # Pane 2

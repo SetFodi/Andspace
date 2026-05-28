@@ -20,6 +20,9 @@ explorer, or settings UI.
 | Project      | Create ANDSPACE.md   | Scaffold an ANDSPACE.md in the active pane  |
 | AI / Handoff | Send Context         | Open the AI handoff overlay                 |
 | AI / Handoff | Copy Last Prompt     | Copy the most recent handoff prompt         |
+| Servers      | Open Localhost Preview | Open the most recently detected server    |
+| Servers      | Copy Server URL      | Copy the most recently detected server URL  |
+| Servers      | Focus Servers        | Open the sidebar focused on Servers         |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
 
 Filtering is simple substring matching over command title, section, id, and
@@ -54,7 +57,7 @@ command-palette-run action=terminal.splitRight
 ## Limits
 
 - The palette stays lightweight; it should not become a dashboard.
-- Sidebar commands only focus or toggle the Files / Scripts sidebar.
+- Sidebar commands only focus or toggle Files / Scripts / Servers.
 - No Git panel.
 - No settings UI.
-- No server detection.
+- No embedded browser preview.
