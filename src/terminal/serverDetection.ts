@@ -26,13 +26,17 @@ export interface ParsedServer {
 export interface ServerDetectionContext {
   /// Rolling text buffer for this pane (most recent ~4 KB of output).
   buffer: string;
+  /// Small carryover for URLs split across PTY chunks.
+  tail: string;
 }
 
 export function createServerDetectionContext(): ServerDetectionContext {
-  return { buffer: "" };
+  return { buffer: "", tail: "" };
 }
 
 const CONTEXT_WINDOW_BYTES = 4096;
+const CHUNK_CARRY_BYTES = 256;
+const TRAILING_URL_FRAGMENT_REGEX = /https?:\/\/[^\s\u001b"'<>)\]]*$/i;
 
 /// Append a chunk to the per-pane context buffer and return any new
 /// localhost URLs that appeared in it. The caller (the store) is
@@ -43,8 +47,10 @@ export function ingestChunk(
 ): ParsedServer[] {
   if (!chunk) return [];
   const clean = stripAnsi(chunk);
+  const parseWindow = ctx.tail + clean;
   ctx.buffer = (ctx.buffer + clean).slice(-CONTEXT_WINDOW_BYTES);
-  return parseLocalhostUrls(ctx.buffer);
+  ctx.tail = trailingIncompleteUrlFragment(parseWindow);
+  return parseLocalhostUrls(parseWindow);
 }
 
 export function stripAnsi(text: string): string {
@@ -132,4 +138,11 @@ export function shortServerUrl(url: string): string {
   // Drop scheme for compact sidebar rows: localhost:3000 instead of
   // http://localhost:3000.
   return url.replace(/^https?:\/\//, "");
+}
+
+function trailingIncompleteUrlFragment(text: string): string {
+  const match = text.match(TRAILING_URL_FRAGMENT_REGEX);
+  if (!match) return "";
+  const fragment = match[0].slice(-CHUNK_CARRY_BYTES);
+  return parseLocalhostUrls(fragment).length > 0 ? "" : fragment;
 }

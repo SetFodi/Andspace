@@ -130,13 +130,19 @@ test("shortServerUrl drops scheme", () => {
   );
 });
 
-test("ingestChunk dedups within rolling buffer", () => {
+test("ingestChunk does not re-emit an old URL on unrelated output", () => {
   const ctx = createServerDetectionContext();
   ingestChunk(ctx, "Listening on http://localhost:3000\n");
   const second = ingestChunk(ctx, "ready in 230ms\n");
-  // Second call returns the same URL because the buffer still holds it.
-  // Dedup is the store's job; parser just exposes what's in the buffer.
+  assert.equal(second.length, 0);
+});
+
+test("ingestChunk still catches URLs split across chunks", () => {
+  const ctx = createServerDetectionContext();
+  ingestChunk(ctx, "Local: http://local");
+  const second = ingestChunk(ctx, "host:3000\n");
   assert.equal(second.length, 1);
+  assert.equal(second[0].url, "http://localhost:3000");
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

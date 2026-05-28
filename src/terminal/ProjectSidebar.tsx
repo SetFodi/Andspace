@@ -98,14 +98,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
         focus() {
           const root = rootRef.current;
           if (!root) return;
-          // Prefer the first file row — drops the user straight into the
-          // tree instead of the "Files" section header, so a single Down
-          // press actually moves through files.
-          const target =
-            root.querySelector<HTMLElement>(".file-row") ??
-            root.querySelector<HTMLElement>(
-              ".sidebar-section-head, .script-row"
-            );
+          const target = firstFocusableForSection(root, focusedSection);
           if (target) {
             target.focus();
             const items = sidebarFocusableItems(root);
@@ -116,7 +109,7 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
           return tree;
         },
       }),
-      [tree]
+      [focusedSection, tree]
     );
 
     // If the user pressed ⌘+Left while the tree was still loading, the
@@ -485,6 +478,7 @@ function SidebarSection({
 }) {
   return (
     <section
+      data-section={id}
       className={`sidebar-section ${active ? "active" : ""} ${
         collapsed ? "collapsed" : ""
       }`}
@@ -708,6 +702,33 @@ function sidebarFocusableItems(root: HTMLElement): HTMLElement[] {
     root.querySelectorAll<HTMLElement>(
       ".sidebar-section-head, .file-row, .script-row, .server-row, .file-load-more, .sidebar-foot-btn:not(:disabled)"
     )
+  );
+}
+
+function firstFocusableForSection(
+  root: HTMLElement,
+  section: SectionKey
+): HTMLElement | null {
+  const sectionRoot = root.querySelector<HTMLElement>(
+    `.sidebar-section[data-section="${section}"]`
+  );
+  if (!sectionRoot) return null;
+
+  if (section === "files") {
+    return (
+      sectionRoot.querySelector<HTMLElement>(".file-row") ??
+      sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
+    );
+  }
+  if (section === "scripts") {
+    return (
+      sectionRoot.querySelector<HTMLElement>(".script-row") ??
+      sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
+    );
+  }
+  return (
+    sectionRoot.querySelector<HTMLElement>(".server-row") ??
+    sectionRoot.querySelector<HTMLElement>(".sidebar-section-head")
   );
 }
 

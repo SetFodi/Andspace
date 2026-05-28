@@ -93,7 +93,9 @@ the sidebar to pick a specific one.
 - When a pane closes, its servers are removed from the list.
 - The list is capped at **16 servers** in memory. Hitting the cap drops the
   oldest entries; in practice you'll never reach this.
-- Duplicate URLs only update `lastSeenAt` — they don't grow the list.
+- Duplicate URLs only update `lastSeenAt` when the URL appears again in new
+  output — they don't grow the list, and unrelated later output does not
+  re-emit old URLs from the rolling context buffer.
 
 ## Diagnostics
 

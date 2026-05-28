@@ -28,8 +28,8 @@ exact error and do not work around it for alpha.
 - [x] App icon appears in Finder / Dock / app switcher
 - [x] No placeholder dev icon is packaged
 - [x] Terminal opens with a shell prompt
-- [ ] `Cmd+K` opens the command palette
-- [ ] `Cmd+B` opens and focuses the sidebar
+- [x] `Cmd+K` opens the command palette
+- [x] `Cmd+B` opens and focuses the sidebar
 
 ## Manual UX Checks
 
@@ -65,18 +65,46 @@ exact error and do not work around it for alpha.
 
 ## Manual QA Required
 
-Visual UI automation was blocked by macOS Accessibility permissions, so these
-items must be checked manually in the launched production app:
+Full visual UI automation is not reliable in this environment, so these items
+must be checked manually in the launched production app:
 
-- [ ] `Cmd+K` opens the command palette
-- [ ] `Cmd+B` opens and focuses the sidebar
-- [ ] `Cmd+E` opens the handoff overlay
+- [x] `Cmd+K` opens the command palette
+- [x] `Cmd+B` opens and focuses the sidebar
+- [x] `Cmd+E` opens the handoff overlay
 - [ ] `Cmd+/` opens the keyboard shortcuts overlay
 - [ ] Command Guard overlay works for protected and dangerous commands
 - [ ] File Actions open and run expected external handoff actions
 - [ ] Server row opens the detected URL in the default browser
 - [ ] Scripts run in a split
 - [ ] Terminal focus returns after overlays close
+
+## Dogfood Status
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Automated checks | Passed | TypeScript, frontend build, Rust tests/check, Command Guard zsh verification, server parser tests, pane navigation tests |
+| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` |
+| Bundle metadata | Passed | App name, bundle id, version, executable, and icon metadata verified |
+| Runtime diagnostics | Passed | PTY creation, WebGL renderer, shell autoload, and cwd OSC events verified |
+| Visual UI workflow | Partial pass | `Cmd+K`, `Cmd+B`, and `Cmd+E` verified visually; full dogfood and remaining shortcuts still need manual confirmation |
+| 60–90 minute dogfood | Needs manual confirmation | Use `docs/DOGFOOD_CHECKLIST.md` in the production app |
+
+## Known Limitations
+
+- macOS first.
+- zsh first; bash/fish integration placeholders exist but are not fully
+  supported.
+- AI handoff uses installed local CLIs only. No provider API integration,
+  provider billing, API key management, or hosted chat UI.
+- The app bundle is built for local alpha use. Signing, notarization, and
+  auto-update are not implemented yet. Current bundle uses an ad-hoc local
+  signature with no Team ID.
+- No Git panel yet.
+- No embedded browser preview yet.
+- No settings UI yet.
+- No file editing or in-app file preview yet.
+- Server detection is best-effort from terminal output only; no port scanning,
+  polling, or health checks.
 
 ## Performance Sanity
 
@@ -102,12 +130,14 @@ items must be checked manually in the launched production app:
 - Production app launched as process `andspace`.
 - Runtime diagnostics showed `app-start`, `pty-create`, `shell-autoload`,
   `renderer=webgl`, and shell cwd OSC events.
+- Production smoke checks confirmed `Cmd+K` opens the palette, `Cmd+B` opens
+  and focuses the sidebar, and `Cmd+E` opens AI Handoff.
 - Idle process sampling with sidebar presumed closed: five 1-second samples
-  at `0.0%` CPU and about `110 MB` RSS.
-- Visual UI verification was blocked in this environment: Computer Use timed
-  out, `osascript` was denied Accessibility permission for keystrokes/window
-  inspection, and `screencapture` could not create an image from the display.
-  The remaining unchecked UI items need manual verification on the desktop.
+  around `0.4–0.5%` CPU and about `105 MB` RSS.
+- Computer Use timed out. `osascript` and screenshots were usable for a small
+  smoke check, but global keystroke automation became unreliable when another
+  app took focus. The remaining unchecked UI items need manual verification
+  on the desktop.
 
 ## Alpha Changelog
 

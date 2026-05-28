@@ -33,24 +33,24 @@ function isAppShortcut(e: KeyboardEvent): boolean {
   if (e.altKey) return false;
 
   return (
-    k === "t" ||
-    k === "w" ||
-    k.toLowerCase() === "o" ||
-    k.toLowerCase() === "l" ||
-    k.toLowerCase() === "b" ||
-    k.toLowerCase() === "k" ||
-    k.toLowerCase() === "e" ||
+    (k === "t" && !e.shiftKey) ||
+    (k === "w" && !e.shiftKey) ||
+    (k.toLowerCase() === "o" && !e.shiftKey) ||
+    (k.toLowerCase() === "l" && !e.shiftKey) ||
+    (k.toLowerCase() === "b" && !e.shiftKey) ||
+    (k.toLowerCase() === "k" && !e.shiftKey) ||
+    (k.toLowerCase() === "e" && !e.shiftKey) ||
     (e.shiftKey && k.toLowerCase() === "i") ||
-    k === "0" ||
-    k === "[" ||
-    k === "]" ||
-    k === "ArrowLeft" ||
-    k === "ArrowRight" ||
-    k === "ArrowUp" ||
-    k === "ArrowDown" ||
+    (k === "0" && !e.shiftKey) ||
+    (k === "[" && !e.shiftKey) ||
+    (k === "]" && !e.shiftKey) ||
+    (k === "ArrowLeft" && !e.shiftKey) ||
+    (k === "ArrowRight" && !e.shiftKey) ||
+    (k === "ArrowUp" && !e.shiftKey) ||
+    (k === "ArrowDown" && !e.shiftKey) ||
     k === "/" ||
     k === "?" ||
-    /^[1-9]$/.test(k)
+    (/^[1-9]$/.test(k) && !e.shiftKey)
   );
 }
 
