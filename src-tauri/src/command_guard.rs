@@ -293,6 +293,61 @@ mod tests {
         assert_eq!(result.decision, GuardDecision::Safe);
     }
 
+    #[test]
+    fn zsh_gate_fixture_commands_match_expected_rust_decisions() {
+        let cases = [
+            ("echo hello", GuardDecision::Safe, GuardSeverity::None, None),
+            (
+                "echo protected-test",
+                GuardDecision::Protected,
+                GuardSeverity::Confirm,
+                Some("echo protected-test"),
+            ),
+            (
+                "echo protected-test allowed",
+                GuardDecision::Allowed,
+                GuardSeverity::None,
+                Some("echo protected-test allowed"),
+            ),
+            (
+                "echo dangerous-test",
+                GuardDecision::Dangerous,
+                GuardSeverity::TypeToConfirm,
+                Some("echo dangerous-test"),
+            ),
+            (
+                "rm -rf ./fake-folder",
+                GuardDecision::Dangerous,
+                GuardSeverity::TypeToConfirm,
+                Some("rm -rf ./fake-folder"),
+            ),
+            (
+                "overlap command",
+                GuardDecision::Dangerous,
+                GuardSeverity::TypeToConfirm,
+                Some("overlap command"),
+            ),
+            (
+                "overlap command allowed",
+                GuardDecision::Allowed,
+                GuardSeverity::None,
+                Some("overlap command allowed"),
+            ),
+        ];
+
+        let rules = zsh_gate_fixture_rules();
+        for (command, decision, severity, matched_rule) in cases {
+            let result = evaluate_command_guard(command, "/workspace", &rules);
+            assert_eq!(result.decision, decision, "command: {command}");
+            assert_eq!(result.severity, severity, "command: {command}");
+            assert_eq!(
+                result.matched_rule.as_deref(),
+                matched_rule,
+                "command: {command}"
+            );
+        }
+    }
+
     fn rules() -> ResolvedRules {
         ResolvedRules {
             cwd: "/workspace".to_string(),
@@ -378,6 +433,64 @@ mod tests {
                 Some(RuleSeverity::TypeToConfirm),
             )],
             allowed: Vec::new(),
+            ai_handoff: Vec::new(),
+            project_context: Vec::new(),
+        }
+    }
+
+    fn zsh_gate_fixture_rules() -> ResolvedRules {
+        ResolvedRules {
+            cwd: "/workspace".to_string(),
+            project_file: Some("/workspace/ANDSPACE.md".to_string()),
+            global_file: None,
+            protected: vec![
+                rule(
+                    "echo protected-test",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    Some(RuleSeverity::Confirm),
+                ),
+                rule(
+                    "overlap",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    Some(RuleSeverity::Confirm),
+                ),
+            ],
+            dangerous: vec![
+                rule(
+                    "echo dangerous-test",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    Some(RuleSeverity::TypeToConfirm),
+                ),
+                rule(
+                    "rm -rf ./fake-folder",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    Some(RuleSeverity::TypeToConfirm),
+                ),
+                rule(
+                    "overlap command",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    Some(RuleSeverity::TypeToConfirm),
+                ),
+            ],
+            allowed: vec![
+                rule(
+                    "echo protected-test allowed",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    None,
+                ),
+                rule(
+                    "overlap command allowed",
+                    RuleMatcher::Substring,
+                    RuleSource::Project,
+                    None,
+                ),
+            ],
             ai_handoff: Vec::new(),
             project_context: Vec::new(),
         }

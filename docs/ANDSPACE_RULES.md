@@ -1,8 +1,8 @@
 # ANDSPACE Rules
 
-AndSpace v0.1 loads command safety rules as data for Command Guard. Milestone 4
-evaluates these rules in dry-run mode only: no prompts, modals, blocking,
-sidebars, AI handoff UI, or command palette features.
+AndSpace v0.1 loads command safety rules as data for Command Guard. The zsh
+pre-execution gate is active, but there is still no final modal UI, sidebar,
+command palette, or AI handoff.
 
 ## File Locations
 
@@ -15,6 +15,16 @@ command:
 
 The frontend requests resolved rules for the active pane cwd and stores them in
 memory only.
+
+## Source Of Truth
+
+`src-tauri/src/rules.rs` and `src-tauri/src/command_guard.rs` are canonical for
+app-side rule resolution, matching behavior, result shape, and tests.
+
+`src-tauri/shell-integration/andspace.zsh` contains a temporary shell-side
+matcher because the current zsh blocking gate needs a synchronous answer inside
+ZLE. That duplication is intentional for v0.1 and is covered by parity tests and
+`scripts/verify-command-guard-zsh.sh`.
 
 ## Precedence
 
@@ -112,6 +122,7 @@ Dangerous defaults:
 - Regex flags are not supported.
 - Aliases, shell functions, shell expansion, command substitution, and resolved
   executable paths are not handled yet.
+- Scripts and Makefiles can hide dangerous commands internally.
 - Project lookup is `cwd/ANDSPACE.md`; it does not walk parent directories yet.
 - Command Guard catches what shell integration reports as command text.
-- Command Guard is a safety rail, not a security boundary.
+- Command Guard is a safety rail, not a security sandbox or security boundary.

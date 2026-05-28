@@ -4,10 +4,21 @@ Command Guard has two v0.1 paths:
 
 - Milestone 4: Rust dry-run evaluator used after shell lifecycle capture.
 - Milestone 5: zsh pre-execution proof gate using an `accept-line` widget.
+- Milestone 6: hardening and parity checks for the temporary zsh matcher.
 
 The zsh gate can stop protected and dangerous commands before execution, but it
 is still not the final product UI: no modal, sidebar, command palette, project
 UI, or AI handoff.
+
+## Source Of Truth
+
+The Rust resolver and evaluator are canonical for app-side logic, serialized
+result shape, and unit tests. The zsh matcher is the current blocking path
+because ZLE needs a synchronous decision before accepting the command line.
+
+This duplication is intentional temporary v0.1 architecture. The zsh matcher is
+kept small, documented, and covered by parity checks until a Rust-backed
+synchronous bridge replaces it.
 
 ## Current Flow
 
@@ -45,6 +56,9 @@ This milestone uses a small shell-side matcher so the gate can make a
 synchronous decision inside ZLE. It intentionally mirrors the Rust matching
 order and rule file format, but it is temporary until a Rust-backed synchronous
 bridge exists.
+
+The zsh matcher defensively ignores empty rules, comment-only list items, and
+invalid regex rules. Invalid regex rules do not block command input.
 
 ## Matching
 
@@ -106,6 +120,12 @@ command-guard-preexec pane=p-... cwd=/path decision=protected severity=confirm m
 command-guard-preexec pane=p-... cwd=/path decision=dangerous severity=type-to-confirm matched_rule=rm -rf ./fake-folder matched_source=project matched_pattern_type=substring command=rm -rf ./fake-folder action=run
 ```
 
+Milestone 6 adds `matcher_impl=zsh` to pre-execution diagnostics:
+
+```text
+command-guard-preexec pane=p-... cwd=/path matcher_impl=zsh decision=dangerous severity=type-to-confirm matched_rule=rm -rf ./fake-folder matched_source=project matched_pattern_type=substring command=rm -rf ./fake-folder action=cancel
+```
+
 ## Manual Verification
 
 Use a temporary `ANDSPACE.md` in the repo:
@@ -145,6 +165,13 @@ Expected behavior:
 - `echo dangerous-test` requires typing `run`.
 - `rm -rf ./fake-folder` requires typing `run`; if canceled, the folder remains.
 
+The automated dev verification script runs the same fixture through the direct
+zsh matcher and a controlling-PTY ZLE flow:
+
+```bash
+scripts/verify-command-guard-zsh.sh
+```
+
 ## Limits
 
 - Pre-execution blocking is zsh only.
@@ -152,7 +179,9 @@ Expected behavior:
 - No AI handoff yet.
 - Matching uses the command text reported by shell integration.
 - The zsh pre-execution gate matches `$BUFFER` before execution.
+- Rust is canonical for app-side matching; zsh matching is temporary for
+  blocking.
 - Aliases, shell expansion, command substitution, shell functions, and resolved
   executable paths are not handled yet.
 - Scripts and Makefiles can hide dangerous commands internally.
-- This is a safety rail, not a security boundary.
+- This is a safety rail, not a security sandbox or security boundary.

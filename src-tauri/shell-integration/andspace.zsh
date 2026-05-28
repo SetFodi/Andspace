@@ -63,7 +63,7 @@ __andspace_guard_log() {
   local command="$6"
   local action="$7"
   local pane="${ANDSPACE_PANE_ID:-unknown}"
-  local line="$(__andspace_guard_now_ms) command-guard-preexec pane=$pane cwd=$(__andspace_guard_log_value "$PWD") decision=$decision severity=$severity"
+  local line="$(__andspace_guard_now_ms) command-guard-preexec pane=$pane cwd=$(__andspace_guard_log_value "$PWD") matcher_impl=zsh decision=$decision severity=$severity"
 
   if [[ -n "$matched_rule" ]]; then
     line+=" matched_rule=$(__andspace_guard_log_value "$matched_rule")"
@@ -81,10 +81,12 @@ __andspace_guard_log() {
 
 __andspace_guard_add_rule() {
   local bucket="$1"
-  local pattern="$2"
+  local pattern="$(__andspace_guard_trim "$2")"
   local matcher="$3"
   local source="$4"
   local entry="${pattern}"$'\t'"${matcher}"$'\t'"${source}"
+
+  [[ -n "$pattern" ]] || return 0
 
   case "$bucket" in
     allowed) __andspace_guard_allowed+=("$entry") ;;
