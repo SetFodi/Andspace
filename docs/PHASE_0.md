@@ -96,6 +96,12 @@ unusual GPU configurations.
 store. `TerminalPane.tsx` uses `term.attachCustomKeyEventHandler` to
 prevent those same shortcuts from being forwarded into the shell.
 
+## Performance findings
+
+Idle CPU initially measured around ~2.0%. It was reduced to ~0.8% median
+by disabling cursor blink when inactive/unfocused and pausing blink after
+3 seconds of idle input. This is acceptable for Phase 0.
+
 ## Decision gate
 
 After running every test in `BENCHMARKS.md`, count results:

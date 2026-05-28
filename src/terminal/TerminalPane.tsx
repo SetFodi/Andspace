@@ -18,6 +18,11 @@ interface PtyOutputPayload {
   data: number[];
 }
 
+// How long after the last input the cursor stops blinking. Matches iTerm2 /
+// Warp's behavior — cursor blinks while you're typing, goes steady when idle.
+// Cheap and significant: 2 paints/sec while blinking is ~2% of one CPU core.
+const BLINK_IDLE_MS = 3000;
+
 function isAppShortcut(e: KeyboardEvent): boolean {
   if (!e.metaKey || e.ctrlKey || e.altKey) return false;
   const k = e.key;
@@ -42,6 +47,11 @@ export function TerminalPane({ paneId, tabId }: Props) {
     (s) => s.activeTabId === tabId && s.activePaneByTab[tabId] === paneId
   );
 
+  // Live ref so the main effect's closures can read the current isActive
+  // without re-binding the effect on every change.
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -52,9 +62,13 @@ export function TerminalPane({ paneId, tabId }: Props) {
       fontSize: 13,
       lineHeight: 1.25,
       letterSpacing: 0,
-      cursorBlink: true,
+      // Start with blink OFF; the state machine below turns it on only while
+      // active + window-focused + recently used.
+      cursorBlink: false,
       cursorStyle: "block",
-      cursorInactiveStyle: "outline",
+      // Don't paint a cursor at all on unfocused panes — saves a paint cycle
+      // for every pane that isn't the active one.
+      cursorInactiveStyle: "none",
       allowProposedApi: true,
       scrollback: 10000,
       drawBoldTextInBrightColors: true,
@@ -117,7 +131,9 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
       // Diagnostic — write the chosen renderer to /tmp/andspace-diag.log so we
       // can verify which path is active without devtools.
-      invoke("report_renderer", { kind: webgl ? "webgl" : "dom" }).catch(() => {});
+      invoke("report_renderer", { kind: webgl ? "webgl" : "dom" }).catch(
+        () => {}
+      );
 
       invoke("resize_pty", {
         paneId,
@@ -134,7 +150,47 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
     const rafId = requestAnimationFrame(initialize);
 
+    // ----- Cursor blink state machine ------------------------------------
+    // The cursor only blinks when:
+    //   1. this pane is the active pane in the active tab, AND
+    //   2. the OS window has focus, AND
+    //   3. there was input within the last BLINK_IDLE_MS.
+    // Otherwise blink is off — which on WebGL means no paint per blink
+    // cycle, which drops idle CPU from ~2 % to near zero.
+    let lastActivityMs = Date.now();
+    let currentBlink = false;
+
+    const evaluateBlink = () => {
+      const shouldBlink =
+        isActiveRef.current &&
+        document.hasFocus() &&
+        Date.now() - lastActivityMs < BLINK_IDLE_MS;
+      if (shouldBlink !== currentBlink) {
+        currentBlink = shouldBlink;
+        try {
+          term.options.cursorBlink = shouldBlink;
+        } catch {}
+      }
+    };
+
+    const onInputActivity = () => {
+      lastActivityMs = Date.now();
+      evaluateBlink();
+    };
+
+    // Cheap idle check at 2 Hz. Each tick is just date math + a string-set
+    // when the boolean flips. The interval itself doesn't dirty any paint.
+    const blinkInterval = window.setInterval(evaluateBlink, 500);
+
+    // React to OS-level window focus changes.
+    window.addEventListener("focus", evaluateBlink);
+    window.addEventListener("blur", evaluateBlink);
+
+    // Initial state
+    evaluateBlink();
+
     const dataDisposable = term.onData((data) => {
+      onInputActivity();
       invoke("write_to_pty", { paneId, data }).catch(() => {});
     });
 
@@ -174,17 +230,20 @@ export function TerminalPane({ paneId, tabId }: Props) {
     const ro = new ResizeObserver(syncSize);
     ro.observe(container);
 
-    const onFocus = () => setActivePane(tabId, paneId);
-    container.addEventListener("mousedown", onFocus);
+    const onMouseDown = () => setActivePane(tabId, paneId);
+    container.addEventListener("mousedown", onMouseDown);
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafId);
+      window.clearInterval(blinkInterval);
+      window.removeEventListener("focus", evaluateBlink);
+      window.removeEventListener("blur", evaluateBlink);
       dataDisposable.dispose();
       unlisten?.();
       unlistenExit?.();
       ro.disconnect();
-      container.removeEventListener("mousedown", onFocus);
+      container.removeEventListener("mousedown", onMouseDown);
       try {
         webgl?.dispose();
       } catch {}
@@ -193,14 +252,17 @@ export function TerminalPane({ paneId, tabId }: Props) {
     };
   }, [paneId, tabId, setActivePane]);
 
-  // Focus this pane's xterm when it becomes the active pane in the active tab.
+  // Focus/blur the xterm based on whether it's the active pane. Blurring
+  // inactive panes means cursorInactiveStyle: "none" applies and they
+  // stop drawing the cursor entirely.
   useEffect(() => {
-    if (isActive) {
-      // Defer to next frame so layout has settled if we just switched tabs.
-      const id = requestAnimationFrame(() => {
-        termRef.current?.focus();
-      });
+    const term = termRef.current;
+    if (!term) return;
+    if (isActive && document.hasFocus()) {
+      const id = requestAnimationFrame(() => term.focus());
       return () => cancelAnimationFrame(id);
+    } else {
+      term.blur();
     }
   }, [isActive]);
 
