@@ -4,7 +4,9 @@ dist
 src-tauri/target
 src-tauri/gen
 src-tauri/shell-integration/zdotdir/.zcompdump*
+src-tauri/shell-integration/zdotdir/.zcompdump*.zwc
 src-tauri/shell-integration/zdotdir/.zsh_history
+src-tauri/shell-integration/zdotdir/*.lock
 *.log
 .env
 .env.local

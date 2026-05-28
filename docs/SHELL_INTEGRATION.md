@@ -37,6 +37,11 @@ Non-zsh shells (`bash`, `fish`) are unchanged — no `ZDOTDIR` override.
 A future milestone may offer optional user-level install; v0.1 uses PTY-only
 bootstrap.
 
+zsh must not write completion caches into `zdotdir/` (that path is under
+`src-tauri/` and would retrigger `tauri dev` rebuilds). `.zshenv` redirects
+`ZSH_COMPDUMP` and `HISTFILE` to `/tmp`. `src-tauri/.taurignore` excludes
+`shell-integration/zdotdir/` from the dev watcher as a safety net.
+
 ## Files
 
 | File | Role |
