@@ -12,30 +12,17 @@ pub struct AvailableEditors {
 
 pub fn detect_external_editors() -> AvailableEditors {
     AvailableEditors {
-        cursor: which_on_path("cursor"),
-        code: which_on_path("code"),
-        nvim: which_on_path("nvim"),
-        vim: which_on_path("vim"),
+        cursor: crate::tool_resolver::command_available("cursor"),
+        code: crate::tool_resolver::command_available("code"),
+        nvim: crate::tool_resolver::command_available("nvim"),
+        vim: crate::tool_resolver::command_available("vim"),
     }
 }
 
-/// Lightweight PATH walker — checks each PATH entry for a binary with the
-/// given name. Doesn't try to `exec` anything, so this is safe to call on
-/// startup or every time the sidebar opens.
+/// Lightweight command resolver used by tests and diagnostics.
+#[cfg(test)]
 pub fn which_on_path(cmd: &str) -> bool {
-    let Ok(path) = std::env::var("PATH") else {
-        return false;
-    };
-    for dir in path.split(':') {
-        if dir.is_empty() {
-            continue;
-        }
-        let candidate = Path::new(dir).join(cmd);
-        if candidate.is_file() {
-            return true;
-        }
-    }
-    false
+    crate::tool_resolver::command_available(cmd)
 }
 
 /// Spawn an external editor (Cursor or VS Code) with the file path. nvim is
@@ -49,7 +36,9 @@ pub fn open_in_external_editor(tool: &str, path: &str) -> Result<(), String> {
     if !p.exists() {
         return Err(format!("path does not exist: {path}"));
     }
-    std::process::Command::new(tool)
+    let executable = crate::tool_resolver::resolve_executable(tool)
+        .ok_or_else(|| format!("{tool} not found in PATH"))?;
+    std::process::Command::new(executable)
         .arg(path)
         .spawn()
         .map(|_| ())

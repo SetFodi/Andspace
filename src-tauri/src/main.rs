@@ -8,6 +8,7 @@ mod git_status;
 mod project_sidebar;
 mod pty;
 mod rules;
+mod tool_resolver;
 mod workspace;
 
 use commands::*;

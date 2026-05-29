@@ -116,10 +116,19 @@ pub fn build_handoff_prompt(input: HandoffPromptInput) -> HandoffPrompt {
 }
 
 pub fn detect_ai_cli_tools() -> Vec<AiCliTool> {
-    let paths = std::env::var_os("PATH")
-        .map(|path| std::env::split_paths(&path).collect::<Vec<PathBuf>>())
-        .unwrap_or_default();
-    detect_ai_cli_tools_in_paths(&paths)
+    tool_specs()
+        .into_iter()
+        .map(|(target, label, command)| {
+            let path = crate::tool_resolver::resolve_executable(command);
+            AiCliTool {
+                target,
+                label: label.to_string(),
+                command: command.to_string(),
+                available: path.is_some(),
+                path: path.map(|path| path.display().to_string()),
+            }
+        })
+        .collect()
 }
 
 pub fn prepare_ai_cli_handoff(
@@ -237,11 +246,12 @@ fn joined_len(lines: &[String]) -> usize {
     lines.iter().map(|line| line.len()).sum::<usize>() + lines.len().saturating_sub(1)
 }
 
+#[cfg(test)]
 fn detect_ai_cli_tools_in_paths(paths: &[PathBuf]) -> Vec<AiCliTool> {
     tool_specs()
         .into_iter()
         .map(|(target, label, command)| {
-            let path = find_executable(paths, command);
+            let path = crate::tool_resolver::find_executable_in_paths(paths, command);
             AiCliTool {
                 target,
                 label: label.to_string(),
@@ -259,29 +269,6 @@ fn tool_specs() -> Vec<(AiCliTarget, &'static str, &'static str)> {
         (AiCliTarget::Codex, "Codex", "codex"),
         (AiCliTarget::Cursor, "Cursor CLI", "cursor-agent"),
     ]
-}
-
-fn find_executable(paths: &[PathBuf], command: &str) -> Option<PathBuf> {
-    paths
-        .iter()
-        .map(|path| path.join(command))
-        .find(|candidate| is_executable(candidate))
-}
-
-#[cfg(unix)]
-fn is_executable(path: &Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-
-    path.is_file()
-        && path
-            .metadata()
-            .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
-            .unwrap_or(false)
-}
-
-#[cfg(not(unix))]
-fn is_executable(path: &Path) -> bool {
-    path.is_file()
 }
 
 fn command_for_target(target: AiCliTarget) -> &'static str {
