@@ -49,7 +49,8 @@ fi
 rm -f "$CHECKSUM_PATH"
 for artifact in "${artifacts[@]}"; do
   if [[ -f "$artifact" ]]; then
-    shasum -a 256 "$artifact" >> "$CHECKSUM_PATH"
+    checksum="$(shasum -a 256 "$artifact" | awk '{print $1}')"
+    printf "%s  %s\n" "$checksum" "$(basename "$artifact")" >> "$CHECKSUM_PATH"
   fi
 done
 

@@ -1,8 +1,8 @@
 # Servers
 
 The v0.1 Servers section lists local development servers AndSpace has noticed
-in **terminal output**. It is a small terminal companion — not a browser, not
-a service monitor, not a tunnel manager.
+in **terminal output**. It is a small terminal companion — not a general
+browser, not a service monitor, not a tunnel manager.
 
 ## What gets detected
 
@@ -69,8 +69,35 @@ a live health indicator — AndSpace doesn't ping the server.
 
 Row actions:
 
-- **Click** → open the URL in your default browser (`open <url>` on macOS).
+- **Click** → open the URL using the configured server behavior. The default is
+  the right-side AndSpace Preview panel.
+- **⌘Enter while focused** → open the URL in your default browser
+  (`open <url>` on macOS).
 - **Right-click** or **⌘C while focused** → copy the URL to the clipboard.
+
+Terminal links use modifier keys:
+
+- **⌘Click** local URLs → open in AndSpace Preview.
+- **⇧⌘Click** local URLs → open in the external browser.
+
+## Local Preview
+
+AndSpace Preview is a single right-side panel beside the terminal workspace.
+It keeps terminal panes as terminals; preview never becomes another terminal
+split.
+
+Preview is local-only:
+
+- `localhost`
+- `127.0.0.1`
+- `0.0.0.0` normalized to `localhost`
+- private LAN hosts (`10.x`, `172.16–31.x`, `192.168.x`)
+
+The toolbar provides Refresh, Open in browser, and Close. The panel has
+lightweight local preview tabs and can be resized from the left edge. There is
+no address bar, history, arbitrary browsing, multiple preview panes, devtools,
+or server polling. If the window is too narrow for a usable panel, AndSpace
+opens the URL in the external browser instead.
 
 ## Command Palette
 
@@ -78,7 +105,7 @@ Row actions:
 
 | Action                  | Behavior                                          |
 | ----------------------- | ------------------------------------------------- |
-| Open Localhost Preview  | Opens the most recently seen server in browser    |
+| Open Localhost Preview  | Opens the most recently seen server in preview    |
 | Copy Server URL         | Copies the most recently seen server URL          |
 | Focus Servers           | Opens the sidebar focused on the Servers section  |
 
@@ -117,13 +144,14 @@ it directly (requires Node 22.6+ for native TypeScript strip):
 
 ```sh
 ./scripts/test-server-detection.mjs
+./scripts/test-local-preview.mjs
 ```
 
 ## Out of scope (deferred)
 
-- Embedded browser preview tab.
+- General browser / arbitrary website preview.
 - Custom port labels.
 - Per-server tunnel/share (ngrok, Cloudflare).
 - Health checks / status pings.
 - Reading from `lsof -i` or `netstat`.
-- Settings UI.
+- Full settings app.

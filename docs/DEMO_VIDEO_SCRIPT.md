@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.5 Demo Video Script
+# AndSpace v0.1.0-alpha.6 Demo Video Script
 
 Target length: 30-45 seconds.
 
@@ -20,7 +20,7 @@ Tone: calm, premium, no hype text on screen. Let the app carry the demo.
 | --- | --- | --- |
 | 0-4s | Restored workspace | Open AndSpace into a restored workspace with sidebar, two panes, and a clean prompt. |
 | 4-9s | Terminal-first work | Run `pnpm dev` in one pane. Keep the command readable and avoid long output. |
-| 9-13s | Servers | Show the Servers section detecting `localhost`. Click the server row to open it in the browser, then return to AndSpace. |
+| 9-13s | Servers + Preview | Show the Servers section detecting `localhost`. Click the server row to open it in the right-side Local Preview panel. |
 | 13-17s | Command palette | Press `Cmd+K`, type a short query like `split` or `git`, then close with Escape. |
 | 17-23s | Command Guard | Run the protected demo command and show Command Guard blocking it. Close or confirm intentionally. |
 | 23-29s | AI handoff | Press `Cmd+E` and show the Send Context overlay with Preview, Copy, Claude, Codex, and Cursor actions. |
@@ -40,5 +40,6 @@ API billing. This is v0.1 alpha for macOS."
 - Keep terminal font large enough to read after compression.
 - Avoid showing private repository names, tokens, shell history, or real customer
   code.
-- Do not show staging, committing, pushing, settings, browser preview, or file
-  editing because those are intentionally not part of this alpha.
+- Do not show staging, committing, pushing, arbitrary web browsing, a full
+  settings app, or file editing because those are intentionally not part of
+  this alpha.

@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.5 Launch Copy
+# AndSpace v0.1.0-alpha.6 Launch Copy
 
 ## One-Line Description
 
@@ -17,29 +17,28 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.5` is a hotfix release for the public macOS alpha. It
-fixes local Claude Code, Codex, Cursor, VS Code, Neovim, and Vim CLI detection
-when AndSpace is launched as a normal macOS app from Finder, Dock, Spotlight, or
-the website download. It preserves the same terminal foundation, workspace
-restore, Command Guard, command palette, project sidebar, passive localhost
-detection, read-only Git Changes, and read-only Git Diff Preview from alpha.4.
+AndSpace `v0.1.0-alpha.6` is a public alpha polish release. It adds first-run
+onboarding, lightweight local Preferences, ten color schemes, a `Cmd+P` color
+scheme picker, and a right-side Local Preview panel for detected
+localhost/private-LAN dev servers.
 
 This is a prerelease alpha: macOS-first, zsh-first, not notarized yet, and
-intentionally scoped. There is no embedded browser preview, no built-in editor,
-no settings UI, and no Git write actions.
+intentionally scoped. Local Preview is limited to detected localhost/private-LAN
+dev servers. There is no built-in editor, no provider API integration, and no
+Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.5 is live.
+AndSpace v0.1.0-alpha.6 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and
 read-only Git Changes + Diff Preview.
 
-Hotfix: Claude/Codex and external editor detection now works from the downloaded
-macOS app, including common Homebrew and user-bin installs.
+New: first-run onboarding, lightweight preferences, ten color schemes, and a
+local-only preview panel for dev servers.
 
 No provider API billing. No Git write actions.
 
@@ -56,7 +55,7 @@ A terminal-first workspace for local development on macOS.
 3. Move pane focus with `Cmd+Arrow`.
 4. Open the sidebar with `Cmd+B`.
 5. Run a package script from Scripts.
-6. Show a detected localhost server in Servers and open it in the browser.
+6. Show a detected localhost server in Servers and open it in Local Preview.
 7. Trigger Command Guard with a protected or dangerous command.
 8. Open `Cmd+E` AI handoff and preview the prompt before sending.
 9. Open Git Changes and inspect a read-only Git Diff Preview.

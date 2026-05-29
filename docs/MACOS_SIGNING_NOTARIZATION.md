@@ -16,7 +16,7 @@ Official references:
 
 - Product name: `AndSpace`
 - Bundle identifier: `com.andspace.desktop`
-- Version: `0.1.0-alpha.5`
+- Version: `0.1.0-alpha.6`
 - Tauri bundle targets: `app` and `dmg`
 - Icon config includes `src-tauri/icons/icon.icns`
 - Current public alpha is not signed with a Developer ID.

@@ -31,7 +31,7 @@ Current preference shape:
   "workflow": {
     "defaultFileAction": "auto",
     "defaultAiCli": "ask",
-    "serverOpenBehavior": "external"
+    "serverOpenBehavior": "preview"
   },
   "safety": {
     "workspaceRestoreEnabled": true,
@@ -44,7 +44,7 @@ Current preference shape:
 
 On first launch, AndSpace shows a local welcome/preferences modal. It covers:
 
-- Theme.
+- Theme. AndSpace currently includes ten local color schemes.
 - Terminal font size.
 - Scrollback profile.
 - Default file action.
@@ -63,7 +63,8 @@ The onboarding copy is intentionally local-first:
 After the user chooses **Start using AndSpace**, `onboardingCompleted` is set to
 `true` and the first-run modal does not appear again. The native macOS
 **AndSpace -> Preferences...** menu item, `Cmd+,`, and `Cmd+K -> Open
-Preferences` all open the same lightweight surface later.
+Preferences` all open the same lightweight surface later. `Cmd+P` opens a
+focused color scheme picker for quick theme changes.
 
 ## Applied Preferences
 
@@ -76,14 +77,16 @@ These preferences are active in this version:
 | Scrollback profile | Applies to existing and new terminal panes |
 | Default file action | Used by `Cmd+Enter` file actions and Go to File defaults |
 | Default AI CLI | Preferred handoff CLI is ordered/focused first in the `Cmd+E` overlay |
+| Server links | Optional escape hatch to open server rows in the external browser instead of Preview |
 | Workspace restore | Controls automatic launch restore and autosave |
 | Command Guard | Existing zsh panes read this local preference before each command |
 
 ## Deferred Preferences
 
-The local server preference is stored as `external` today. AndSpace Preview is
-shown as "coming next" and is not enabled yet. Server rows still open in the
-external browser in this version.
+The `ask` value is reserved for a future prompt flow and normalizes back to
+the default today. Terminal links use modifiers directly: `Cmd+click` opens
+local URLs in AndSpace Preview, while `Cmd+Shift+click` opens them in the
+external browser.
 
 ## Scrollback Profiles
 

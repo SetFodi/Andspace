@@ -44,7 +44,6 @@ import {
 import { shortServerUrl } from "./serverDetection";
 import {
   copyServerUrl,
-  openServerUrl,
   useServerStore,
   type DetectedServer,
 } from "./serverStore";
@@ -59,6 +58,8 @@ interface Props {
   onFileAction: (path: string) => void;
   onFileDefault: (path: string) => void;
   onGitDiff: (file: GitChangedFile, status: GitStatus) => void;
+  onServerPreview: (server: DetectedServer) => void;
+  onServerOpenExternal: (server: DetectedServer) => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
 
@@ -84,6 +85,8 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
       onFileAction,
       onFileDefault,
       onGitDiff,
+      onServerPreview,
+      onServerOpenExternal,
       onToast,
     },
     ref
@@ -524,6 +527,8 @@ export const ProjectSidebar = forwardRef<ProjectSidebarHandle, Props>(
               active={focusedSection === "servers"}
               onToggle={() => toggleSection("servers")}
               onFocus={() => onFocusedSectionChange("servers")}
+              onPreview={onServerPreview}
+              onOpenExternal={onServerOpenExternal}
               onToast={onToast}
             />
 
@@ -615,12 +620,16 @@ function ServersSection({
   active,
   onToggle,
   onFocus,
+  onPreview,
+  onOpenExternal,
   onToast,
 }: {
   collapsed: boolean;
   active: boolean;
   onToggle: () => void;
   onFocus: () => void;
+  onPreview: (server: DetectedServer) => void;
+  onOpenExternal: (server: DetectedServer) => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }) {
   const servers = useServerStore((s) => s.servers);
@@ -651,11 +660,8 @@ function ServersSection({
         <ServerRow
           key={server.url}
           server={server}
-          onOpen={() => {
-            void openServerUrl(server.url).catch((e) =>
-              onToast(`Could not open URL: ${String(e)}`, "error")
-            );
-          }}
+          onPreview={() => onPreview(server)}
+          onOpenExternal={() => onOpenExternal(server)}
           onCopy={() => {
             void copyServerUrl(server.url).then(
               () => onToast("Copied server URL", "neutral"),
@@ -670,19 +676,21 @@ function ServersSection({
 
 function ServerRow({
   server,
-  onOpen,
+  onPreview,
+  onOpenExternal,
   onCopy,
 }: {
   server: DetectedServer;
-  onOpen: () => void;
+  onPreview: () => void;
+  onOpenExternal: () => void;
   onCopy: () => void;
 }) {
   return (
     <button
       className="server-row"
       data-url={server.url}
-      title={`${server.url} — Click to open · ⌘C to copy`}
-      onClick={onOpen}
+      title={`${server.url} — Click to preview · ⌘Enter to open browser · ⌘C to copy`}
+      onClick={onPreview}
       onContextMenu={(e) => {
         e.preventDefault();
         onCopy();
@@ -693,6 +701,9 @@ function ServerRow({
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
           e.preventDefault();
           onCopy();
+        } else if (e.metaKey && e.key === "Enter") {
+          e.preventDefault();
+          onOpenExternal();
         }
       }}
     >

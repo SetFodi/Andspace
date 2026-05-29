@@ -49,7 +49,8 @@ AndSpace does not embed an editor and does not show a full preview — see
 The Servers section lists local dev URLs that AndSpace has seen in terminal
 output (Vite, Next.js, NestJS, etc.). Detection is best-effort, comes only
 from terminal text, and **does no port scanning, no polling, and no fetches**.
-Click a row to open in the default browser; right-click or `⌘C` to copy the
+Click a row to open in the right-side Local Preview panel by default;
+`Cmd+Enter` opens in the external browser, and right-click or `⌘C` copies the
 URL. Full behavior in [SERVERS.md](SERVERS.md).
 
 ## Git Changes
@@ -140,9 +141,9 @@ git-refresh
 - No commit, push, pull, reset, checkout, stash, merge, or rebase UI.
 - Diff preview is read-only and capped; no diff editor.
 - No background server scanning.
-- No embedded server preview.
+- Local server preview is limited to detected localhost/private-LAN URLs.
 - No file editing.
 - No full file preview.
-- No settings UI.
+- No full settings app.
 - No background watchers.
 - No indexing `node_modules`.

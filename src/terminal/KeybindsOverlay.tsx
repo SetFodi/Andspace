@@ -43,6 +43,8 @@ const GROUPS: Group[] = [
       { keys: ["⌘", "K"], label: "Command palette" },
       { keys: ["⌘", "E"], label: "AI handoff" },
       { keys: ["⌘", "⇧", "I"], label: "Create ANDSPACE.md" },
+      { keys: ["⌘", "click"], label: "Preview local URL" },
+      { keys: ["⌘", "⇧", "click"], label: "Open local URL in browser" },
     ],
   },
   {
@@ -51,6 +53,7 @@ const GROUPS: Group[] = [
       { keys: ["Esc"], label: "Close modal / return to terminal" },
       { keys: ["⌘", "/"], label: "Show this cheatsheet" },
       { keys: ["⌘", ","], label: "Open preferences" },
+      { keys: ["⌘", "P"], label: "Color scheme" },
     ],
   },
 ];

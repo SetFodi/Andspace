@@ -45,6 +45,12 @@ pub enum ThemePreference {
     Midnight,
     PureDark,
     SoftContrast,
+    Cobalt,
+    Evergreen,
+    RoseNoir,
+    Ember,
+    Aurora,
+    SlateLime,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -119,8 +125,8 @@ pub enum DefaultAiCli {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ServerOpenBehavior {
-    #[default]
     External,
+    #[default]
     Preview,
     Ask,
 }
@@ -265,7 +271,10 @@ mod tests {
         assert_eq!(parsed.onboarding_completed, true);
         assert_eq!(parsed.theme, ThemePreference::GraphiteViolet);
         assert_eq!(parsed.terminal.font_size, 16);
-        assert_eq!(parsed.terminal.scrollback_profile, ScrollbackProfile::Balanced);
+        assert_eq!(
+            parsed.terminal.scrollback_profile,
+            ScrollbackProfile::Balanced
+        );
         assert_eq!(parsed.workflow.default_ai_cli, DefaultAiCli::Ask);
         assert_eq!(parsed.safety.command_guard_enabled, true);
     }
@@ -274,11 +283,11 @@ mod tests {
     fn preferences_json_tolerates_newer_version_number() {
         let raw = r#"{
           "version": 99,
-          "theme": "pure-dark"
+          "theme": "slate-lime"
         }"#;
         let parsed: Preferences = serde_json::from_str(raw).unwrap();
 
         assert_eq!(parsed.version, 99);
-        assert_eq!(parsed.theme, ThemePreference::PureDark);
+        assert_eq!(parsed.theme, ThemePreference::SlateLime);
     }
 }

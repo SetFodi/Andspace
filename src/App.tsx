@@ -13,6 +13,8 @@ import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
 import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
 import { GitDiffOverlay } from "./terminal/GitDiffOverlay";
 import { PreferencesOverlay } from "./terminal/PreferencesOverlay";
+import { ColorSchemeOverlay } from "./terminal/ColorSchemeOverlay";
+import { LocalPreviewPanel } from "./terminal/LocalPreviewPanel";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
@@ -50,8 +52,15 @@ import {
 import {
   copyServerUrl,
   openServerUrl,
+  reportServer,
   useServerStore,
+  type DetectedServer,
 } from "./terminal/serverStore";
+import {
+  buildLocalPreviewTarget,
+  buildLocalPreviewTargetFromUrl,
+  type LocalPreviewTarget,
+} from "./terminal/localPreview";
 import {
   absoluteGitPath,
   loadGitDiff,
@@ -78,7 +87,11 @@ import {
   saveWorkspaceState,
 } from "./terminal/workspacePersistence";
 import { usePreferencesStore } from "./terminal/preferencesStore";
-import type { Preferences } from "./terminal/preferencesModel";
+import {
+  themePresetForPreference,
+  type Preferences,
+  type ThemePreference,
+} from "./terminal/preferencesModel";
 
 function TitleBar() {
   const startWindowDrag = (event: MouseEvent<HTMLDivElement>) => {
@@ -146,8 +159,13 @@ interface ToastState {
   tone: "success" | "neutral" | "error";
 }
 
+interface PreviewTab extends LocalPreviewTarget {
+  id: string;
+  reloadKey: number;
+}
+
 type NativeShortcut = "split-right" | "split-down";
-type NativeMenuAction = NativeShortcut | "preferences.open";
+type NativeMenuAction = NativeShortcut | "preferences.open" | "color-scheme.open";
 
 export default function App() {
   const tabs = useStore((s) => s.tabs);
@@ -224,6 +242,11 @@ export default function App() {
   );
   const [goToFileOpen, setGoToFileOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [colorSchemeOpen, setColorSchemeOpen] = useState(false);
+  const [savingTheme, setSavingTheme] = useState<ThemePreference | null>(null);
+  const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
+  const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
+  const [previewPanelWidth, setPreviewPanelWidth] = useState(520);
   const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
   const [pickerLoading, setPickerLoading] = useState(false);
   const lastSplitShortcutRef = useRef<{ action: NativeShortcut; at: number } | null>(
@@ -291,6 +314,102 @@ export default function App() {
       }
     },
     [refocusTerminal, savePreferences, showToast]
+  );
+
+  const saveThemePreference = useCallback(
+    async (theme: ThemePreference) => {
+      if (theme === preferences.theme || savingTheme) return;
+      setSavingTheme(theme);
+      try {
+        await savePreferences({ ...preferences, theme });
+      } catch (e) {
+        showToast({
+          tone: "error",
+          message: `Could not save color scheme: ${String(e)}`,
+        });
+      } finally {
+        setSavingTheme(null);
+      }
+    },
+    [preferences, savePreferences, savingTheme, showToast]
+  );
+
+  const showLocalPreviewTarget = useCallback(
+    async (target: LocalPreviewTarget, externalFallbackUrl = target.url) => {
+      if (window.innerWidth < 940) {
+        await openServerUrl(externalFallbackUrl);
+        showToast({
+          tone: "neutral",
+          message: "Window too narrow for preview. Opened in browser.",
+        });
+        return;
+      }
+
+      const id = target.url;
+      setPreviewTabs((tabs) => {
+        const existing = tabs.find((tab) => tab.id === id);
+        if (existing) {
+          return tabs.map((tab) =>
+            tab.id === id ? { ...tab, ...target } : tab
+          );
+        }
+        return [...tabs, { ...target, id, reloadKey: 0 }];
+      });
+      setActivePreviewId(id);
+      reportServer("server-open", { url: target.url, label: target.label });
+      showToast({ tone: "neutral", message: `Previewing ${target.displayUrl}` });
+    },
+    [showToast]
+  );
+
+  const refreshPreviewTab = useCallback((id: string) => {
+    setPreviewTabs((tabs) =>
+      tabs.map((tab) =>
+        tab.id === id ? { ...tab, reloadKey: tab.reloadKey + 1 } : tab
+      )
+    );
+  }, []);
+
+  const closePreviewTab = useCallback(
+    (id: string) => {
+      setPreviewTabs((tabs) => {
+        const index = tabs.findIndex((tab) => tab.id === id);
+        const next = tabs.filter((tab) => tab.id !== id);
+        if (activePreviewId === id) {
+          const fallback = next[Math.max(0, Math.min(index, next.length - 1))];
+          setActivePreviewId(fallback?.id ?? null);
+        }
+        return next;
+      });
+    },
+    [activePreviewId]
+  );
+
+  const openLocalPreview = useCallback(
+    async (server: DetectedServer) => {
+      const target = buildLocalPreviewTarget(server);
+      if (!target) {
+        showToast({
+          tone: "error",
+          message: "Only local development URLs can open in preview",
+        });
+        return;
+      }
+
+      await showLocalPreviewTarget(target, server.url);
+    },
+    [showLocalPreviewTarget, showToast]
+  );
+
+  const openServerFromSidebar = useCallback(
+    async (server: DetectedServer) => {
+      if (preferences.workflow.serverOpenBehavior === "external") {
+        await openServerUrl(server.url);
+        return;
+      }
+      await openLocalPreview(server);
+    },
+    [openLocalPreview, preferences.workflow.serverOpenBehavior]
   );
 
   const closeHandoff = useCallback(() => {
@@ -600,10 +719,12 @@ export default function App() {
           showToast({ tone: "neutral", message: "No local servers detected" });
         } else {
           try {
-            await openServerUrl(server.url);
-            showToast({ tone: "success", message: `Opening ${server.url}` });
+            await openLocalPreview(server);
           } catch (e) {
-            showToast({ tone: "error", message: `Could not open URL: ${String(e)}` });
+            showToast({
+              tone: "error",
+              message: `Could not open preview: ${String(e)}`,
+            });
           }
         }
       } else if (action.id === "servers.copyUrl") {
@@ -691,6 +812,8 @@ export default function App() {
         }
       } else if (action.id === "preferences.open") {
         setPreferencesOpen(true);
+      } else if (action.id === "preferences.colorScheme") {
+        setColorSchemeOpen(true);
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -719,6 +842,7 @@ export default function App() {
       copyGitDiffFromPalette,
       openGitDiffFromPalette,
       openGoToFile,
+      openLocalPreview,
       projectRoot,
       refocusTerminal,
       restoreWorkspace,
@@ -902,7 +1026,16 @@ export default function App() {
   }, [workspaceReady]);
 
   useEffect(() => {
-    document.documentElement.dataset.andspaceTheme = preferences.theme;
+    const preset = themePresetForPreference(preferences.theme);
+    const root = document.documentElement;
+    root.dataset.andspaceTheme = preferences.theme;
+    root.style.setProperty("--theme-app-bg", preset.css.appBg);
+    root.style.setProperty("--theme-chrome-bg", preset.css.chromeBg);
+    root.style.setProperty("--theme-terminal-bg", preset.css.terminalBg);
+    root.style.setProperty("--theme-surface", preset.css.surface);
+    root.style.setProperty("--theme-accent", preset.css.accent);
+    root.style.setProperty("--theme-accent-soft", preset.css.accentSoft);
+    root.style.setProperty("--theme-active-border", preset.css.activeBorder);
   }, [preferences.theme]);
 
   useEffect(() => {
@@ -916,6 +1049,25 @@ export default function App() {
     workspaceFingerprint,
     workspaceReady,
   ]);
+
+  useEffect(() => {
+    const onPreviewUrl = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail;
+      if (!detail?.url) return;
+      const target = buildLocalPreviewTargetFromUrl(detail.url);
+      if (!target) {
+        showToast({
+          tone: "error",
+          message: "Only local development URLs can open in preview",
+        });
+        return;
+      }
+      void showLocalPreviewTarget(target, detail.url);
+    };
+    window.addEventListener("andspace:preview-url", onPreviewUrl);
+    return () =>
+      window.removeEventListener("andspace:preview-url", onPreviewUrl);
+  }, [showLocalPreviewTarget, showToast]);
 
   useEffect(() => {
     if (!workspaceReady) return;
@@ -947,6 +1099,7 @@ export default function App() {
     paletteOpen ||
     keybindsOpen ||
     preferencesOpen ||
+    colorSchemeOpen ||
     onboardingOpen ||
     fileActionsPath !== null ||
     gitDiffOpen ||
@@ -1004,6 +1157,9 @@ export default function App() {
       } else if (k === "," && !e.shiftKey) {
         e.preventDefault();
         setPreferencesOpen(true);
+      } else if (k.toLowerCase() === "p" && !e.shiftKey) {
+        e.preventDefault();
+        setColorSchemeOpen(true);
       } else if (k === "/" || k === "?") {
         e.preventDefault();
         setKeybindsOpen(true);
@@ -1032,6 +1188,7 @@ export default function App() {
     focusPaneInDirection,
     runSplitShortcut,
     toggleSidebar,
+    setColorSchemeOpen,
     focusSidebar,
     nextTab,
     prevTab,
@@ -1049,6 +1206,10 @@ export default function App() {
       if (pendingGuardConfirmation || anyOverlayOpen) return;
       if (event.payload === "preferences.open") {
         setPreferencesOpen(true);
+        return;
+      }
+      if (event.payload === "color-scheme.open") {
+        setColorSchemeOpen(true);
         return;
       }
       if (event.payload !== "split-right" && event.payload !== "split-down") {
@@ -1113,6 +1274,9 @@ export default function App() {
     };
   }, [activePaneCwd]);
 
+  const activePreviewTab =
+    previewTabs.find((tab) => tab.id === activePreviewId) ?? null;
+
   return (
     <div className="app">
       <TitleBar />
@@ -1131,6 +1295,12 @@ export default function App() {
             void runFileAction(defaultActionFor(editors, preferredFileAction), path);
           }}
           onGitDiff={openGitDiff}
+          onServerPreview={(server) => void openServerFromSidebar(server)}
+          onServerOpenExternal={(server) => {
+            void openServerUrl(server.url).catch((e) =>
+              showToast({ message: `Could not open URL: ${String(e)}`, tone: "error" })
+            );
+          }}
           onToast={(message, tone) => showToast({ message, tone })}
         />
         <div className="terminal-area">
@@ -1143,6 +1313,31 @@ export default function App() {
             </div>
           ))}
         </div>
+        <LocalPreviewPanel
+          tabs={previewTabs}
+          activeId={activePreviewId}
+          width={previewPanelWidth}
+          onResize={setPreviewPanelWidth}
+          onSelect={setActivePreviewId}
+          onCloseTab={closePreviewTab}
+          onRefresh={() => {
+            if (activePreviewId) refreshPreviewTab(activePreviewId);
+          }}
+          onOpenExternal={() => {
+            if (!activePreviewTab) return;
+            void openServerUrl(activePreviewTab.url).catch((e) =>
+              showToast({
+                message: `Could not open URL: ${String(e)}`,
+                tone: "error",
+              })
+            );
+          }}
+          onClose={() => {
+            setPreviewTabs([]);
+            setActivePreviewId(null);
+            refocusTerminal();
+          }}
+        />
       </div>
       <GuardConfirmationOverlay
         request={pendingGuardConfirmation}
@@ -1152,6 +1347,7 @@ export default function App() {
         open={
           !pendingGuardConfirmation &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           handoffOpen
         }
@@ -1172,6 +1368,7 @@ export default function App() {
           !keybindsOpen &&
           !gitDiffOpen &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           paletteOpen
         }
@@ -1187,6 +1384,7 @@ export default function App() {
           !keybindsOpen &&
           !gitDiffOpen &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           fileActionsPath !== null
         }
@@ -1207,6 +1405,7 @@ export default function App() {
           !paletteOpen &&
           !keybindsOpen &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           fileActionsPath === null &&
           gitDiffOpen
@@ -1229,6 +1428,7 @@ export default function App() {
           !paletteOpen &&
           !keybindsOpen &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           !gitDiffOpen &&
           fileActionsPath === null &&
@@ -1249,7 +1449,11 @@ export default function App() {
         }}
       />
       <PreferencesOverlay
-        open={!pendingGuardConfirmation && (preferencesOpen || onboardingOpen)}
+        open={
+          !pendingGuardConfirmation &&
+          !colorSchemeOpen &&
+          (preferencesOpen || onboardingOpen)
+        }
         mode={onboardingOpen ? "onboarding" : "preferences"}
         preferences={preferences}
         editors={editors}
@@ -1259,12 +1463,33 @@ export default function App() {
           refocusTerminal();
         }}
       />
+      <ColorSchemeOverlay
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
+          fileActionsPath === null &&
+          !gitDiffOpen &&
+          !goToFileOpen &&
+          colorSchemeOpen
+        }
+        theme={preferences.theme}
+        savingTheme={savingTheme}
+        onSelect={(theme) => void saveThemePreference(theme)}
+        onClose={() => {
+          setColorSchemeOpen(false);
+          refocusTerminal();
+        }}
+      />
       <KeybindsOverlay
         open={
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
           !preferencesOpen &&
+          !colorSchemeOpen &&
           !onboardingOpen &&
           fileActionsPath === null &&
           !gitDiffOpen &&

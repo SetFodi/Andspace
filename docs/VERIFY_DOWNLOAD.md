@@ -1,6 +1,6 @@
 # Verify AndSpace Downloads
 
-Use this guide to verify AndSpace `v0.1.0-alpha.5` release artifacts before
+Use this guide to verify AndSpace `v0.1.0-alpha.6` release artifacts before
 installing or sharing them.
 
 Checksums confirm that the file you downloaded matches the published release
@@ -9,14 +9,14 @@ current alpha is still unsigned and not notarized.
 
 ## Release
 
-- GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+- GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
 - Platform focus: macOS first, Apple Silicon focused.
 
 ## Expected SHA-256 Checksums
 
 ```text
-30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
-4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
+317afd38c3c19ce1c6cd7ba74e74f8677f16564c5c250ebaa06786e9bd3a7d9f  AndSpace-v0.1.0-alpha.6-macos.zip
+f6dc8458b81a73d6aa759bec24af9ded231a81b1f84c09b28750892d8d020f5c  AndSpace_0.1.0-alpha.6_aarch64.dmg
 ```
 
 ## Verify The ZIP
@@ -24,13 +24,13 @@ current alpha is still unsigned and not notarized.
 From the folder containing the downloaded ZIP:
 
 ```bash
-shasum -a 256 AndSpace-v0.1.0-alpha.5-macos.zip
+shasum -a 256 AndSpace-v0.1.0-alpha.6-macos.zip
 ```
 
 Expected output:
 
 ```text
-30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
+317afd38c3c19ce1c6cd7ba74e74f8677f16564c5c250ebaa06786e9bd3a7d9f  AndSpace-v0.1.0-alpha.6-macos.zip
 ```
 
 ## Verify The DMG
@@ -38,13 +38,13 @@ Expected output:
 From the folder containing the downloaded DMG:
 
 ```bash
-shasum -a 256 AndSpace_0.1.0-alpha.5_aarch64.dmg
+shasum -a 256 AndSpace_0.1.0-alpha.6_aarch64.dmg
 ```
 
 Expected output:
 
 ```text
-4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
+f6dc8458b81a73d6aa759bec24af9ded231a81b1f84c09b28750892d8d020f5c  AndSpace_0.1.0-alpha.6_aarch64.dmg
 ```
 
 ## If The Checksum Does Not Match
@@ -55,7 +55,7 @@ https://github.com/SetFodi/Andspace/issues
 
 ## Install Warning
 
-AndSpace `v0.1.0-alpha.5` is not signed with a Developer ID certificate and is
+AndSpace `v0.1.0-alpha.6` is not signed with a Developer ID certificate and is
 not notarized yet. macOS may block first launch. This is expected for the
 current alpha.
 

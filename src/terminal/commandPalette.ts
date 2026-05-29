@@ -24,6 +24,7 @@ export type CommandPaletteActionId =
   | "workspace.restore"
   | "workspace.reset"
   | "preferences.open"
+  | "preferences.colorScheme"
   | "help.showKeybinds";
 
 export interface CommandPaletteAction {
@@ -187,6 +188,12 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Open Preferences",
     section: "Preferences",
     keywords: ["preferences", "settings", "first", "run", "onboarding"],
+  },
+  {
+    id: "preferences.colorScheme",
+    title: "Color Scheme",
+    section: "Preferences",
+    keywords: ["theme", "color", "scheme", "appearance", "palette", "cmd", "p"],
   },
   {
     id: "help.showKeybinds",

@@ -18,6 +18,7 @@ use tauri::menu::{Menu, MenuItem, MenuItemKind, Submenu};
 use tauri::Emitter;
 
 const MENU_OPEN_PREFERENCES: &str = "app.preferences";
+const MENU_COLOR_SCHEME: &str = "view.color_scheme";
 const MENU_SPLIT_RIGHT: &str = "pane.split_right";
 const MENU_SPLIT_DOWN: &str = "pane.split_down";
 
@@ -37,6 +38,11 @@ fn main() {
             if let Some(MenuItemKind::Submenu(app_menu)) = menu_items.first() {
                 app_menu.insert(&preferences, 1)?;
             }
+            let color_scheme =
+                MenuItem::with_id(app, MENU_COLOR_SCHEME, "Color Scheme", true, Some("Cmd+P"))?;
+            if let Some(MenuItemKind::Submenu(view_menu)) = menu_items.get(3) {
+                view_menu.insert(&color_scheme, 0)?;
+            }
             let split_right =
                 MenuItem::with_id(app, MENU_SPLIT_RIGHT, "Split Right", true, Some("Cmd+O"))?;
             let split_down =
@@ -49,6 +55,9 @@ fn main() {
             if event.id() == MENU_OPEN_PREFERENCES {
                 pty::diag_log("native-shortcut action=preferences-open");
                 let _ = app.emit("native-shortcut", "preferences.open");
+            } else if event.id() == MENU_COLOR_SCHEME {
+                pty::diag_log("native-shortcut action=color-scheme-open");
+                let _ = app.emit("native-shortcut", "color-scheme.open");
             } else if event.id() == MENU_SPLIT_RIGHT {
                 pty::diag_log("native-shortcut action=split-right");
                 let _ = app.emit("native-shortcut", "split-right");

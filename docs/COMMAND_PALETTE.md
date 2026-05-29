@@ -20,7 +20,7 @@ explorer, or full settings app.
 | Project      | Create ANDSPACE.md   | Scaffold an ANDSPACE.md in the active pane  |
 | AI / Handoff | Send Context         | Open the AI handoff overlay                 |
 | AI / Handoff | Copy Last Prompt     | Copy the most recent handoff prompt         |
-| Servers      | Open Localhost Preview | Open the most recently detected server    |
+| Servers      | Open Localhost Preview | Open the most recent server in preview    |
 | Servers      | Copy Server URL      | Copy the most recently detected server URL  |
 | Servers      | Focus Servers        | Open the sidebar focused on Servers         |
 | Git          | Focus Git Changes    | Open the sidebar focused on Git Changes     |
@@ -31,6 +31,7 @@ explorer, or full settings app.
 | Workspace    | Restore Last Workspace | Recreate tabs/splits/cwds from saved state |
 | Workspace    | Reset Saved Workspace | Delete the saved workspace file             |
 | Preferences  | Open Preferences      | Open lightweight local preferences          |
+| Preferences  | Color Scheme          | Open the quick color scheme picker          |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
 
 Filtering is simple substring matching over command title, section, id, and
@@ -44,11 +45,12 @@ Only one overlay is on screen at a time. From highest priority to lowest:
 1. **Command Guard** confirmation — blocks all other overlays and all
    `Cmd`-shortcuts. Cannot be dismissed by another overlay opening.
 2. **Preferences / first-run onboarding** (palette → "Open Preferences")
-3. **AI Handoff** (`Cmd+E`)
-4. **Command Palette** (`Cmd+K`)
-5. **Keyboard Shortcuts** (`Cmd+/`)
-6. **File Actions** (sidebar click / Enter)
-7. **Go to File** (palette → "Go to File")
+3. **Color Scheme** (`Cmd+P`)
+4. **AI Handoff** (`Cmd+E`)
+5. **Command Palette** (`Cmd+K`)
+6. **Keyboard Shortcuts** (`Cmd+/`)
+7. **File Actions** (sidebar click / Enter)
+8. **Go to File** (palette → "Go to File")
 
 While any overlay is open, all `Cmd`-shortcuts are ignored so users can't
 stack overlays. Each overlay owns its own window-level Escape handler that
@@ -74,6 +76,7 @@ command-palette-run action=git.refresh
   checkout, stash, merge, or rebase action.
 - No full settings app; Preferences is a compact local onboarding/preferences
   surface.
-- No embedded browser preview.
+- Local Preview is scoped to detected localhost/private-LAN server URLs only;
+  it is not a general browser.
 - Workspace commands restore layout and cwd only; they do not restore
   scrollback, output, prompts, or old processes.

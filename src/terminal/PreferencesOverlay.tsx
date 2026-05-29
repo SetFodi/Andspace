@@ -11,8 +11,9 @@ import type {
   DefaultFileAction,
   Preferences,
   ScrollbackProfile,
-  ThemePreference,
 } from "./preferencesModel";
+import { THEME_PRESETS } from "./preferencesModel";
+import { CheckMark, ThemeCard } from "./ThemeCard";
 
 interface Props {
   open: boolean;
@@ -22,33 +23,6 @@ interface Props {
   onSave: (preferences: Preferences) => Promise<void>;
   onClose: () => void;
 }
-
-const THEMES: Array<{
-  value: ThemePreference;
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "graphite-violet",
-    title: "Graphite Violet",
-    description: "Default AndSpace contrast with violet focus accents.",
-  },
-  {
-    value: "midnight",
-    title: "Midnight",
-    description: "Cooler blue-black tone for long night sessions.",
-  },
-  {
-    value: "pure-dark",
-    title: "Pure Dark",
-    description: "Lowest-chrome, high-neutral terminal surface.",
-  },
-  {
-    value: "soft-contrast",
-    title: "Soft Contrast",
-    description: "Warmer text and softer amber focus color.",
-  },
-];
 
 const SCROLLBACK: Array<{
   value: ScrollbackProfile;
@@ -187,8 +161,14 @@ export function PreferencesOverlay({
             </p>
           </div>
           {!isOnboarding && (
-            <button className="preferences-close" onClick={onClose}>
-              Close
+            <button
+              className="preferences-close"
+              onClick={onClose}
+              aria-label="Close preferences"
+            >
+              <svg viewBox="0 0 16 16" aria-hidden>
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
             </button>
           )}
         </div>
@@ -200,11 +180,10 @@ export function PreferencesOverlay({
             description="These themes keep the same layout and only tune the app chrome and terminal surface."
           >
             <div className="preferences-card-grid theme-grid">
-              {THEMES.map((theme) => (
-                <RadioCard
+              {THEME_PRESETS.map((theme) => (
+                <ThemeCard
                   key={theme.value}
-                  title={theme.title}
-                  description={theme.description}
+                  preset={theme}
                   selected={draft.theme === theme.value}
                   onClick={() => setDraft({ ...draft, theme: theme.value })}
                 />
@@ -215,33 +194,44 @@ export function PreferencesOverlay({
           <PreferenceSection
             eyebrow="Terminal"
             title="Tune terminal density"
-            description="Font size applies immediately. Scrollback affects retained terminal history, not persisted app state."
+            description="Scrollback sets retained in-session history. It is never written to persisted app state."
           >
-            <div className="font-size-row">
-              <button
-                onClick={() => setDraft({
-                  ...draft,
-                  terminal: {
-                    ...draft.terminal,
-                    fontSize: Math.max(11, draft.terminal.fontSize - 1),
-                  },
-                })}
-              >
-                -
-              </button>
-              <strong>{draft.terminal.fontSize}px</strong>
-              <button
-                onClick={() => setDraft({
-                  ...draft,
-                  terminal: {
-                    ...draft.terminal,
-                    fontSize: Math.min(18, draft.terminal.fontSize + 1),
-                  },
-                })}
-              >
-                +
-              </button>
+            <div className="density-control">
+              <div className="density-control-label">
+                <strong>Font size</strong>
+                <em>Applies immediately to every pane.</em>
+              </div>
+              <div className="font-size-row">
+                <button
+                  aria-label="Decrease font size"
+                  disabled={draft.terminal.fontSize <= 11}
+                  onClick={() => setDraft({
+                    ...draft,
+                    terminal: {
+                      ...draft.terminal,
+                      fontSize: Math.max(11, draft.terminal.fontSize - 1),
+                    },
+                  })}
+                >
+                  −
+                </button>
+                <strong>{draft.terminal.fontSize}px</strong>
+                <button
+                  aria-label="Increase font size"
+                  disabled={draft.terminal.fontSize >= 18}
+                  onClick={() => setDraft({
+                    ...draft,
+                    terminal: {
+                      ...draft.terminal,
+                      fontSize: Math.min(18, draft.terminal.fontSize + 1),
+                    },
+                  })}
+                >
+                  +
+                </button>
+              </div>
             </div>
+            <div className="density-sublabel">Scrollback history</div>
             <div className="preferences-card-grid three">
               {SCROLLBACK.map((profile) => (
                 <RadioCard
@@ -315,12 +305,22 @@ export function PreferencesOverlay({
               </div>
             </div>
 
-            <div className="preferences-coming">
-              <div>
-                <strong>Server links</strong>
-                <span>Open in external browser</span>
-              </div>
-              <em>AndSpace Preview coming next</em>
+            <div className="server-behavior-block">
+              <h3>Server links</h3>
+              <ToggleRow
+                title="Open server rows in external browser"
+                description="Off by default. Terminal links still use ⌘Click for preview and ⇧⌘Click for browser."
+                checked={draft.workflow.serverOpenBehavior === "external"}
+                onChange={(checked) =>
+                  setDraft({
+                    ...draft,
+                    workflow: {
+                      ...draft.workflow,
+                      serverOpenBehavior: checked ? "external" : "preview",
+                    },
+                  })
+                }
+              />
             </div>
           </PreferenceSection>
 
@@ -432,7 +432,9 @@ function RadioCard({
       className={`preferences-choice-card ${selected ? "selected" : ""}`}
       onClick={onClick}
     >
-      <span className="choice-dot" aria-hidden />
+      <span className="choice-check" aria-hidden>
+        <CheckMark />
+      </span>
       <strong>{title}</strong>
       <em>{description}</em>
     </button>

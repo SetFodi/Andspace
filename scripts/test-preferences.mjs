@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import {
   DEFAULT_PREFERENCES,
+  THEME_PRESETS,
   clampTerminalFontSize,
   normalizePreferences,
   scrollbackRowsForProfile,
@@ -35,7 +36,7 @@ test("defaults are local-first and safe", () => {
   assert.equal(preferences.theme, "graphite-violet");
   assert.equal(preferences.workflow.defaultAiCli, "ask");
   assert.equal(preferences.workflow.defaultFileAction, "auto");
-  assert.equal(preferences.workflow.serverOpenBehavior, "external");
+  assert.equal(preferences.workflow.serverOpenBehavior, "preview");
   assert.equal(preferences.safety.workspaceRestoreEnabled, true);
   assert.equal(preferences.safety.commandGuardEnabled, true);
 });
@@ -43,17 +44,36 @@ test("defaults are local-first and safe", () => {
 test("normalizes partial preference JSON", () => {
   const preferences = normalizePreferences({
     onboardingCompleted: true,
-    theme: "midnight",
+    theme: "evergreen",
     terminal: { fontSize: 16 },
     workflow: { defaultAiCli: "claude" },
   });
 
   assert.equal(preferences.onboardingCompleted, true);
-  assert.equal(preferences.theme, "midnight");
+  assert.equal(preferences.theme, "evergreen");
   assert.equal(preferences.terminal.fontSize, 16);
   assert.equal(preferences.terminal.scrollbackProfile, "balanced");
   assert.equal(preferences.workflow.defaultAiCli, "claude");
   assert.equal(preferences.workflow.defaultFileAction, "auto");
+});
+
+test("exposes ten local color schemes", () => {
+  assert.equal(THEME_PRESETS.length, 10);
+  assert.deepEqual(
+    THEME_PRESETS.map((theme) => theme.value),
+    [
+      "graphite-violet",
+      "midnight",
+      "pure-dark",
+      "soft-contrast",
+      "cobalt",
+      "evergreen",
+      "rose-noir",
+      "ember",
+      "aurora",
+      "slate-lime",
+    ]
+  );
 });
 
 test("tolerates newer version numbers", () => {

@@ -1,11 +1,11 @@
 # v0.1-alpha Release Checklist
 
-Target tag: `v0.1.0-alpha.5`
+Target tag: `v0.1.0-alpha.6`
 
 This checklist is for the first usable v0.1-alpha build. It covers release
-readiness only: no write-capable Git client, settings UI, embedded browser
-preview, file editing, search panel, or additional sidebar sections beyond
-Files / Scripts / Servers / Git Changes.
+readiness only: no write-capable Git client, full settings app, general browser,
+file editing, search panel, or additional sidebar sections beyond Files /
+Scripts / Servers / Git Changes.
 
 ## Build Checks
 
@@ -55,7 +55,9 @@ record the exact error and do not work around it for alpha.
 - [ ] Scripts section lists `package.json` scripts and runs one in a split
 - [ ] Servers section stays quiet when empty
 - [ ] Servers section shows detected localhost URLs from terminal output
-- [ ] Clicking a server row opens the URL in the default browser
+- [ ] Clicking a server row opens the URL in Local Preview by default
+- [ ] Preview toolbar can refresh, open the URL in the external browser, and
+  close
 - [ ] Close and relaunch restores tabs, split layout, cwd values, sidebar
   state, active tab, and active pane.
 - [ ] Restored panes are fresh shells with no old scrollback, command output,
@@ -87,7 +89,7 @@ must be checked manually in the launched production app:
 - [ ] `Cmd+/` opens the keyboard shortcuts overlay
 - [ ] Command Guard overlay works for protected and dangerous commands
 - [ ] File Actions open and run expected external handoff actions
-- [ ] Server row opens the detected URL in the default browser
+- [ ] Server row opens the detected URL in Local Preview
 - [ ] Scripts run in a split
 - [ ] Terminal focus returns after overlays close
 
@@ -96,7 +98,7 @@ must be checked manually in the launched production app:
 | Area | Status | Notes |
 | --- | --- | --- |
 | Automated checks | Passed | TypeScript, frontend build, Rust tests/check, Command Guard zsh verification, server parser tests, pane navigation tests |
-| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.5_aarch64.dmg` |
+| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.6_aarch64.dmg` |
 | Bundle metadata | Passed | App name, bundle id, version, executable, and icon metadata verified |
 | Runtime diagnostics | Passed | PTY creation, WebGL renderer, shell autoload, and cwd OSC events verified |
 | Visual UI workflow | Partial pass | `Cmd+K`, `Cmd+B`, and `Cmd+E` verified visually; full dogfood and remaining shortcuts still need manual confirmation |
@@ -114,8 +116,9 @@ must be checked manually in the launched production app:
   unsigned/not-notarized until Apple credentials are configured.
 - Git Changes is read-only; diff preview is capped and there is no commit,
   push, pull, staging, reset, checkout, stash, merge, or rebase UI yet.
-- No embedded browser preview yet.
-- No settings UI yet.
+- Local Preview is limited to detected localhost/private-LAN URLs only; it is
+  not a general browser.
+- No full settings app beyond first-run onboarding/preferences.
 - No file editing or in-app file preview yet.
 - Server detection is best-effort from terminal output only; no port scanning,
   polling, or health checks.
@@ -134,18 +137,18 @@ must be checked manually in the launched production app:
 - `pnpm tauri build` succeeded and produced:
   `src-tauri/target/release/bundle/macos/AndSpace.app`
 - DMG output was produced at:
-  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.5_aarch64.dmg`.
+  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.6_aarch64.dmg`.
 - `scripts/package-alpha.sh` produced:
-  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.5-macos.zip`
-  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.5-checksums.txt`.
+  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.6-macos.zip`
+  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.6-checksums.txt`.
 - Latest local package checksums:
-  `30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333`
+  `317afd38c3c19ce1c6cd7ba74e74f8677f16564c5c250ebaa06786e9bd3a7d9f`
   for the ZIP and
-  `4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2`
+  `f6dc8458b81a73d6aa759bec24af9ded231a81b1f84c09b28750892d8d020f5c`
   for the DMG.
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
-  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.5`,
-  `CFBundleVersion=0.1.0-alpha.5`,
+  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.6`,
+  `CFBundleVersion=0.1.0-alpha.6`,
   `CFBundleIdentifier=com.andspace.desktop`, and
   `CFBundleIconFile=icon.icns`.
 - Packaged icon is a real macOS `.icns` file at
@@ -204,7 +207,7 @@ must be checked manually in the launched production app:
 - Codex handoff keeps stdin attached to the terminal for interactive launch
 - zsh startup now sources login profile setup before user `.zshrc`
 
-### v0.1.0-alpha.5
+### v0.1.0-alpha.6
 
 - Hotfix release for CLI/editor detection from Finder/Dock-launched app bundles
 - Claude, Codex, VS Code, Neovim, Vim, and Cursor detection now checks common

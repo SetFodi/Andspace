@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -15,6 +15,7 @@ import {
   scrollbackRowsForProfile,
   xtermThemeForPreference,
 } from "./preferencesModel";
+import { normalizeLocalPreviewUrl } from "./localPreview";
 
 interface Props {
   paneId: PaneId;
@@ -38,6 +39,13 @@ type RepairOptions = {
   clearAtlas?: boolean;
 };
 
+type LinkHint = {
+  x: number;
+  y: number;
+  title: string;
+  preview?: boolean;
+};
+
 function isAppShortcut(e: KeyboardEvent): boolean {
   if (!e.metaKey || e.ctrlKey) return false;
   const k = e.key;
@@ -52,6 +60,7 @@ function isAppShortcut(e: KeyboardEvent): boolean {
     (k.toLowerCase() === "b" && !e.shiftKey) ||
     (k.toLowerCase() === "k" && !e.shiftKey) ||
     (k.toLowerCase() === "e" && !e.shiftKey) ||
+    (k.toLowerCase() === "p" && !e.shiftKey) ||
     (k === "," && !e.shiftKey) ||
     (e.shiftKey && k.toLowerCase() === "i") ||
     (k === "0" && !e.shiftKey) ||
@@ -174,6 +183,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
     (s) => s.preferences.terminal.scrollbackProfile
   );
   const themePreference = usePreferencesStore((s) => s.preferences.theme);
+  const [linkHint, setLinkHint] = useState<LinkHint | null>(null);
 
   // Live ref so the main effect's closures can read the current isActive
   // without re-binding the effect on every change.
@@ -209,13 +219,39 @@ export function TerminalPane({ paneId, tabId }: Props) {
     fitRef.current = fit;
     term.loadAddon(fit);
 
-    // ⌘+click on URLs opens them in the default browser. Plain clicks fall
-    // through (no-op) so the user can still select text containing a URL.
-    const webLinks = new WebLinksAddon((event, uri) => {
-      if (event.metaKey) {
-        invoke("open_url", { url: uri }).catch(() => {});
+    const webLinks = new WebLinksAddon(
+      (event, uri) => {
+        if (!event.metaKey) return;
+        event.preventDefault();
+        setLinkHint(null);
+
+        const localUrl = normalizeLocalPreviewUrl(uri);
+        if (localUrl && !event.shiftKey) {
+          window.dispatchEvent(
+            new CustomEvent("andspace:preview-url", {
+              detail: { url: localUrl },
+            })
+          );
+          return;
+        }
+
+        invoke("open_url", { url: localUrl ?? uri }).catch(() => {});
+      },
+      {
+        hover(event, uri) {
+          const localUrl = normalizeLocalPreviewUrl(uri);
+          setLinkHint({
+            x: event.clientX,
+            y: event.clientY,
+            title: localUrl ? "Preview local app" : "Open link",
+            preview: Boolean(localUrl),
+          });
+        },
+        leave() {
+          setLinkHint(null);
+        },
       }
-    });
+    );
     term.loadAddon(webLinks);
 
     term.attachCustomKeyEventHandler((e) => !isAppShortcut(e));
@@ -547,6 +583,40 @@ export function TerminalPane({ paneId, tabId }: Props) {
       onPointerDownCapture={() => setActivePane(tabId, paneId)}
     >
       <div ref={containerRef} className="terminal-host" />
+      {linkHint && (
+        <div
+          className="terminal-link-hint"
+          style={{
+            left: Math.max(
+              8,
+              Math.min(linkHint.x + 12, window.innerWidth - 376)
+            ),
+            top: Math.max(8, linkHint.y - 34),
+          }}
+        >
+          <strong>{linkHint.title}</strong>
+          {linkHint.preview ? (
+            <span className="terminal-link-hint-actions">
+              <span className="terminal-link-hint-action">
+                <kbd>⌘</kbd>
+                <em>Preview in AndSpace</em>
+              </span>
+              <span className="terminal-link-hint-action">
+                <kbd>⇧</kbd>
+                <kbd>⌘</kbd>
+                <em>Open browser</em>
+              </span>
+            </span>
+          ) : (
+            <span className="terminal-link-hint-actions">
+              <span className="terminal-link-hint-action">
+                <kbd>⌘</kbd>
+                <em>Open browser</em>
+              </span>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

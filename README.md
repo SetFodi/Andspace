@@ -10,8 +10,8 @@ context, command safety, local AI CLI handoff, server discovery, and read-only
 Git inspection.
 
 - Website: https://andspace.app
-- Current alpha: `v0.1.0-alpha.5`
-- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+- Current alpha: `v0.1.0-alpha.6`
+- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
 - Demo: https://andspace.app/andspace.mp4
 - Privacy: https://andspace.app/privacy
 - Security: https://andspace.app/security
@@ -28,6 +28,7 @@ Git inspection.
 - Optional project sidebar with Files, Scripts, Servers, and Git Changes
 - File Actions for Cursor, VS Code, Neovim split, copy path, and Finder reveal
 - Passive localhost server detection from terminal output
+- Right-side Local Preview for detected localhost/private-LAN dev servers
 - Read-only Git Changes
 - Read-only Git Diff Preview
 
@@ -61,7 +62,7 @@ checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md)
 ## Install The Alpha
 
 1. Download the macOS ZIP or DMG from the
-   [v0.1.0-alpha.5 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5).
+   [v0.1.0-alpha.6 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6).
 2. For a ZIP, unzip it. For a DMG, open it and drag `AndSpace.app` to
    Applications.
 3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
@@ -75,8 +76,8 @@ Security and choose "Open Anyway" for AndSpace. You can also right-click
 SHA-256 checksums from the latest local packaging run:
 
 ```text
-30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
-4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
+317afd38c3c19ce1c6cd7ba74e74f8677f16564c5c250ebaa06786e9bd3a7d9f  AndSpace-v0.1.0-alpha.6-macos.zip
+f6dc8458b81a73d6aa759bec24af9ded231a81b1f84c09b28750892d8d020f5c  AndSpace_0.1.0-alpha.6_aarch64.dmg
 ```
 
 For verification steps and install-warning context, see
@@ -101,7 +102,7 @@ scripts/package-alpha.sh
 - No provider API billing or hosted AI backend
 - No Git write actions: no staging, commit, push, pull, reset, checkout, stash,
   merge, or rebase UI
-- No embedded browser preview
+- Local preview is limited to detected localhost/private-LAN dev URLs only
 - No built-in editor
 
 ## Privacy And Security
@@ -136,6 +137,7 @@ terminals like Ghostty.
 | `Cmd+0` | Focus sidebar |
 | `Cmd+K` | Command palette |
 | `Cmd+,` | Preferences |
+| `Cmd+P` | Color scheme picker |
 | `Cmd+E` | AI handoff |
 | `Cmd+/` | Keyboard shortcuts |
 | `Cmd+Shift+I` | Create `ANDSPACE.md` |
@@ -177,6 +179,7 @@ src-tauri/target/release/bundle/dmg/
 - [security notes](docs/SECURITY_NOTES.md)
 - [verify downloads](docs/VERIFY_DOWNLOAD.md)
 - [preferences](docs/PREFERENCES.md)
+- [local preview](docs/LOCAL_PREVIEW.md)
 - [terminal comparison benchmark](docs/TERMINAL_COMPARISON_BENCHMARK.md)
 - [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)
