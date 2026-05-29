@@ -267,6 +267,17 @@ __andspace_guard_request_id() {
   printf '%s-%s-%s-%s' "$pane" "$$" "$now" "$RANDOM"
 }
 
+__andspace_guard_enabled() {
+  [[ "${ANDSPACE_COMMAND_GUARD_ENABLED:-1}" != "0" ]] || return 1
+
+  local preferences="$HOME/Library/Application Support/AndSpace/preferences.json"
+  if [[ -f "$preferences" ]] && /usr/bin/grep -Eq '"commandGuardEnabled"[[:space:]]*:[[:space:]]*false' "$preferences" 2>/dev/null; then
+    return 1
+  fi
+
+  return 0
+}
+
 __andspace_guard_emit_ui_request() {
   local request_id="$1"
   local decision="$2"
@@ -339,6 +350,11 @@ __andspace_accept_line() {
   local command="$BUFFER"
   local result decision severity matched_rule matched_source matched_pattern_type action
   local -a parts
+
+  if ! __andspace_guard_enabled; then
+    zle __andspace_orig_accept_line
+    return $?
+  fi
 
   result="$(__andspace_guard_evaluate "$command")"
   parts=("${(@ps:\t:)result}")

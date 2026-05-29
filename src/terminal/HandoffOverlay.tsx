@@ -8,6 +8,7 @@ import {
   type HandoffCommandRecord,
   type HandoffPrompt,
 } from "./aiHandoff";
+import type { DefaultAiCli } from "./preferencesModel";
 
 interface Props {
   open: boolean;
@@ -16,6 +17,7 @@ interface Props {
   record: HandoffCommandRecord | null;
   projectContext: string[];
   selectedText: string;
+  defaultTarget: DefaultAiCli;
   onSendToCli: (
     target: AiCliTarget,
     prompt: HandoffPrompt,
@@ -32,6 +34,7 @@ export function HandoffOverlay({
   record,
   projectContext,
   selectedText,
+  defaultTarget,
   onSendToCli,
   onClose,
   onToast,
@@ -43,6 +46,7 @@ export function HandoffOverlay({
   const [tools, setTools] = useState<AiCliTool[]>([]);
   const [sendingTarget, setSendingTarget] = useState<AiCliTarget | null>(null);
   const copyRef = useRef<HTMLButtonElement>(null);
+  const defaultSendRef = useRef<HTMLButtonElement>(null);
 
   const input = useMemo(
     () => ({
@@ -83,7 +87,10 @@ export function HandoffOverlay({
 
   useEffect(() => {
     if (!open) return;
-    const id = requestAnimationFrame(() => copyRef.current?.focus());
+    const id = requestAnimationFrame(() => {
+      if (defaultTarget !== "ask") defaultSendRef.current?.focus();
+      else copyRef.current?.focus();
+    });
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -95,7 +102,7 @@ export function HandoffOverlay({
       cancelAnimationFrame(id);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose, open]);
+  }, [defaultTarget, onClose, open]);
 
   if (!open) return null;
 
@@ -127,6 +134,7 @@ export function HandoffOverlay({
       setSendingTarget(null);
     }
   };
+  const orderedTools = orderToolsByPreference(tools, defaultTarget);
 
   return (
     <div
@@ -198,10 +206,13 @@ export function HandoffOverlay({
           >
             Preview prompt
           </button>
-          {tools.map((tool) => (
+          {orderedTools.map((tool) => {
+            const isDefault = defaultTarget === tool.target;
+            return (
             <button
               key={tool.target}
-              className="handoff-button secondary"
+              ref={isDefault ? defaultSendRef : undefined}
+              className={`handoff-button ${isDefault ? "primary" : "secondary"}`}
               disabled={
                 loading ||
                 !prompt ||
@@ -217,9 +228,12 @@ export function HandoffOverlay({
             >
               {sendingTarget === tool.target
                 ? `Sending to ${tool.label}`
-                : `Send to ${tool.label.replace(" Code", "")}`}
+                : `Send to ${tool.label.replace(" Code", "")}${
+                    isDefault ? " (default)" : ""
+                  }`}
             </button>
-          ))}
+            );
+          })}
           <button className="handoff-button ghost" onClick={onClose}>
             Cancel
           </button>
@@ -227,4 +241,14 @@ export function HandoffOverlay({
       </section>
     </div>
   );
+}
+
+function orderToolsByPreference(
+  tools: AiCliTool[],
+  defaultTarget: DefaultAiCli
+): AiCliTool[] {
+  if (defaultTarget === "ask") return tools;
+  const idx = tools.findIndex((tool) => tool.target === defaultTarget);
+  if (idx <= 0) return tools;
+  return [tools[idx], ...tools.slice(0, idx), ...tools.slice(idx + 1)];
 }

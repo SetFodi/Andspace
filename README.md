@@ -21,6 +21,7 @@ Git inspection.
 - Terminal tabs and split panes
 - Pane focus navigation with `Cmd+Arrow`
 - Workspace restore for tabs, splits, cwd, sidebar state, and window shape
+- First-run onboarding and lightweight local preferences
 - Command Guard with project rules from `ANDSPACE.md`
 - AI CLI handoff to installed local Claude Code, Codex, and Cursor CLIs
 - Command palette and keyboard shortcuts overlay
@@ -174,6 +175,7 @@ src-tauri/target/release/bundle/dmg/
 - [privacy notes](docs/PRIVACY.md)
 - [security notes](docs/SECURITY_NOTES.md)
 - [verify downloads](docs/VERIFY_DOWNLOAD.md)
+- [preferences](docs/PREFERENCES.md)
 - [terminal comparison benchmark](docs/TERMINAL_COMPARISON_BENCHMARK.md)
 - [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)

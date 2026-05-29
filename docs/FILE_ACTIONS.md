@@ -37,15 +37,22 @@ possible, but it can't be invoked.
 
 ## Default file action
 
-The default action used by `Cmd+Enter` is picked dynamically:
+The default action used by `Cmd+Enter` can be set from
+`Cmd+K -> Open Preferences`:
+
+- Auto-detect
+- Cursor
+- VS Code
+- Neovim split
+- Copy path
+
+When set to Auto-detect, or when a preferred editor CLI is unavailable, the
+fallback order is:
 
 1. Cursor, if installed
 2. VS Code, if installed
 3. Neovim split, if installed
 4. Copy path (always wins as the last fallback)
-
-This default is **temporary and detected**. A future settings UI will let
-users override it explicitly. There is no settings UI in v0.1.
 
 ## Editor detection
 
@@ -95,7 +102,7 @@ project-root-resolve cwd=/repo/src/components root=/repo marker=package.json
 - A real in-app code editor.
 - File preview / read-only viewer.
 - Full project-wide grep / "find in files".
-- Settings UI for default file action.
+- A full settings app beyond the lightweight preferences modal.
 - Right-click context menus (the keyboard-first menu is the only surface).
 - Multi-file selection.
 - Watching the filesystem for changes.

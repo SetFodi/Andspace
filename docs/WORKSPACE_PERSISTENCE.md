@@ -15,6 +15,10 @@ Workspace state is stored locally at:
 The file is JSON, versioned, and best-effort tolerant of missing or older
 fields.
 
+Automatic launch restore and autosave can be disabled from
+`Cmd+K -> Open Preferences`. The preference is stored separately in
+`~/Library/Application Support/AndSpace/preferences.json`.
+
 ## What Is Restored
 
 - Window size and position, when available. If the saved position is no longer
@@ -60,6 +64,10 @@ fresh terminal process prints a local URL.
 
 Reset affects the next launch. It does not close current tabs or kill current
 processes.
+
+If workspace restore is disabled in Preferences, AndSpace skips automatic
+workspace loading on launch and skips autosaving workspace changes. Manual
+restore/reset commands remain available from the command palette.
 
 ## Diagnostics
 

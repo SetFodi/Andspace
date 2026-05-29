@@ -23,6 +23,7 @@ export type CommandPaletteActionId =
   | "git.openChangedFile"
   | "workspace.restore"
   | "workspace.reset"
+  | "preferences.open"
   | "help.showKeybinds";
 
 export interface CommandPaletteAction {
@@ -34,6 +35,7 @@ export interface CommandPaletteAction {
     | "Servers"
     | "Git"
     | "Workspace"
+    | "Preferences"
     | "AI / Handoff"
     | "Help";
   keywords: string[];
@@ -179,6 +181,12 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Reset Saved Workspace",
     section: "Workspace",
     keywords: ["workspace", "reset", "clear", "session", "restore"],
+  },
+  {
+    id: "preferences.open",
+    title: "Open Preferences",
+    section: "Preferences",
+    keywords: ["preferences", "settings", "first", "run", "onboarding"],
   },
   {
     id: "help.showKeybinds",

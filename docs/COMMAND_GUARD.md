@@ -12,6 +12,10 @@ The zsh gate can stop protected and dangerous commands before execution. It
 remains scoped to Command Guard behavior and is separate from AI handoff,
 command palette actions, sidebar, project UI, and file exploration.
 
+Command Guard is enabled by default. The lightweight Preferences modal can
+disable it; zsh panes read
+`~/Library/Application Support/AndSpace/preferences.json` before each command.
+
 ## Source Of Truth
 
 The Rust resolver and evaluator are canonical for app-side logic, serialized
@@ -246,7 +250,9 @@ is pending:
 - The zsh pre-execution gate matches `$BUFFER` before execution.
 - Dangerous commands default to cancel on UI failure or timeout.
 - zsh is still the only fully supported shell integration.
-- There is no settings UI or write-capable Git client. Read-only Git Changes,
+- Command Guard can be disabled from Preferences. This removes the
+  pre-execution safety rail; it does not make commands safer.
+- There is no full settings UI or write-capable Git client. Read-only Git Changes,
   sidebar file actions, and script launch remain separate from Command Guard.
 - Rust is canonical for app-side matching; zsh matching is temporary for
   blocking.

@@ -34,6 +34,7 @@ import {
   remapPersistedSplitNode,
   type WorkspaceSnapshot,
 } from "./workspaceModel";
+import { usePreferencesStore } from "./preferencesStore";
 
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
@@ -87,7 +88,14 @@ function uid(): string {
 }
 
 async function createPty(cwd?: string): Promise<CreatedPty> {
-  return invoke<CreatedPty>("create_pty", { cols: 80, rows: 24, cwd });
+  const commandGuardEnabled =
+    usePreferencesStore.getState().preferences.safety.commandGuardEnabled;
+  return invoke<CreatedPty>("create_pty", {
+    cols: 80,
+    rows: 24,
+    cwd,
+    commandGuardEnabled,
+  });
 }
 
 async function killPty(paneId: string) {
@@ -282,7 +290,9 @@ export const useStore = create<State>((set, get) => ({
     }
     if (event.kind === "cmd" && event.command) {
       get().updatePaneMeta(paneId, { lastCommand: event.command });
-      void get().evaluateGuardForPane(paneId, event.command);
+      if (usePreferencesStore.getState().preferences.safety.commandGuardEnabled) {
+        void get().evaluateGuardForPane(paneId, event.command);
+      }
       return;
     }
     if (

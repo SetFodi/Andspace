@@ -68,6 +68,7 @@ def run_direct_matcher(work):
 
     env = os.environ.copy()
     env.update({
+        "HOME": str(work),
         "TERM_PROGRAM": "AndSpace",
         "ANDSPACE_SHELL_INTEGRATION": "1",
         "ANDSPACE_PANE_ID": "verify-direct",
@@ -96,6 +97,7 @@ def run_zle_gate(work):
     env = os.environ.copy()
     ready = f"ANDSPACE_READY_{uuid.uuid4().hex}"
     env.update({
+        "HOME": str(work),
         "TERM": "xterm-256color",
         "TERM_PROGRAM": "AndSpace",
         "ANDSPACE_SHELL_INTEGRATION": "1",

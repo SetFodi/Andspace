@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree, ProjectTreeNode } from "./projectSidebarData";
+import type { DefaultFileAction } from "./preferencesModel";
 
 export interface AvailableEditors {
   cursor: boolean;
@@ -87,9 +88,26 @@ export function actionsForFile(editors: AvailableEditors): FileAction[] {
   ];
 }
 
-/// Default action used by Cmd+Enter. Cursor > Code > Neovim > Copy.
+/// Default action used by Cmd+Enter. The user's explicit preference wins when
+/// the required CLI is available; otherwise Auto falls through Cursor > Code >
+/// Neovim > Copy so the command always does something safe.
 /// Returns the action that should run immediately, never null.
-export function defaultActionFor(editors: AvailableEditors): FileAction {
+export function defaultActionFor(
+  editors: AvailableEditors,
+  preference: DefaultFileAction = "auto"
+): FileAction {
+  if (preference === "cursor" && editors.cursor) {
+    return { type: "open", tool: "cursor", label: "Open in Cursor" };
+  }
+  if (preference === "code" && editors.code) {
+    return { type: "open", tool: "code", label: "Open in VS Code" };
+  }
+  if (preference === "nvim-split" && editors.nvim) {
+    return { type: "nvim-split", label: "Open in Neovim split" };
+  }
+  if (preference === "copy") {
+    return { type: "copy", label: "Copy path" };
+  }
   if (editors.cursor) {
     return { type: "open", tool: "cursor", label: "Open in Cursor" };
   }

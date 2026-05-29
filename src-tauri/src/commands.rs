@@ -10,8 +10,9 @@ pub fn create_pty(
     cols: u16,
     rows: u16,
     cwd: Option<String>,
+    command_guard_enabled: Option<bool>,
 ) -> Result<crate::pty::CreatedPty, String> {
-    state.create(app, cols, rows, cwd)
+    state.create(app, cols, rows, cwd, command_guard_enabled.unwrap_or(true))
 }
 
 #[tauri::command]
@@ -416,4 +417,14 @@ pub fn save_workspace_state(snapshot: crate::workspace::WorkspaceSnapshot) -> Re
 #[tauri::command]
 pub fn reset_workspace_state() -> Result<(), String> {
     crate::workspace::reset_workspace_state()
+}
+
+#[tauri::command]
+pub fn load_preferences_state() -> Result<crate::preferences::Preferences, String> {
+    crate::preferences::load_preferences_state()
+}
+
+#[tauri::command]
+pub fn save_preferences_state(preferences: crate::preferences::Preferences) -> Result<(), String> {
+    crate::preferences::save_preferences_state(&preferences)
 }

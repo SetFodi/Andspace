@@ -73,6 +73,7 @@ impl PtyManager {
         cols: u16,
         rows: u16,
         cwd: Option<String>,
+        command_guard_enabled: bool,
     ) -> Result<CreatedPty, String> {
         let pty_system = native_pty_system();
         let pair = pty_system
@@ -93,6 +94,10 @@ impl PtyManager {
         cmd.env("COLORTERM", "truecolor");
         cmd.env("TERM_PROGRAM", "AndSpace");
         cmd.env("ANDSPACE_SHELL_INTEGRATION", "1");
+        cmd.env(
+            "ANDSPACE_COMMAND_GUARD_ENABLED",
+            if command_guard_enabled { "1" } else { "0" },
+        );
 
         let pane_id = make_id();
         cmd.env("ANDSPACE_PANE_ID", &pane_id);

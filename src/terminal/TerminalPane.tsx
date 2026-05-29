@@ -10,6 +10,11 @@ import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
 import { appendOutputCaptureBytes } from "./aiHandoff";
 import { hasServerDetectionTail, useServerStore } from "./serverStore";
+import { usePreferencesStore } from "./preferencesStore";
+import {
+  scrollbackRowsForProfile,
+  xtermThemeForPreference,
+} from "./preferencesModel";
 
 interface Props {
   paneId: PaneId;
@@ -152,6 +157,7 @@ function decodePtyPayload(payload: PtyOutputPayload): Uint8Array {
 export function TerminalPane({ paneId, tabId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
+  const fitRef = useRef<FitAddon | null>(null);
   const setActivePane = useStore((s) => s.setActivePane);
   const setPaneSelectedText = useStore((s) => s.setPaneSelectedText);
   const handleShellOsc = useStore((s) => s.handleShellOsc);
@@ -160,6 +166,13 @@ export function TerminalPane({ paneId, tabId }: Props) {
   const isActive = useStore(
     (s) => s.activeTabId === tabId && s.activePaneByTab[tabId] === paneId
   );
+  const terminalFontSize = usePreferencesStore(
+    (s) => s.preferences.terminal.fontSize
+  );
+  const scrollbackProfile = usePreferencesStore(
+    (s) => s.preferences.terminal.scrollbackProfile
+  );
+  const themePreference = usePreferencesStore((s) => s.preferences.theme);
 
   // Live ref so the main effect's closures can read the current isActive
   // without re-binding the effect on every change.
@@ -173,7 +186,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
     const term = new Terminal({
       fontFamily:
         '"JetBrainsMono Nerd Font Mono", "JetBrains Mono", "SF Mono", "Menlo", "Monaco", monospace',
-      fontSize: 13,
+      fontSize: terminalFontSize,
       lineHeight: 1.25,
       letterSpacing: 0,
       // Start with blink OFF; the state machine below turns it on only while
@@ -184,21 +197,15 @@ export function TerminalPane({ paneId, tabId }: Props) {
       // for every pane that isn't the active one.
       cursorInactiveStyle: "none",
       allowProposedApi: true,
-      scrollback: 5000,
+      scrollback: scrollbackRowsForProfile(scrollbackProfile),
       drawBoldTextInBrightColors: true,
       minimumContrastRatio: 1,
-      theme: {
-        background: "#0d0e12",
-        foreground: "#e6e6ea",
-        cursor: "#a78bfa",
-        cursorAccent: "#0d0e12",
-        selectionBackground: "#4a3d72",
-        selectionInactiveBackground: "#322c46",
-      },
+      theme: xtermThemeForPreference(themePreference),
     });
     termRef.current = term;
 
     const fit = new FitAddon();
+    fitRef.current = fit;
     term.loadAddon(fit);
 
     // ⌘+click on URLs opens them in the default browser. Plain clicks fall
@@ -485,8 +492,26 @@ export function TerminalPane({ paneId, tabId }: Props) {
       } catch {}
       term.dispose();
       termRef.current = null;
+      fitRef.current = null;
     };
   }, [paneId, tabId, setActivePane, setPaneSelectedText, handleShellOsc]);
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    term.options.fontSize = terminalFontSize;
+    term.options.scrollback = scrollbackRowsForProfile(scrollbackProfile);
+    term.options.theme = xtermThemeForPreference(themePreference);
+    try {
+      fitRef.current?.fit();
+      invoke("resize_pty", {
+        paneId,
+        cols: term.cols,
+        rows: term.rows,
+      }).catch(() => {});
+      term.refresh(0, Math.max(0, term.rows - 1));
+    } catch {}
+  }, [paneId, scrollbackProfile, terminalFontSize, themePreference]);
 
   // Focus/blur the xterm based on whether it's the active pane. Blurring
   // inactive panes means cursorInactiveStyle: "none" applies and they

@@ -84,6 +84,10 @@ Press `Cmd+E` to open a compact `Send context` overlay. It includes:
 copies the same redacted prompt to the clipboard. Send buttons launch only local
 installed CLIs. Escape closes the overlay and returns focus to the terminal.
 
+`Cmd+K -> Open Preferences` can set a default AI CLI. When set, that local CLI
+is ordered and focused first in the handoff overlay; AndSpace still does not
+auto-send prompts without a user action.
+
 The handoff overlay sits below Command Guard in the priority stack — if Guard
 is waiting for confirmation, `Cmd+E` is suppressed. While the handoff overlay
 is open, no other overlay can open and `Cmd`-shortcuts are inactive until it

@@ -5,6 +5,7 @@ mod command_guard;
 mod commands;
 mod file_actions;
 mod git_status;
+mod preferences;
 mod project_sidebar;
 mod pty;
 mod rules;
@@ -78,6 +79,8 @@ fn main() {
             load_workspace_state,
             save_workspace_state,
             reset_workspace_state,
+            load_preferences_state,
+            save_preferences_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running andspace");

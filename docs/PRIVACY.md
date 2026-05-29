@@ -15,6 +15,7 @@ This document is practical public-facing privacy information for the AndSpace
 - AI handoff uses locally installed command line tools only: Claude Code,
   Codex, and Cursor CLI.
 - Lightweight workspace restore data is stored locally.
+- Lightweight preferences are stored locally.
 - Diagnostics are local.
 
 ## Local App Behavior
@@ -70,6 +71,32 @@ Workspace persistence does not store:
 
 See [WORKSPACE_PERSISTENCE.md](WORKSPACE_PERSISTENCE.md) for implementation
 details.
+
+## Local Preferences
+
+AndSpace stores lightweight preferences locally at:
+
+```text
+~/Library/Application Support/AndSpace/preferences.json
+```
+
+Preferences may include:
+
+- First-run onboarding completed.
+- Theme.
+- Terminal font size.
+- Scrollback profile.
+- Default file action.
+- Default AI CLI.
+- Server open behavior.
+- Workspace restore enabled/disabled.
+- Command Guard enabled/disabled.
+
+Preferences do not store terminal output, terminal scrollback, AI prompt
+contents, secrets, Git diffs, command history, shell history, or detected
+server records.
+
+See [PREFERENCES.md](PREFERENCES.md) for details.
 
 ## Diagnostics
 

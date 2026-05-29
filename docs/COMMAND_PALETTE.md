@@ -2,7 +2,7 @@
 
 `Cmd+K` opens the v0.1 command palette. It is a small keyboard-first overlay
 for terminal workflow actions, not a dashboard, project explorer, file
-explorer, or settings UI.
+explorer, or full settings app.
 
 ## Commands
 
@@ -30,6 +30,7 @@ explorer, or settings UI.
 | Git          | Open Changed File    | Open File Actions for the first changed file |
 | Workspace    | Restore Last Workspace | Recreate tabs/splits/cwds from saved state |
 | Workspace    | Reset Saved Workspace | Delete the saved workspace file             |
+| Preferences  | Open Preferences      | Open lightweight local preferences          |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
 
 Filtering is simple substring matching over command title, section, id, and
@@ -42,11 +43,12 @@ Only one overlay is on screen at a time. From highest priority to lowest:
 
 1. **Command Guard** confirmation — blocks all other overlays and all
    `Cmd`-shortcuts. Cannot be dismissed by another overlay opening.
-2. **AI Handoff** (`Cmd+E`)
-3. **Command Palette** (`Cmd+K`)
-4. **Keyboard Shortcuts** (`Cmd+/`)
-5. **File Actions** (sidebar click / Enter)
-6. **Go to File** (palette → "Go to File")
+2. **Preferences / first-run onboarding** (palette → "Open Preferences")
+3. **AI Handoff** (`Cmd+E`)
+4. **Command Palette** (`Cmd+K`)
+5. **Keyboard Shortcuts** (`Cmd+/`)
+6. **File Actions** (sidebar click / Enter)
+7. **Go to File** (palette → "Go to File")
 
 While any overlay is open, all `Cmd`-shortcuts are ignored so users can't
 stack overlays. Each overlay owns its own window-level Escape handler that
@@ -70,7 +72,8 @@ command-palette-run action=git.refresh
 - Git Changes actions are read-only: status, diff preview, copy diff, and
   external File Actions only. There is no commit, push, pull, staging, reset,
   checkout, stash, merge, or rebase action.
-- No settings UI.
+- No full settings app; Preferences is a compact local onboarding/preferences
+  surface.
 - No embedded browser preview.
 - Workspace commands restore layout and cwd only; they do not restore
   scrollback, output, prompts, or old processes.

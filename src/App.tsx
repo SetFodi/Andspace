@@ -12,6 +12,7 @@ import { FileActionsOverlay } from "./terminal/FileActionsOverlay";
 import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
 import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
 import { GitDiffOverlay } from "./terminal/GitDiffOverlay";
+import { PreferencesOverlay } from "./terminal/PreferencesOverlay";
 import {
   ProjectSidebar,
   scriptCommandForSidebar,
@@ -76,6 +77,8 @@ import {
   resetWorkspaceState,
   saveWorkspaceState,
 } from "./terminal/workspacePersistence";
+import { usePreferencesStore } from "./terminal/preferencesStore";
+import type { Preferences } from "./terminal/preferencesModel";
 
 function TitleBar() {
   const startWindowDrag = (event: MouseEvent<HTMLDivElement>) => {
@@ -204,6 +207,10 @@ export default function App() {
   });
   const [projectRoot, setProjectRoot] = useState<string | undefined>(undefined);
   const serverCount = useServerStore((s) => s.servers.length);
+  const preferences = usePreferencesStore((s) => s.preferences);
+  const preferencesLoaded = usePreferencesStore((s) => s.loaded);
+  const loadPreferences = usePreferencesStore((s) => s.loadPreferences);
+  const savePreferences = usePreferencesStore((s) => s.savePreferences);
   const [fileActionsPath, setFileActionsPath] = useState<string | null>(null);
   const [gitDiffOpen, setGitDiffOpen] = useState(false);
   const [gitDiffPreview, setGitDiffPreview] = useState<GitDiffPreview | null>(
@@ -215,6 +222,7 @@ export default function App() {
     null
   );
   const [goToFileOpen, setGoToFileOpen] = useState(false);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [pickerTree, setPickerTree] = useState<ProjectTree | null>(null);
   const [pickerLoading, setPickerLoading] = useState(false);
   const lastSplitShortcutRef = useRef<{ action: NativeShortcut; at: number } | null>(
@@ -258,12 +266,31 @@ export default function App() {
   );
   const sidebarCwd = projectRoot ?? activePaneCwd;
   const gitRefreshKey = `${activePaneId ?? ""}:${sidebarCwd ?? ""}:${activePaneCommandEndedAt}`;
+  const onboardingOpen = preferencesLoaded && !preferences.onboardingCompleted;
+  const preferredFileAction = preferences.workflow.defaultFileAction;
 
   const refocusTerminal = useCallback(() => {
     window.setTimeout(() => {
       window.dispatchEvent(new Event("andspace-refocus-terminal"));
     }, 0);
   }, []);
+
+  const savePreferencesDraft = useCallback(
+    async (next: Preferences) => {
+      try {
+        await savePreferences(next);
+        setPreferencesOpen(false);
+        showToast({ tone: "success", message: "Saved preferences" });
+        refocusTerminal();
+      } catch (e) {
+        showToast({
+          tone: "error",
+          message: `Could not save preferences: ${String(e)}`,
+        });
+      }
+    },
+    [refocusTerminal, savePreferences, showToast]
+  );
 
   const closeHandoff = useCallback(() => {
     setHandoffOpen(false);
@@ -661,6 +688,8 @@ export default function App() {
             message: `Could not reset workspace: ${String(e)}`,
           });
         }
+      } else if (action.id === "preferences.open") {
+        setPreferencesOpen(true);
       } else if (action.id === "handoff.sendContext") {
         setHandoffOpen(true);
       } else if (action.id === "handoff.copyLastPrompt") {
@@ -801,6 +830,7 @@ export default function App() {
 
   const saveWorkspaceNow = useCallback(async () => {
     if (!workspaceReadyRef.current) return;
+    if (!preferences.safety.workspaceRestoreEnabled) return;
     const state = useStore.getState();
     if (state.tabs.length === 0) return;
     try {
@@ -819,7 +849,7 @@ export default function App() {
     } catch (e) {
       console.warn("Failed to save workspace", e);
     }
-  }, [projectRoot, sidebarOpen, sidebarSection]);
+  }, [preferences.safety.workspaceRestoreEnabled, projectRoot, sidebarOpen, sidebarSection]);
 
   const scheduleWorkspaceSave = useCallback(() => {
     if (!workspaceReadyRef.current) return;
@@ -840,9 +870,13 @@ export default function App() {
     didInit.current = true;
     void (async () => {
       let restored = false;
+      let loadedPreferences = preferences;
       try {
-        const snapshot = await loadWorkspaceState();
-        if (snapshot) {
+        loadedPreferences = await loadPreferences();
+        const snapshot = loadedPreferences.safety.workspaceRestoreEnabled
+          ? await loadWorkspaceState()
+          : null;
+        if (snapshot && loadedPreferences.safety.workspaceRestoreEnabled) {
           await applyWindowState(snapshot.window);
           setSidebarSection(snapshot.sidebar.focusedSection);
           setSidebarOpen(snapshot.sidebar.open);
@@ -865,6 +899,10 @@ export default function App() {
   useEffect(() => {
     workspaceReadyRef.current = workspaceReady;
   }, [workspaceReady]);
+
+  useEffect(() => {
+    document.documentElement.dataset.andspaceTheme = preferences.theme;
+  }, [preferences.theme]);
 
   useEffect(() => {
     if (!workspaceReady) return;
@@ -907,6 +945,8 @@ export default function App() {
     handoffOpen ||
     paletteOpen ||
     keybindsOpen ||
+    preferencesOpen ||
+    onboardingOpen ||
     fileActionsPath !== null ||
     gitDiffOpen ||
     goToFileOpen;
@@ -1080,7 +1120,7 @@ export default function App() {
           onRunScript={runProjectScript}
           onFileAction={(path) => setFileActionsPath(path)}
           onFileDefault={(path) => {
-            void runFileAction(defaultActionFor(editors), path);
+            void runFileAction(defaultActionFor(editors, preferredFileAction), path);
           }}
           onGitDiff={openGitDiff}
           onToast={(message, tone) => showToast({ message, tone })}
@@ -1101,12 +1141,18 @@ export default function App() {
         onRespond={respondToGuardConfirmation}
       />
       <HandoffOverlay
-        open={!pendingGuardConfirmation && handoffOpen}
+        open={
+          !pendingGuardConfirmation &&
+          !preferencesOpen &&
+          !onboardingOpen &&
+          handoffOpen
+        }
         paneId={activePaneId}
         cwd={activePaneCwd}
         record={activeHandoffRecord}
         projectContext={handoffProjectContext}
         selectedText={activeSelectedText}
+        defaultTarget={preferences.workflow.defaultAiCli}
         onSendToCli={sendPromptToCli}
         onClose={closeHandoff}
         onToast={(message, tone) => showToast({ message, tone })}
@@ -1117,6 +1163,8 @@ export default function App() {
           !handoffOpen &&
           !keybindsOpen &&
           !gitDiffOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
           paletteOpen
         }
         disabledActions={disabledPaletteActions}
@@ -1130,6 +1178,8 @@ export default function App() {
           !paletteOpen &&
           !keybindsOpen &&
           !gitDiffOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
           fileActionsPath !== null
         }
         path={fileActionsPath}
@@ -1148,6 +1198,8 @@ export default function App() {
           !handoffOpen &&
           !paletteOpen &&
           !keybindsOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
           fileActionsPath === null &&
           gitDiffOpen
         }
@@ -1168,6 +1220,8 @@ export default function App() {
           !handoffOpen &&
           !paletteOpen &&
           !keybindsOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
           !gitDiffOpen &&
           fileActionsPath === null &&
           goToFileOpen
@@ -1179,11 +1233,22 @@ export default function App() {
         onSelect={(entry, useDefault) => {
           setGoToFileOpen(false);
           if (useDefault) {
-            void runFileAction(defaultActionFor(editors), entry.path);
+            void runFileAction(defaultActionFor(editors, preferredFileAction), entry.path);
             refocusTerminal();
           } else {
             setFileActionsPath(entry.path);
           }
+        }}
+      />
+      <PreferencesOverlay
+        open={!pendingGuardConfirmation && (preferencesOpen || onboardingOpen)}
+        mode={onboardingOpen ? "onboarding" : "preferences"}
+        preferences={preferences}
+        editors={editors}
+        onSave={savePreferencesDraft}
+        onClose={() => {
+          setPreferencesOpen(false);
+          refocusTerminal();
         }}
       />
       <KeybindsOverlay
@@ -1191,6 +1256,8 @@ export default function App() {
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
+          !preferencesOpen &&
+          !onboardingOpen &&
           fileActionsPath === null &&
           !gitDiffOpen &&
           !goToFileOpen &&
