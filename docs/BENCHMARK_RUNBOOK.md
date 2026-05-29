@@ -5,6 +5,11 @@ is automated, what requires the macOS Accessibility permission, what is
 manual, how to grant Accessibility, and the exact manual commands to use as a
 fallback if the automation cannot run.
 
+For a current side-by-side AndSpace vs Ghostty comparison, use
+`docs/TERMINAL_COMPARISON_BENCHMARK.md`. The Phase 0 harness below is still
+useful for AndSpace-specific regression checks, but it is not the recommended
+way to compare two terminals.
+
 The harness itself is `scripts/benchmark.sh`. Each automated test is a
 subcommand of that script.
 

@@ -66,8 +66,8 @@ Security and choose "Open Anyway" for AndSpace. You can also right-click
 SHA-256 checksums from the latest local packaging run:
 
 ```text
-fd2d4a0eec0ca77e35bd189d58e6cd92cc6884c0860377e98ba1d4838ab2570b  AndSpace-v0.1.0-alpha.5-macos.zip
-312baeabbe54a7cbd681f34ea9f4857580d97e6c7942937aea4c5e36ec137f3c  AndSpace_0.1.0-alpha.5_aarch64.dmg
+30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
+4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
 ```
 
 Local release packaging and checksum generation:
@@ -90,6 +90,14 @@ scripts/package-alpha.sh
   merge, or rebase UI
 - No embedded browser preview
 - No built-in editor
+
+## Performance Note
+
+AndSpace is built on Tauri, WKWebView, and xterm.js. Recent alpha hardening
+adds bounded PTY backpressure, larger PTY read chunks, compact PTY transport,
+and lower retained scrollback. It performs well for normal local development,
+but it is not positioned as a raw-throughput replacement for native GPU
+terminals like Ghostty.
 
 ## Shortcuts
 
@@ -142,6 +150,7 @@ src-tauri/target/release/bundle/dmg/
 - [release checklist](docs/V0_1_RELEASE_CHECKLIST.md)
 - [dogfood checklist](docs/DOGFOOD_CHECKLIST.md)
 - [macOS signing and notarization](docs/MACOS_SIGNING_NOTARIZATION.md)
+- [terminal comparison benchmark](docs/TERMINAL_COMPARISON_BENCHMARK.md)
 - [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)
 - [AI handoff](docs/AI_HANDOFF.md)

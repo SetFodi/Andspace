@@ -139,9 +139,9 @@ must be checked manually in the launched production app:
   `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.5-macos.zip`
   and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.5-checksums.txt`.
 - Latest local package checksums:
-  `fd2d4a0eec0ca77e35bd189d58e6cd92cc6884c0860377e98ba1d4838ab2570b`
+  `30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333`
   for the ZIP and
-  `312baeabbe54a7cbd681f34ea9f4857580d97e6c7942937aea4c5e36ec137f3c`
+  `4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2`
   for the DMG.
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
   `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.5`,
@@ -210,3 +210,8 @@ must be checked manually in the launched production app:
 - Claude, Codex, VS Code, Neovim, Vim, and Cursor detection now checks common
   Homebrew/user-bin locations instead of relying only on the app process PATH
 - External editor launch uses the resolved absolute CLI path
+- Terminal output hardening: larger PTY reads, compact PTY transport, bounded
+  frontend backpressure, cheaper server-marker scanning, and lower retained
+  scrollback
+- Local AndSpace-vs-Ghostty benchmark harness added for repeatable dogfood
+  throughput, CPU, memory, and terminal-drain comparisons

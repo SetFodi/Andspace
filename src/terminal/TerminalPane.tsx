@@ -8,8 +8,8 @@ import { listen } from "@tauri-apps/api/event";
 import { installShellIntegration } from "./shellIntegration";
 import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
-import { appendOutputCapture } from "./aiHandoff";
-import { useServerStore } from "./serverStore";
+import { appendOutputCaptureBytes } from "./aiHandoff";
+import { hasServerDetectionTail, useServerStore } from "./serverStore";
 
 interface Props {
   paneId: PaneId;
@@ -18,13 +18,15 @@ interface Props {
 
 interface PtyOutputPayload {
   pane_id: string;
-  data: number[];
+  data: string | number[];
+  encoding?: "base64";
 }
 
 // How long after the last input the cursor stops blinking. Matches iTerm2 /
 // Warp's behavior — cursor blinks while you're typing, goes steady when idle.
 // Cheap and significant: 2 paints/sec while blinking is ~2% of one CPU core.
 const BLINK_IDLE_MS = 3000;
+const MAX_XTERM_WRITE_BATCH_BYTES = 128 * 1024;
 
 type RepairOptions = {
   resize?: boolean;
@@ -57,6 +59,94 @@ function isAppShortcut(e: KeyboardEvent): boolean {
     k === "?" ||
     (/^[1-9]$/.test(k) && !e.shiftKey)
   );
+}
+
+function containsServerScanMarker(bytes: Uint8Array): boolean {
+  for (let i = 0; i < bytes.length; i++) {
+    const b = asciiLower(bytes[i]);
+    if (
+      (b === 104 && matchesAsciiAt(bytes, i, "http")) ||
+      (b === 108 &&
+        (matchesAsciiAt(bytes, i, "localhost") ||
+          matchesAsciiAt(bytes, i, "local:"))) ||
+      (b === 49 &&
+        (matchesAsciiAt(bytes, i, "127.") ||
+          matchesAsciiAt(bytes, i, "192.168."))) ||
+      (b === 48 && matchesAsciiAt(bytes, i, "0.0.0.0")) ||
+      (b === 118 && matchesAsciiAt(bytes, i, "vite")) ||
+      (b === 110 &&
+        (matchesAsciiAt(bytes, i, "next") ||
+          matchesAsciiAt(bytes, i, "nestjs") ||
+          matchesAsciiAt(bytes, i, "network:"))) ||
+      (b === 97 && matchesAsciiAt(bytes, i, "astro")) ||
+      (b === 115 && matchesAsciiAt(bytes, i, "storybook"))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function matchesAsciiAt(bytes: Uint8Array, offset: number, value: string): boolean {
+  if (offset + value.length > bytes.length) return false;
+  for (let i = 0; i < value.length; i++) {
+    if (asciiLower(bytes[offset + i]) !== value.charCodeAt(i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function asciiLower(byte: number): number {
+  return byte >= 65 && byte <= 90 ? byte + 32 : byte;
+}
+
+function takeWriteBatch(queue: Uint8Array[]): Uint8Array | null {
+  const first = queue.shift();
+  if (!first) return null;
+  if (first.length >= MAX_XTERM_WRITE_BATCH_BYTES || queue.length === 0) {
+    return first;
+  }
+
+  const chunks = [first];
+  let total = first.length;
+  while (queue.length > 0) {
+    const next = queue[0];
+    if (total + next.length > MAX_XTERM_WRITE_BATCH_BYTES) break;
+    chunks.push(queue.shift()!);
+    total += next.length;
+  }
+
+  const batch = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    batch.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return batch;
+}
+
+function decodePtyPayload(payload: PtyOutputPayload): Uint8Array {
+  if (typeof payload.data !== "string") {
+    return new Uint8Array(payload.data);
+  }
+  if (payload.encoding === "base64") {
+    const fromBase64 = (
+      Uint8Array as unknown as {
+        fromBase64?: (value: string) => Uint8Array;
+      }
+    ).fromBase64;
+    if (typeof fromBase64 === "function") {
+      return fromBase64(payload.data);
+    }
+    const binary = atob(payload.data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+  return new TextEncoder().encode(payload.data);
 }
 
 export function TerminalPane({ paneId, tabId }: Props) {
@@ -94,7 +184,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       // for every pane that isn't the active one.
       cursorInactiveStyle: "none",
       allowProposedApi: true,
-      scrollback: 10000,
+      scrollback: 5000,
       drawBoldTextInBrightColors: true,
       minimumContrastRatio: 1,
       theme: {
@@ -279,15 +369,58 @@ export function TerminalPane({ paneId, tabId }: Props) {
     });
 
     let unlisten: (() => void) | null = null;
+    const writeQueue: Uint8Array[] = [];
+    let isWritingToTerminal = false;
+    let unackedTerminalBytes = 0;
+
+    const ackTerminalBytes = (bytes: number) => {
+      if (bytes <= 0) return;
+      unackedTerminalBytes = Math.max(0, unackedTerminalBytes - bytes);
+      invoke("ack_pty_output", { paneId, bytes }).catch(() => {});
+    };
+
+    const pumpTerminalWriteQueue = () => {
+      if (cancelled || isWritingToTerminal) return;
+      const batch = takeWriteBatch(writeQueue);
+      if (!batch) return;
+
+      isWritingToTerminal = true;
+      term.write(batch, () => {
+        isWritingToTerminal = false;
+        ackTerminalBytes(batch.length);
+        pumpTerminalWriteQueue();
+      });
+    };
+
+    const enqueueTerminalWrite = (bytes: Uint8Array) => {
+      const last = writeQueue[writeQueue.length - 1];
+      if (last && last.length + bytes.length <= MAX_XTERM_WRITE_BATCH_BYTES) {
+        const merged = new Uint8Array(last.length + bytes.length);
+        merged.set(last, 0);
+        merged.set(bytes, last.length);
+        writeQueue[writeQueue.length - 1] = merged;
+      } else {
+        writeQueue.push(bytes);
+      }
+      pumpTerminalWriteQueue();
+    };
+
     listen<PtyOutputPayload>("pty-output", (event) => {
       if (event.payload.pane_id !== paneId) return;
-      const bytes = new Uint8Array(event.payload.data);
-      const text = new TextDecoder().decode(bytes);
-      appendOutputCapture(paneId, text);
-      // Server detection runs off the same byte stream — no extra round
-      // trip, no port scanning. The store handles dedup and labeling.
-      useServerStore.getState().ingestPaneOutput(paneId, text);
-      term.write(bytes);
+      const bytes = decodePtyPayload(event.payload);
+      unackedTerminalBytes += bytes.length;
+      appendOutputCaptureBytes(paneId, bytes);
+      // Server detection runs off the same byte stream, but only decode chunks
+      // that can plausibly contain a local server URL/banner. Heavy terminal
+      // output should not pay a UTF-8 decode + regex scan per PTY chunk.
+      if (
+        hasServerDetectionTail(paneId) ||
+        containsServerScanMarker(bytes)
+      ) {
+        const text = new TextDecoder().decode(bytes);
+        useServerStore.getState().ingestPaneOutput(paneId, text);
+      }
+      enqueueTerminalWrite(bytes);
     }).then((fn) => {
       unlisten = fn;
     });
@@ -295,7 +428,9 @@ export function TerminalPane({ paneId, tabId }: Props) {
     let unlistenExit: (() => void) | null = null;
     listen<string>("pty-exit", (event) => {
       if (event.payload !== paneId) return;
-      term.write("\r\n\x1b[2m[process exited]\x1b[0m\r\n");
+      enqueueTerminalWrite(
+        new TextEncoder().encode("\r\n\x1b[2m[process exited]\x1b[0m\r\n")
+      );
     }).then((fn) => {
       unlistenExit = fn;
     });
@@ -318,7 +453,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
     ro.observe(container);
     window.addEventListener("resize", syncSize);
 
-    const paneSlot = container.parentElement;
+    const paneSlot = container.closest(".pane-slot");
     paneSlot?.addEventListener("transitionend", syncSize);
     paneSlot?.addEventListener("animationend", syncSize);
 
@@ -339,6 +474,7 @@ export function TerminalPane({ paneId, tabId }: Props) {
       shellIntegration.dispose();
       unlisten?.();
       unlistenExit?.();
+      ackTerminalBytes(unackedTerminalBytes);
       ro.disconnect();
       paneSlot?.removeEventListener("transitionend", syncSize);
       paneSlot?.removeEventListener("animationend", syncSize);
@@ -381,8 +517,10 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
   return (
     <div
-      ref={containerRef}
       className={`terminal-pane ${isActive ? "active" : ""}`}
-    />
+      onPointerDownCapture={() => setActivePane(tabId, paneId)}
+    >
+      <div ref={containerRef} className="terminal-host" />
+    </div>
   );
 }

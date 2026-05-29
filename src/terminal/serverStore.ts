@@ -62,6 +62,10 @@ function reportServerEvent(
 
 export const reportServer = reportServerEvent;
 
+export function hasServerDetectionTail(paneId: string): boolean {
+  return (contexts.get(paneId)?.tail.length ?? 0) > 0;
+}
+
 export const useServerStore = create<ServerState>((set, get) => ({
   servers: [],
 

@@ -4,7 +4,7 @@ const DEFAULT_OUTPUT_LINES = 80;
 const MAX_OUTPUT_BYTES = 32 * 1024;
 
 interface OutputCapture {
-  text: string;
+  bytes: Uint8Array;
   truncated: boolean;
 }
 
@@ -54,17 +54,32 @@ export interface PreparedAiHandoff {
 const captures = new Map<string, OutputCapture>();
 
 export function startOutputCapture(paneId: string) {
-  captures.set(paneId, { text: "", truncated: false });
+  captures.set(paneId, { bytes: new Uint8Array(0), truncated: false });
 }
 
 export function appendOutputCapture(paneId: string, chunk: string) {
-  const capture = captures.get(paneId);
-  if (!capture || !chunk) return;
+  if (!captures.has(paneId) || chunk.length === 0) return;
+  appendOutputCaptureBytes(paneId, new TextEncoder().encode(chunk));
+}
 
-  capture.text += chunk;
-  if (capture.text.length > MAX_OUTPUT_BYTES) {
-    capture.text = capture.text.slice(-MAX_OUTPUT_BYTES);
+export function appendOutputCaptureBytes(paneId: string, chunk: Uint8Array) {
+  const capture = captures.get(paneId);
+  if (!capture || chunk.length === 0) return;
+
+  if (chunk.length >= MAX_OUTPUT_BYTES) {
+    capture.bytes = chunk.slice(chunk.length - MAX_OUTPUT_BYTES);
     capture.truncated = true;
+    return;
+  }
+
+  const next = new Uint8Array(capture.bytes.length + chunk.length);
+  next.set(capture.bytes, 0);
+  next.set(chunk, capture.bytes.length);
+  if (next.length > MAX_OUTPUT_BYTES) {
+    capture.bytes = next.slice(next.length - MAX_OUTPUT_BYTES);
+    capture.truncated = true;
+  } else {
+    capture.bytes = next;
   }
 }
 
@@ -80,7 +95,8 @@ export function finishOutputCapture(paneId: string): {
     return { outputLines: [], outputLineCount: 0, outputTruncated: false };
   }
 
-  const allLines = normalizeCapturedOutput(capture.text);
+  const text = new TextDecoder().decode(capture.bytes);
+  const allLines = normalizeCapturedOutput(text);
   const outputLines = allLines.slice(-DEFAULT_OUTPUT_LINES);
   return {
     outputLines,

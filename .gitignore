@@ -11,3 +11,5 @@ src-tauri/shell-integration/zdotdir/*.lock
 .env
 .env.local
 .claude
+benchmarks/terminal/
+__pycache__/

@@ -39,6 +39,11 @@ pub fn kill_pty(state: State<'_, PtyManager>, pane_id: String) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn ack_pty_output(state: State<'_, PtyManager>, pane_id: String, bytes: usize) {
+    state.ack_output(&pane_id, bytes);
+}
+
+#[tauri::command]
 pub fn report_renderer(kind: String) {
     crate::pty::diag_log(&format!("renderer={kind}"));
 }

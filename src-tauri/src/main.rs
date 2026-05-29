@@ -47,6 +47,7 @@ fn main() {
             write_to_pty,
             resize_pty,
             kill_pty,
+            ack_pty_output,
             report_renderer,
             report_shell_event,
             load_rules_for_cwd,

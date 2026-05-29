@@ -910,12 +910,15 @@ body,
 .terminal-pane {
   width: 100%;
   height: 100%;
-  padding: 10px 14px 2px 14px;
+  padding: 10px 14px;
   background: #0d0e12;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 5px;
   position: relative;
   overflow: hidden;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
   /* Subtle fade between inactive ↔ active ring color on focus change. */
   transition: border-color 140ms ease;
 }
@@ -928,6 +931,14 @@ body,
    or not) so there's only one "focused surface" on screen. */
 .workspace:has(.project-sidebar:focus-within) .terminal-pane.active {
   border-color: rgba(255, 255, 255, 0.06);
+}
+
+.terminal-host {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
 }
 
 .terminal-pane .xterm {

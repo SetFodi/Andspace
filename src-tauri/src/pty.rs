@@ -23,7 +23,8 @@ pub fn diag_log(line: &str) {
     }
 }
 
-use parking_lot::Mutex;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use parking_lot::{Condvar, Mutex};
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
@@ -43,18 +44,26 @@ pub struct CreatedPty {
 
 pub struct PtyManager {
     panes: Arc<Mutex<HashMap<String, PtyHandle>>>,
+    output_backpressure: Arc<OutputBackpressure>,
+}
+
+struct OutputBackpressure {
+    pending_bytes: Mutex<HashMap<String, usize>>,
+    changed: Condvar,
 }
 
 #[derive(Serialize, Clone)]
 struct PtyOutputPayload {
     pane_id: String,
-    data: Vec<u8>,
+    data: String,
+    encoding: &'static str,
 }
 
 impl PtyManager {
     pub fn new() -> Self {
         Self {
             panes: Arc::new(Mutex::new(HashMap::new())),
+            output_backpressure: Arc::new(OutputBackpressure::new()),
         }
     }
 
@@ -125,27 +134,34 @@ impl PtyManager {
         let pid_for_thread = child_pid;
         let app_for_thread = app.clone();
         let panes_for_thread = self.panes.clone();
+        let output_backpressure = self.output_backpressure.clone();
 
         // Blocking read loop on its own thread. Each chunk is forwarded
         // to the frontend via the `pty-output` event. On EOF / error,
         // emits `pty-exit` and removes the pane.
         thread::spawn(move || {
-            let mut buf = [0u8; 8192];
+            let mut buf = [0u8; 65536];
             loop {
+                output_backpressure.wait_for_capacity(&pane_id_for_thread);
                 match reader.read(&mut buf) {
                     Ok(0) => break,
                     Ok(n) => {
+                        output_backpressure.add(&pane_id_for_thread, n);
                         let payload = PtyOutputPayload {
                             pane_id: pane_id_for_thread.clone(),
-                            data: buf[..n].to_vec(),
+                            data: BASE64.encode(&buf[..n]),
+                            encoding: "base64",
                         };
-                        let _ = app_for_thread.emit("pty-output", payload);
+                        if app_for_thread.emit("pty-output", payload).is_err() {
+                            output_backpressure.ack(&pane_id_for_thread, n);
+                        }
                     }
                     Err(_) => break,
                 }
             }
             let _ = app_for_thread.emit("pty-exit", pane_id_for_thread.clone());
             panes_for_thread.lock().remove(&pane_id_for_thread);
+            output_backpressure.clear(&pane_id_for_thread);
             diag_log(&format!(
                 "pty-natural-exit pid={pid_for_thread} pane={pane_id_for_thread}"
             ));
@@ -194,9 +210,53 @@ impl PtyManager {
             let pid = h.child.process_id().unwrap_or(0);
             let _ = h.child.kill();
             let _ = h.child.wait();
+            self.output_backpressure.clear(pane_id);
             diag_log(&format!("pty-kill pid={pid} pane={pane_id}"));
         }
         Ok(())
+    }
+
+    pub fn ack_output(&self, pane_id: &str, bytes: usize) {
+        self.output_backpressure.ack(pane_id, bytes);
+    }
+}
+
+const MAX_PENDING_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
+
+impl OutputBackpressure {
+    fn new() -> Self {
+        Self {
+            pending_bytes: Mutex::new(HashMap::new()),
+            changed: Condvar::new(),
+        }
+    }
+
+    fn wait_for_capacity(&self, pane_id: &str) {
+        let mut pending = self.pending_bytes.lock();
+        while pending.get(pane_id).copied().unwrap_or(0) >= MAX_PENDING_OUTPUT_BYTES {
+            self.changed.wait(&mut pending);
+        }
+    }
+
+    fn add(&self, pane_id: &str, bytes: usize) {
+        let mut pending = self.pending_bytes.lock();
+        *pending.entry(pane_id.to_string()).or_insert(0) += bytes;
+    }
+
+    fn ack(&self, pane_id: &str, bytes: usize) {
+        let mut pending = self.pending_bytes.lock();
+        if let Some(value) = pending.get_mut(pane_id) {
+            *value = value.saturating_sub(bytes);
+            if *value == 0 {
+                pending.remove(pane_id);
+            }
+        }
+        self.changed.notify_all();
+    }
+
+    fn clear(&self, pane_id: &str) {
+        self.pending_bytes.lock().remove(pane_id);
+        self.changed.notify_all();
     }
 }
 
