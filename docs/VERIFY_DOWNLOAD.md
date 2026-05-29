@@ -1,0 +1,68 @@
+# Verify AndSpace Downloads
+
+Use this guide to verify AndSpace `v0.1.0-alpha.5` release artifacts before
+installing or sharing them.
+
+Checksums confirm that the file you downloaded matches the published release
+artifact. They do not replace Developer ID signing or Apple notarization. The
+current alpha is still unsigned and not notarized.
+
+## Release
+
+- GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+- Platform focus: macOS first, Apple Silicon focused.
+
+## Expected SHA-256 Checksums
+
+```text
+30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
+4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
+```
+
+## Verify The ZIP
+
+From the folder containing the downloaded ZIP:
+
+```bash
+shasum -a 256 AndSpace-v0.1.0-alpha.5-macos.zip
+```
+
+Expected output:
+
+```text
+30ee2906e5a5c9891e1a90133aeb6799e323fad5ab99d8104f7e1ac2737da333  AndSpace-v0.1.0-alpha.5-macos.zip
+```
+
+## Verify The DMG
+
+From the folder containing the downloaded DMG:
+
+```bash
+shasum -a 256 AndSpace_0.1.0-alpha.5_aarch64.dmg
+```
+
+Expected output:
+
+```text
+4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
+```
+
+## If The Checksum Does Not Match
+
+Do not run the app. Delete the file and download it again from the GitHub
+release page. If the mismatch repeats, report it on GitHub:
+https://github.com/SetFodi/Andspace/issues
+
+## Install Warning
+
+AndSpace `v0.1.0-alpha.5` is not signed with a Developer ID certificate and is
+not notarized yet. macOS may block first launch. This is expected for the
+current alpha.
+
+To open the app:
+
+1. Move `AndSpace.app` to Applications.
+2. Try to open it once.
+3. If macOS blocks it, open System Settings -> Privacy & Security and choose
+   Open Anyway for AndSpace.
+4. You can also right-click `AndSpace.app` in Finder and choose Open.

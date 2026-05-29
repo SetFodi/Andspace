@@ -13,6 +13,8 @@ Git inspection.
 - Current alpha: `v0.1.0-alpha.5`
 - Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
 - Demo: https://andspace.app/andspace.mp4
+- Privacy: https://andspace.app/privacy
+- Security: https://andspace.app/security
 
 ## What Is Included
 
@@ -76,6 +78,10 @@ SHA-256 checksums from the latest local packaging run:
 4eb5f491c771a235c03607efa8d62e7739e5133d5a4fbf6588fcb0ee945670e2  AndSpace_0.1.0-alpha.5_aarch64.dmg
 ```
 
+For verification steps and install-warning context, see
+[docs/VERIFY_DOWNLOAD.md](docs/VERIFY_DOWNLOAD.md). The GitHub release also
+includes the checksum file generated for the public artifacts.
+
 Local release packaging and checksum generation:
 
 ```bash
@@ -96,6 +102,15 @@ scripts/package-alpha.sh
   merge, or rebase UI
 - No embedded browser preview
 - No built-in editor
+
+## Privacy And Security
+
+- [Privacy notes](docs/PRIVACY.md): local app behavior, local AI CLI handoff,
+  workspace persistence, diagnostics, and website logs.
+- [Security notes](docs/SECURITY_NOTES.md): notarization status, Command Guard
+  limits, read-only Git behavior, and reporting guidance.
+- [Verify downloads](docs/VERIFY_DOWNLOAD.md): SHA-256 checksum commands for
+  the ZIP and DMG.
 
 ## Performance Note
 
@@ -156,6 +171,9 @@ src-tauri/target/release/bundle/dmg/
 - [release checklist](docs/V0_1_RELEASE_CHECKLIST.md)
 - [dogfood checklist](docs/DOGFOOD_CHECKLIST.md)
 - [macOS signing and notarization](docs/MACOS_SIGNING_NOTARIZATION.md)
+- [privacy notes](docs/PRIVACY.md)
+- [security notes](docs/SECURITY_NOTES.md)
+- [verify downloads](docs/VERIFY_DOWNLOAD.md)
 - [terminal comparison benchmark](docs/TERMINAL_COMPARISON_BENCHMARK.md)
 - [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)
