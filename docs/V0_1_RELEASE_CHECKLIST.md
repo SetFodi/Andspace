@@ -19,8 +19,8 @@ Files / Scripts / Servers / Git Changes.
 - [x] `scripts/test-workspace-persistence.mjs`
 - [x] `pnpm tauri build`
 
-If `pnpm tauri build` fails because of signing or notarization, record the
-exact error and do not work around it for alpha.
+If `pnpm tauri build` fails because of signing, notarization, or DMG packaging,
+record the exact error and do not work around it for alpha.
 
 ## Production App Sanity
 
@@ -96,7 +96,7 @@ must be checked manually in the launched production app:
 | Area | Status | Notes |
 | --- | --- | --- |
 | Automated checks | Passed | TypeScript, frontend build, Rust tests/check, Command Guard zsh verification, server parser tests, pane navigation tests |
-| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` |
+| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.2_aarch64.dmg` |
 | Bundle metadata | Passed | App name, bundle id, version, executable, and icon metadata verified |
 | Runtime diagnostics | Passed | PTY creation, WebGL renderer, shell autoload, and cwd OSC events verified |
 | Visual UI workflow | Partial pass | `Cmd+K`, `Cmd+B`, and `Cmd+E` verified visually; full dogfood and remaining shortcuts still need manual confirmation |
@@ -109,9 +109,9 @@ must be checked manually in the launched production app:
   supported.
 - AI handoff uses installed local CLIs only. No provider API integration,
   provider billing, API key management, or hosted chat UI.
-- The app bundle is built for local alpha use. Signing, notarization, and
-  auto-update are not implemented yet. Current bundle uses an ad-hoc local
-  signature with no Team ID.
+- The app bundle and DMG are built for local alpha use. Developer ID signing,
+  notarization, and auto-update are not implemented yet. Current release remains
+  unsigned/not-notarized until Apple credentials are configured.
 - Git Changes is read-only; diff preview is capped and there is no commit,
   push, pull, staging, reset, checkout, stash, merge, or rebase UI yet.
 - No embedded browser preview yet.
@@ -133,6 +133,16 @@ must be checked manually in the launched production app:
 - Automated build checks passed on May 29, 2026.
 - `pnpm tauri build` succeeded and produced:
   `src-tauri/target/release/bundle/macos/AndSpace.app`
+- DMG output was produced at:
+  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.2_aarch64.dmg`.
+- `scripts/package-alpha.sh` produced:
+  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.2-macos.zip`
+  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.2-checksums.txt`.
+- Latest local package checksums:
+  `950c7e65d0843d33e3857b598f55294fe191a7647aa65662061076a54ecc1a3c`
+  for the ZIP and
+  `19a7e88d66859719520c390993752a18545eb96f41558f0fa4557efdf85f620f`
+  for the DMG.
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
   `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.2`,
   `CFBundleVersion=0.1.0-alpha.2`,
@@ -143,7 +153,8 @@ must be checked manually in the launched production app:
 - Production icon appearance was confirmed from the user-provided screenshot.
 - Production app launched as process `andspace`.
 - Runtime diagnostics showed `app-start`, `pty-create`, `shell-autoload`,
-  `renderer=webgl`, and shell cwd OSC events.
+  `workspace-load`, `renderer=webgl`, `workspace-save`, and shell cwd OSC
+  events.
 - Production smoke checks confirmed `Cmd+K` opens the palette, `Cmd+B` opens
   and focuses the sidebar, and `Cmd+E` opens AI Handoff.
 - Idle process sampling with sidebar presumed closed: five 1-second samples
@@ -178,3 +189,4 @@ must be checked manually in the launched production app:
 - Terminal render repair for stale WebGL/font-cell measurement issues
 - Release notes and screenshot checklist for shareable alpha distribution
 - Public README and launch copy for v0.1.0-alpha.2
+- DMG packaging target, packaging script, and signing/notarization runbook

@@ -55,19 +55,29 @@ Planned screenshot set:
 
 ## Install The Alpha
 
-1. Download the macOS ZIP from the
+1. Download the macOS ZIP or DMG from the
    [v0.1.0-alpha.2 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.2).
-2. Unzip it.
-3. Move `AndSpace.app` to `/Applications` if desired.
+2. For a ZIP, unzip it. For a DMG, open it and drag `AndSpace.app` to
+   Applications.
+3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
 4. Launch AndSpace.
 
-This prerelease alpha is not notarized yet. macOS may block the first launch;
-use right-click -> Open from Finder, or allow the app in Privacy & Security.
+This prerelease alpha is not signed with a Developer ID and is not notarized
+yet. If macOS blocks the first launch, open System Settings -> Privacy &
+Security and choose "Open Anyway" for AndSpace. You can also right-click
+`AndSpace.app` in Finder and choose Open.
 
-SHA-256 for the release ZIP:
+SHA-256 checksums from the latest local packaging run:
 
 ```text
-e6d2c7fe0357e2e9e04fcf3ef9128dd6e8dd57b6bf0c43dac8e9cac4907d5526
+950c7e65d0843d33e3857b598f55294fe191a7647aa65662061076a54ecc1a3c  AndSpace-v0.1.0-alpha.2-macos.zip
+19a7e88d66859719520c390993752a18545eb96f41558f0fa4557efdf85f620f  AndSpace_0.1.0-alpha.2_aarch64.dmg
+```
+
+Local release packaging and checksum generation:
+
+```bash
+scripts/package-alpha.sh
 ```
 
 ## Alpha Limitations
@@ -127,6 +137,7 @@ The packaged macOS app is written to:
 
 ```text
 src-tauri/target/release/bundle/macos/AndSpace.app
+src-tauri/target/release/bundle/dmg/
 ```
 
 ## Documentation
@@ -134,6 +145,7 @@ src-tauri/target/release/bundle/macos/AndSpace.app
 - [v0.1 status](docs/V0_1.md)
 - [release checklist](docs/V0_1_RELEASE_CHECKLIST.md)
 - [dogfood checklist](docs/DOGFOOD_CHECKLIST.md)
+- [macOS signing and notarization](docs/MACOS_SIGNING_NOTARIZATION.md)
 - [workspace persistence](docs/WORKSPACE_PERSISTENCE.md)
 - [Command Guard](docs/COMMAND_GUARD.md)
 - [AI handoff](docs/AI_HANDOFF.md)
