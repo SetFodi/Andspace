@@ -1,6 +1,6 @@
 # v0.1-alpha Release Checklist
 
-Target tag: `v0.1.0-alpha.2`
+Target tag: `v0.1.0-alpha.3`
 
 This checklist is for the first usable v0.1-alpha build. It covers release
 readiness only: no write-capable Git client, settings UI, embedded browser
@@ -96,7 +96,7 @@ must be checked manually in the launched production app:
 | Area | Status | Notes |
 | --- | --- | --- |
 | Automated checks | Passed | TypeScript, frontend build, Rust tests/check, Command Guard zsh verification, server parser tests, pane navigation tests |
-| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.2_aarch64.dmg` |
+| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.3_aarch64.dmg` |
 | Bundle metadata | Passed | App name, bundle id, version, executable, and icon metadata verified |
 | Runtime diagnostics | Passed | PTY creation, WebGL renderer, shell autoload, and cwd OSC events verified |
 | Visual UI workflow | Partial pass | `Cmd+K`, `Cmd+B`, and `Cmd+E` verified visually; full dogfood and remaining shortcuts still need manual confirmation |
@@ -134,18 +134,18 @@ must be checked manually in the launched production app:
 - `pnpm tauri build` succeeded and produced:
   `src-tauri/target/release/bundle/macos/AndSpace.app`
 - DMG output was produced at:
-  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.2_aarch64.dmg`.
+  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.3_aarch64.dmg`.
 - `scripts/package-alpha.sh` produced:
-  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.2-macos.zip`
-  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.2-checksums.txt`.
+  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.3-macos.zip`
+  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.3-checksums.txt`.
 - Latest local package checksums:
-  `950c7e65d0843d33e3857b598f55294fe191a7647aa65662061076a54ecc1a3c`
+  `2b12be781dbc85dbc80527ffba2110d9f2c804588c782158acc95e631a896e3a`
   for the ZIP and
-  `19a7e88d66859719520c390993752a18545eb96f41558f0fa4557efdf85f620f`
+  `c95fa512a686b68961ad04594ad44bd8c7743f7117967cc60843c73a26c4d43d`
   for the DMG.
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
-  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.2`,
-  `CFBundleVersion=0.1.0-alpha.2`,
+  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.3`,
+  `CFBundleVersion=0.1.0-alpha.3`,
   `CFBundleIdentifier=com.andspace.desktop`, and
   `CFBundleIconFile=icon.icns`.
 - Packaged icon is a real macOS `.icns` file at
@@ -189,4 +189,10 @@ must be checked manually in the launched production app:
 - Terminal render repair for stale WebGL/font-cell measurement issues
 - Release notes and screenshot checklist for shareable alpha distribution
 - Public README and launch copy for v0.1.0-alpha.2
+
+### v0.1.0-alpha.3
+
+- Packaging/distribution update after alpha.2 publication
+- DMG packaging target added while keeping the ZIP workflow
+- Packaging script for checks, Tauri build, ZIP generation, and SHA256 output
 - DMG packaging target, packaging script, and signing/notarization runbook

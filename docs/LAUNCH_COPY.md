@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.2 Launch Copy
+# AndSpace v0.1.0-alpha.3 Launch Copy
 
 ## One-Line Description
 
@@ -17,21 +17,21 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.2` is the first shareable macOS alpha. It includes the
-terminal foundation, workspace restore, Command Guard, local AI CLI handoff,
-command palette, keyboard shortcuts overlay, project sidebar, file actions,
-passive localhost detection, read-only Git Changes, and read-only Git Diff
-Preview.
+AndSpace `v0.1.0-alpha.3` is a packaging update for the public macOS alpha. It
+adds a DMG artifact alongside the ZIP while keeping the same terminal
+foundation, workspace restore, Command Guard, local AI CLI handoff, command
+palette, project sidebar, passive localhost detection, read-only Git Changes,
+and read-only Git Diff Preview from alpha.2.
 
 This is a prerelease alpha: macOS-first, zsh-first, not notarized yet, and
 intentionally scoped. There is no embedded browser preview, no built-in editor,
 no settings UI, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.2
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.3
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.2 is live.
+AndSpace v0.1.0-alpha.3 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and

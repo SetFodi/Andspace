@@ -37,9 +37,8 @@ inspection.
 
 1. Download the macOS alpha artifact from the
    [GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.2).
-2. If you downloaded a ZIP, unzip it and move `AndSpace.app` to
-   `/Applications` if desired.
-3. If you downloaded a DMG, open it and drag `AndSpace.app` to Applications.
+2. Unzip it.
+3. Move `AndSpace.app` to `/Applications` if desired.
 4. Launch AndSpace.
 
 Because this alpha is not signed with a Developer ID and is not notarized yet,
@@ -53,14 +52,13 @@ and choose Open.
 | --- | --- |
 | App bundle | `src-tauri/target/release/bundle/macos/AndSpace.app` |
 | ZIP | `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.2-macos.zip` |
-| DMG | `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.2_aarch64.dmg` or similar |
+| DMG | Not generated for alpha.2 |
 | Updater artifact | Not generated |
 
 ## Checksums
 
 ```text
-950c7e65d0843d33e3857b598f55294fe191a7647aa65662061076a54ecc1a3c  src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.2-macos.zip
-19a7e88d66859719520c390993752a18545eb96f41558f0fa4557efdf85f620f  src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.2_aarch64.dmg
+e6d2c7fe0357e2e9e04fcf3ef9128dd6e8dd57b6bf0c43dac8e9cac4907d5526  src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.2-macos.zip
 ```
 
 ## Known Limitations

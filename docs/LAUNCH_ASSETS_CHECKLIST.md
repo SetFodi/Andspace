@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.2 Launch Assets Checklist
+# AndSpace v0.1.0-alpha.3 Launch Assets Checklist
 
 ## Screenshots
 
@@ -24,7 +24,7 @@ docs/screenshots/final/
 | --- | --- |
 | 30-45 second demo video | Needs recording |
 | Demo script | Ready: `docs/DEMO_VIDEO_SCRIPT.md` |
-| Final video filename | Suggested: `andspace-v0.1.0-alpha.2-demo.mp4` |
+| Final video filename | Suggested: `andspace-v0.1.0-alpha.3-demo.mp4` |
 
 ## README And Release
 
@@ -34,7 +34,7 @@ docs/screenshots/final/
 | README final screenshots inserted | Partial: hero, command palette, keyboard shortcuts |
 | GitHub release screenshots added | Optional after capture |
 | GitHub release demo video added | Optional after recording |
-| Release link verified | Ready: `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.2` |
+| Release link target | `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.3` |
 | Launch copy reviewed | Ready: `docs/LAUNCH_COPY.md` |
 
 ## Website Asset Notes
@@ -67,4 +67,4 @@ and cropped consistently.
 - Demo video does not imply unsupported features such as Git writes, embedded
   browser preview, built-in editing, settings, or provider API integration.
 - Release notes, README, website, and launch copy all point to
-  `v0.1.0-alpha.2`.
+  `v0.1.0-alpha.3`.

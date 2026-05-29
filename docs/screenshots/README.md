@@ -1,4 +1,4 @@
-# v0.1.0-alpha.2 Screenshot Capture Plan
+# v0.1.0-alpha.3 Screenshot Capture Plan
 
 Automatic screenshot capture is optional. If UI automation is blocked by macOS
 Accessibility, capture these manually from the packaged app.
