@@ -1,7 +1,7 @@
-# v0.1.0-alpha.3 Screenshot Capture Plan
+# v0.1.0-alpha.3 Screenshot Capture Status
 
-Automatic screenshot capture is optional. If UI automation is blocked by macOS
-Accessibility, capture these manually from the packaged app.
+Final screenshots were captured from the packaged macOS app. If any asset needs
+to be refreshed, use this plan and keep the same filenames.
 
 Use the built app:
 
@@ -62,14 +62,13 @@ macOS permissions are blocked, use the built-in screenshot UI:
 
 | File | Status |
 | --- | --- |
-| `01-hero-sidebar.png` | Seeded from website public asset |
-| `02-command-guard.png` | Needs capture |
-| `03-ai-handoff.png` | Needs capture |
-| `04-command-palette.png` | Seeded from website public asset |
-| `05-git-diff-preview.png` | Needs capture |
-| `06-servers.png` | Seeded from website public asset |
-| `07-keyboard-shortcuts.png` | Seeded from website public asset |
+| `01-hero-sidebar.png` | Captured from packaged app |
+| `02-command-guard.png` | Captured from packaged app |
+| `03-ai-handoff.png` | Captured from packaged app |
+| `04-command-palette.png` | Captured from packaged app |
+| `05-git-diff-preview.png` | Captured from packaged app |
+| `06-servers.png` | Captured from packaged app |
+| `07-keyboard-shortcuts.png` | Captured from packaged app |
 
-The seeded assets came from `/Users/lukafartenadze/Desktop/andspace-web/public`.
-They are good enough for README/release placeholders, but the three overlay
-states still need fresh capture from the packaged app.
+All captures use the production app UI, a temporary non-sensitive demo project,
+and a consistent wide desktop window.

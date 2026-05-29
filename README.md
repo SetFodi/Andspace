@@ -32,26 +32,22 @@ AI handoff is local CLI orchestration only.
 
 ## Screenshots
 
-Current public screenshots live in `docs/screenshots/final/`. The full capture
+Real product screenshots live in `docs/screenshots/final/`. The full capture
 checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md).
 
 ![AndSpace main window with sidebar](docs/screenshots/final/01-hero-sidebar.png)
 
+![Command Guard overlay](docs/screenshots/final/02-command-guard.png)
+
+![AI handoff overlay](docs/screenshots/final/03-ai-handoff.png)
+
 ![Command palette](docs/screenshots/final/04-command-palette.png)
 
+![Read-only Git Diff Preview](docs/screenshots/final/05-git-diff-preview.png)
+
+![Detected localhost server](docs/screenshots/final/06-servers.png)
+
 ![Keyboard shortcuts overlay](docs/screenshots/final/07-keyboard-shortcuts.png)
-
-Planned screenshot set:
-
-| Screenshot | State |
-| --- | --- |
-| `01-hero-sidebar.png` | Main window with sidebar and split panes |
-| `02-command-guard.png` | Command Guard overlay, needs capture |
-| `03-ai-handoff.png` | `Cmd+E` AI handoff overlay, needs capture |
-| `04-command-palette.png` | `Cmd+K` command palette |
-| `05-git-diff-preview.png` | Read-only Git Diff Preview, needs capture |
-| `06-servers.png` | Servers section with detected localhost |
-| `07-keyboard-shortcuts.png` | Keyboard shortcuts overlay |
 
 ## Install The Alpha
 
