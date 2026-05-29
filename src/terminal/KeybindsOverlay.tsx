@@ -50,6 +50,7 @@ const GROUPS: Group[] = [
     binds: [
       { keys: ["Esc"], label: "Close modal / return to terminal" },
       { keys: ["⌘", "/"], label: "Show this cheatsheet" },
+      { keys: ["⌘", ","], label: "Open preferences" },
     ],
   },
 ];

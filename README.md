@@ -135,6 +135,7 @@ terminals like Ghostty.
 | `Cmd+B` | Toggle sidebar |
 | `Cmd+0` | Focus sidebar |
 | `Cmd+K` | Command palette |
+| `Cmd+,` | Preferences |
 | `Cmd+E` | AI handoff |
 | `Cmd+/` | Keyboard shortcuts |
 | `Cmd+Shift+I` | Create `ANDSPACE.md` |

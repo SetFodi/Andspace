@@ -147,6 +147,7 @@ interface ToastState {
 }
 
 type NativeShortcut = "split-right" | "split-down";
+type NativeMenuAction = NativeShortcut | "preferences.open";
 
 export default function App() {
   const tabs = useStore((s) => s.tabs);
@@ -1000,6 +1001,9 @@ export default function App() {
         e.preventDefault();
         setPaletteOpen(true);
         void reportCommandPaletteOpen();
+      } else if (k === "," && !e.shiftKey) {
+        e.preventDefault();
+        setPreferencesOpen(true);
       } else if (k === "/" || k === "?") {
         e.preventDefault();
         setKeybindsOpen(true);
@@ -1041,8 +1045,12 @@ export default function App() {
     let disposed = false;
     let unlisten: (() => void) | null = null;
 
-    listen<NativeShortcut>("native-shortcut", (event) => {
+    listen<NativeMenuAction>("native-shortcut", (event) => {
       if (pendingGuardConfirmation || anyOverlayOpen) return;
+      if (event.payload === "preferences.open") {
+        setPreferencesOpen(true);
+        return;
+      }
       if (event.payload !== "split-right" && event.payload !== "split-down") {
         return;
       }

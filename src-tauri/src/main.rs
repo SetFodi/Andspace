@@ -14,9 +14,10 @@ mod workspace;
 
 use commands::*;
 use pty::PtyManager;
-use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::menu::{Menu, MenuItem, MenuItemKind, Submenu};
 use tauri::Emitter;
 
+const MENU_OPEN_PREFERENCES: &str = "app.preferences";
 const MENU_SPLIT_RIGHT: &str = "pane.split_right";
 const MENU_SPLIT_DOWN: &str = "pane.split_down";
 
@@ -25,6 +26,17 @@ fn main() {
     tauri::Builder::default()
         .menu(|app| {
             let menu = Menu::default(app)?;
+            let preferences = MenuItem::with_id(
+                app,
+                MENU_OPEN_PREFERENCES,
+                "Preferences...",
+                true,
+                Some("Cmd+,"),
+            )?;
+            let menu_items = menu.items()?;
+            if let Some(MenuItemKind::Submenu(app_menu)) = menu_items.first() {
+                app_menu.insert(&preferences, 1)?;
+            }
             let split_right =
                 MenuItem::with_id(app, MENU_SPLIT_RIGHT, "Split Right", true, Some("Cmd+O"))?;
             let split_down =
@@ -34,7 +46,10 @@ fn main() {
             Ok(menu)
         })
         .on_menu_event(|app, event| {
-            if event.id() == MENU_SPLIT_RIGHT {
+            if event.id() == MENU_OPEN_PREFERENCES {
+                pty::diag_log("native-shortcut action=preferences-open");
+                let _ = app.emit("native-shortcut", "preferences.open");
+            } else if event.id() == MENU_SPLIT_RIGHT {
                 pty::diag_log("native-shortcut action=split-right");
                 let _ = app.emit("native-shortcut", "split-right");
             } else if event.id() == MENU_SPLIT_DOWN {

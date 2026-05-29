@@ -52,6 +52,7 @@ function isAppShortcut(e: KeyboardEvent): boolean {
     (k.toLowerCase() === "b" && !e.shiftKey) ||
     (k.toLowerCase() === "k" && !e.shiftKey) ||
     (k.toLowerCase() === "e" && !e.shiftKey) ||
+    (k === "," && !e.shiftKey) ||
     (e.shiftKey && k.toLowerCase() === "i") ||
     (k === "0" && !e.shiftKey) ||
     (k === "[" && !e.shiftKey) ||

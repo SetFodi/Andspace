@@ -61,8 +61,9 @@ The onboarding copy is intentionally local-first:
 - Workspace restore stores layout and cwd, not terminal output or prompts.
 
 After the user chooses **Start using AndSpace**, `onboardingCompleted` is set to
-`true` and the first-run modal does not appear again. `Cmd+K -> Open
-Preferences` opens the same lightweight surface later.
+`true` and the first-run modal does not appear again. The native macOS
+**AndSpace -> Preferences...** menu item, `Cmd+,`, and `Cmd+K -> Open
+Preferences` all open the same lightweight surface later.
 
 ## Applied Preferences
 
