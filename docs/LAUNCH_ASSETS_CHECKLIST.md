@@ -22,9 +22,9 @@ docs/screenshots/final/
 
 | Asset | Status |
 | --- | --- |
-| 30-45 second demo video | Needs recording |
+| 30-45 second demo video | Complete: `https://andspace.app/andspace.mp4` |
 | Demo script | Ready: `docs/DEMO_VIDEO_SCRIPT.md` |
-| Final video filename | Suggested: `andspace-v0.1.0-alpha.5-demo.mp4` |
+| Final video filename | Published as website asset: `andspace.mp4` |
 
 ## README And Release
 
@@ -32,8 +32,9 @@ docs/screenshots/final/
 | --- | --- |
 | README screenshot placeholders | Replaced with real screenshots |
 | README final screenshots inserted | Complete: all seven launch screenshots |
+| README demo link inserted | Complete: `https://andspace.app/andspace.mp4` |
 | GitHub release screenshots added | Optional after capture |
-| GitHub release demo video added | Optional after recording |
+| GitHub release demo video added | Optional; release notes link to website video |
 | Release link target | `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5` |
 | Launch copy reviewed | Ready: `docs/LAUNCH_COPY.md` |
 
@@ -56,7 +57,7 @@ Current website image paths and screenshot replacement status:
 | `app/layout.tsx` | `/app-hero.png` social preview | Replaced with `01-hero-sidebar.png` |
 
 The website layout was left unchanged. The hero/social preview, command palette,
-and keyboard shortcut visuals were swapped to real product screenshots.
+keyboard shortcut visuals, and demo video section now use real product assets.
 
 ## Final Review
 

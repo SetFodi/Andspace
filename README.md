@@ -12,6 +12,7 @@ Git inspection.
 - Website: https://andspace.app
 - Current alpha: `v0.1.0-alpha.5`
 - Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+- Demo: https://andspace.app/andspace.mp4
 
 ## What Is Included
 
@@ -29,6 +30,11 @@ Git inspection.
 
 AndSpace does not call provider APIs, manage API keys, or create API billing.
 AI handoff is local CLI orchestration only.
+
+## Watch Demo
+
+Watch the short alpha demo:
+[andspace.app/andspace.mp4](https://andspace.app/andspace.mp4)
 
 ## Screenshots
 

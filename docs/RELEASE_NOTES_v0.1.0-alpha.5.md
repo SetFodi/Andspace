@@ -6,6 +6,7 @@ bundle from Finder, Dock, Spotlight, or the website download.
 
 - Website: https://andspace.app
 - GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.5
+- Demo video: https://andspace.app/andspace.mp4
 
 ## What Changed Since alpha.4
 
