@@ -125,6 +125,7 @@ pub fn detect_ai_cli_tools() -> Vec<AiCliTool> {
 pub fn prepare_ai_cli_handoff(
     target: AiCliTarget,
     prompt: &str,
+    cwd: &str,
 ) -> Result<PreparedAiHandoff, String> {
     if prompt.trim().is_empty() {
         return Err("prompt is empty".to_string());
@@ -135,10 +136,24 @@ pub fn prepare_ai_cli_handoff(
 
     let command = command_for_target(target);
     let quoted_path = shell_quote(&path.display().to_string());
+    let quoted_cwd = shell_quote(&resolve_handoff_cwd(cwd));
+    let shell_command = match target {
+        // Claude Code accepts stdin while keeping the TUI usable. Keep the
+        // prompt body out of argv and only change cwd inside the subshell.
+        AiCliTarget::Claude | AiCliTarget::Cursor => {
+            format!("(cd {quoted_cwd} && {command} < {quoted_path}); rm -f {quoted_path}")
+        }
+        // Codex interactive mode requires stdin to be the terminal. Pass the
+        // initial prompt as an argv value expanded from the temp file.
+        AiCliTarget::Codex => {
+            format!("(cd {quoted_cwd} && {command} \"$(cat {quoted_path})\"); rm -f {quoted_path}")
+        }
+    };
+
     Ok(PreparedAiHandoff {
         target,
         prompt_path: path.display().to_string(),
-        shell_command: format!("{command} < {quoted_path}; rm -f {quoted_path}"),
+        shell_command,
     })
 }
 
@@ -297,6 +312,14 @@ fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
+fn resolve_handoff_cwd(cwd: &str) -> String {
+    let trimmed = cwd.trim();
+    if !trimmed.is_empty() && Path::new(trimmed).is_dir() {
+        return trimmed.to_string();
+    }
+    std::env::var("HOME").unwrap_or_else(|_| "/".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,15 +430,51 @@ mod tests {
     #[test]
     fn prepares_prompt_file_without_putting_prompt_in_shell_command() {
         let prompt = "secret prompt body";
-        let prepared = prepare_ai_cli_handoff(AiCliTarget::Claude, prompt).unwrap();
+        let cwd = unique_temp_dir("handoff-cwd");
+        std::fs::create_dir_all(&cwd).unwrap();
+        let prepared =
+            prepare_ai_cli_handoff(AiCliTarget::Claude, prompt, cwd.to_str().unwrap()).unwrap();
 
         assert_eq!(
             std::fs::read_to_string(&prepared.prompt_path).unwrap(),
             prompt
         );
-        assert!(prepared.shell_command.contains("claude < "));
+        assert!(prepared.shell_command.contains("cd "));
+        assert!(prepared.shell_command.contains(" && claude < "));
         assert!(prepared.shell_command.contains("rm -f"));
         assert!(!prepared.shell_command.contains(prompt));
+
+        std::fs::remove_file(prepared.prompt_path).unwrap();
+        std::fs::remove_dir_all(cwd).unwrap();
+    }
+
+    #[test]
+    fn prepares_codex_handoff_without_redirecting_stdin() {
+        let prompt = "look at this project";
+        let cwd = unique_temp_dir("codex-cwd");
+        std::fs::create_dir_all(&cwd).unwrap();
+        let prepared =
+            prepare_ai_cli_handoff(AiCliTarget::Codex, prompt, cwd.to_str().unwrap()).unwrap();
+
+        assert!(prepared.shell_command.contains("cd "));
+        assert!(prepared.shell_command.contains(" && codex \"$(cat "));
+        assert!(!prepared.shell_command.contains("codex < "));
+        assert!(prepared.shell_command.contains("rm -f"));
+        assert!(!prepared.shell_command.contains(prompt));
+
+        std::fs::remove_file(prepared.prompt_path).unwrap();
+        std::fs::remove_dir_all(cwd).unwrap();
+    }
+
+    #[test]
+    fn handoff_cwd_falls_back_to_home_when_missing() {
+        let prepared =
+            prepare_ai_cli_handoff(AiCliTarget::Claude, "prompt", "/definitely/not/here").unwrap();
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+
+        assert!(prepared
+            .shell_command
+            .contains(&format!("cd {}", shell_quote(&home))));
 
         std::fs::remove_file(prepared.prompt_path).unwrap();
     }

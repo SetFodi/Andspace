@@ -346,7 +346,12 @@ export default function App() {
         target,
       });
       try {
-        const prepared = await prepareAiCliHandoff(target, prompt.prompt);
+        const handoffCwd = record?.cwd || activePaneCwd || "~";
+        const prepared = await prepareAiCliHandoff(
+          target,
+          prompt.prompt,
+          handoffCwd
+        );
         const paneId = await splitActive("row");
         if (!paneId) throw new Error("could not create handoff pane");
         await writeToPane(paneId, `${prepared.shellCommand}\n`);
@@ -374,7 +379,7 @@ export default function App() {
         });
       }
     },
-    [activePaneId, showToast, splitActive, writeToPane]
+    [activePaneCwd, activePaneId, showToast, splitActive, writeToPane]
   );
 
   const initRulesForActivePane = useCallback(async () => {

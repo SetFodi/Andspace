@@ -106,11 +106,13 @@ export function detectAiCliTools(): Promise<AiCliTool[]> {
 
 export function prepareAiCliHandoff(
   target: AiCliTarget,
-  prompt: string
+  prompt: string,
+  cwd: string
 ): Promise<PreparedAiHandoff> {
   return invoke<PreparedAiHandoff>("prepare_ai_cli_handoff", {
     target,
     prompt,
+    cwd,
   });
 }
 

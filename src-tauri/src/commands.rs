@@ -74,8 +74,9 @@ pub fn detect_ai_cli_tools() -> Result<Vec<crate::ai_handoff::AiCliTool>, String
 pub fn prepare_ai_cli_handoff(
     target: crate::ai_handoff::AiCliTarget,
     prompt: String,
+    cwd: String,
 ) -> Result<crate::ai_handoff::PreparedAiHandoff, String> {
-    crate::ai_handoff::prepare_ai_cli_handoff(target, &prompt)
+    crate::ai_handoff::prepare_ai_cli_handoff(target, &prompt, &cwd)
 }
 
 #[tauri::command]
