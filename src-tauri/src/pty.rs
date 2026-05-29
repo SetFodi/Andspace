@@ -76,7 +76,8 @@ impl PtyManager {
             .map_err(|e| format!("openpty failed: {e}"))?;
 
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-        let mut cmd = CommandBuilder::new(&shell);
+        let mut cmd = CommandBuilder::new_default_prog();
+        cmd.env("SHELL", &shell);
         let (initial_cwd, restore_result) = resolve_initial_cwd(cwd.as_deref());
         cmd.cwd(&initial_cwd);
         cmd.env("TERM", "xterm-256color");
