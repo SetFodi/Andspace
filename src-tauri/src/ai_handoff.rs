@@ -298,12 +298,12 @@ fn handoff_prompt_path(target: AiCliTarget) -> PathBuf {
         AiCliTarget::Codex => "codex",
         AiCliTarget::Cursor => "cursor",
     };
-    let millis = std::time::SystemTime::now()
+    let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
+        .map(|duration| duration.as_nanos())
         .unwrap_or(0);
     std::env::temp_dir().join(format!(
-        "andspace-handoff-{target}-{}-{millis}.md",
+        "andspace-handoff-{target}-{}-{nanos}.md",
         std::process::id()
     ))
 }

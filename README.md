@@ -10,8 +10,8 @@ context, command safety, local AI CLI handoff, server discovery, and read-only
 Git inspection.
 
 - Website: https://andspace.app
-- Current alpha: `v0.1.0-alpha.3`
-- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.3
+- Current alpha: `v0.1.0-alpha.4`
+- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.4
 
 ## What Is Included
 
@@ -52,7 +52,7 @@ checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md)
 ## Install The Alpha
 
 1. Download the macOS ZIP or DMG from the
-   [v0.1.0-alpha.3 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.3).
+   [v0.1.0-alpha.4 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.4).
 2. For a ZIP, unzip it. For a DMG, open it and drag `AndSpace.app` to
    Applications.
 3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
@@ -66,8 +66,8 @@ Security and choose "Open Anyway" for AndSpace. You can also right-click
 SHA-256 checksums from the latest local packaging run:
 
 ```text
-2b12be781dbc85dbc80527ffba2110d9f2c804588c782158acc95e631a896e3a  AndSpace-v0.1.0-alpha.3-macos.zip
-c95fa512a686b68961ad04594ad44bd8c7743f7117967cc60843c73a26c4d43d  AndSpace_0.1.0-alpha.3_aarch64.dmg
+f0c60daec32bcd68f20f26e85a3a97d248fb69e88e3cd33c06ca3ee715244779  AndSpace-v0.1.0-alpha.4-macos.zip
+c9dacea732c7a0fd0fb99419ea75d4cc9f36e45d40ed78785c9649f560e43777  AndSpace_0.1.0-alpha.4_aarch64.dmg
 ```
 
 Local release packaging and checksum generation:

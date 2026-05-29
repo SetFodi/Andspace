@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.3 Launch Copy
+# AndSpace v0.1.0-alpha.4 Launch Copy
 
 ## One-Line Description
 
@@ -17,25 +17,29 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.3` is a packaging update for the public macOS alpha. It
-adds a DMG artifact alongside the ZIP while keeping the same terminal
-foundation, workspace restore, Command Guard, local AI CLI handoff, command
-palette, project sidebar, passive localhost detection, read-only Git Changes,
-and read-only Git Diff Preview from alpha.2.
+AndSpace `v0.1.0-alpha.4` is a hotfix release for the public macOS alpha. It
+fixes local AI CLI handoff cwd behavior, keeps Codex interactive stdin attached
+to the terminal, and improves zsh startup reliability while preserving the same
+terminal foundation, workspace restore, Command Guard, command palette, project
+sidebar, passive localhost detection, read-only Git Changes, and read-only Git
+Diff Preview from alpha.3.
 
 This is a prerelease alpha: macOS-first, zsh-first, not notarized yet, and
 intentionally scoped. There is no embedded browser preview, no built-in editor,
 no settings UI, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.3
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.4
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.3 is live.
+AndSpace v0.1.0-alpha.4 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and
 read-only Git Changes + Diff Preview.
+
+Hotfix: cleaner zsh startup plus Claude/Codex handoff launches from the right
+project cwd.
 
 No provider API billing. No Git write actions.
 

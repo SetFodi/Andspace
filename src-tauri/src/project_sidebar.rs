@@ -103,7 +103,12 @@ pub fn expand_project_directory(path: &str) -> Result<Vec<ProjectTreeNode>, Stri
     let mut children = Vec::with_capacity(entries.len().min(HARD_CAP));
     for entry in entries.into_iter().take(HARD_CAP) {
         if entry.is_dir() {
-            children.push(node(&entry, ProjectTreeNodeKind::Directory, Vec::new(), true));
+            children.push(node(
+                &entry,
+                ProjectTreeNodeKind::Directory,
+                Vec::new(),
+                true,
+            ));
         } else {
             children.push(node(&entry, ProjectTreeNodeKind::File, Vec::new(), false));
         }
