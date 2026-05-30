@@ -1,7 +1,7 @@
 # Security Policy
 
 AndSpace is currently an early macOS alpha. The current public release is
-`v0.1.0-alpha.6`.
+`v0.1.0-alpha.7`.
 
 ## Supported Versions
 
@@ -9,7 +9,7 @@ Only the latest public alpha is expected to receive fixes.
 
 | Version | Supported |
 | --- | --- |
-| `v0.1.0-alpha.6` | Yes |
+| `v0.1.0-alpha.7` | Yes |
 | Older alpha builds | No |
 
 ## Reporting A Vulnerability

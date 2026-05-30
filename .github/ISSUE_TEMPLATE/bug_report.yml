@@ -11,8 +11,8 @@ body:
     id: version
     attributes:
       label: AndSpace version
-      description: Example: v0.1.0-alpha.6
-      placeholder: v0.1.0-alpha.6
+      description: Example: v0.1.0-alpha.7
+      placeholder: v0.1.0-alpha.7
     validations:
       required: true
   - type: input

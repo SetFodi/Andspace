@@ -1,4 +1,4 @@
-# v0.1.0-alpha.6 Screenshot Capture Status
+# v0.1.0-alpha.7 Screenshot Capture Status
 
 Final screenshots were captured from the packaged macOS app. If any asset needs
 to be refreshed, use this plan and keep the same filenames.

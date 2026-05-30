@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.6 Launch Copy
+# AndSpace v0.1.0-alpha.7 Launch Copy
 
 ## One-Line Description
 
@@ -17,7 +17,7 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.6` is a public alpha polish release. It adds first-run
+AndSpace `v0.1.0-alpha.7` is a public alpha polish release. It adds first-run
 onboarding, lightweight local Preferences, ten color schemes, a `Cmd+P` color
 scheme picker, and a right-side Local Preview panel for detected
 localhost/private-LAN dev servers.
@@ -27,11 +27,11 @@ distribution, and intentionally scoped. Local Preview is limited to detected
 localhost/private-LAN dev servers. There is no built-in editor, no provider API
 integration, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.7
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.6 is live.
+AndSpace v0.1.0-alpha.7 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and

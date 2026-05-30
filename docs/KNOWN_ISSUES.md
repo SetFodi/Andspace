@@ -1,6 +1,6 @@
 # Known Issues
 
-AndSpace `v0.1.0-alpha.6` is a public prerelease alpha. This document keeps
+AndSpace `v0.1.0-alpha.7` is a public prerelease alpha. This document keeps
 current limits visible so testers know what is expected behavior and what is
 worth reporting.
 
