@@ -22,10 +22,10 @@ onboarding, lightweight local Preferences, ten color schemes, a `Cmd+P` color
 scheme picker, and a right-side Local Preview panel for detected
 localhost/private-LAN dev servers.
 
-This is a prerelease alpha: macOS-first, zsh-first, not notarized yet, and
-intentionally scoped. Local Preview is limited to detected localhost/private-LAN
-dev servers. There is no built-in editor, no provider API integration, and no
-Git write actions.
+This is a prerelease alpha: macOS-first, zsh-first, unsigned alpha
+distribution, and intentionally scoped. Local Preview is limited to detected
+localhost/private-LAN dev servers. There is no built-in editor, no provider API
+integration, and no Git write actions.
 
 Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
 

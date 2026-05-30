@@ -17,6 +17,7 @@ This document is practical public-facing privacy information for the AndSpace
 - Lightweight workspace restore data is stored locally.
 - Lightweight preferences are stored locally.
 - Diagnostics are local.
+- No app telemetry or analytics are added in this alpha.
 
 ## Local App Behavior
 
@@ -104,6 +105,12 @@ AndSpace may write local diagnostics to help debug launch, shell integration,
 renderer, and packaging behavior during alpha testing. These diagnostics are
 local files on the user's machine and are not uploaded automatically by
 AndSpace.
+
+The command palette action `Copy Diagnostics` copies a sanitized support block
+with app version, macOS version, architecture, renderer, shell integration
+status, active cwd, and local support paths. It does not include terminal
+output, command history, AI prompts, secrets, Git diffs, shell history, or
+environment variable values.
 
 If you share diagnostics in a bug report, review them first and remove any
 private paths, usernames, tokens, or project details you do not want to share.

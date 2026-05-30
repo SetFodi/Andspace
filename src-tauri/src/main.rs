@@ -74,6 +74,7 @@ fn main() {
             kill_pty,
             ack_pty_output,
             report_renderer,
+            get_public_diagnostics,
             report_shell_event,
             load_rules_for_cwd,
             init_andspace_rules,

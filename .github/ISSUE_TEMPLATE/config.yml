@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: AndSpace website
+    url: https://andspace.app
+    about: Product overview, download, privacy, and security notes.
+  - name: Latest alpha release
+    url: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6
+    about: Download the current public alpha.

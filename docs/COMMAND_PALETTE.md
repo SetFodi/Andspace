@@ -33,6 +33,7 @@ explorer, or full settings app.
 | Preferences  | Open Preferences      | Open lightweight local preferences          |
 | Preferences  | Color Scheme          | Open the quick color scheme picker          |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
+| Help         | Copy Diagnostics     | Copy a sanitized support block for bug reports |
 
 Filtering is simple substring matching over command title, section, id, and
 keywords. Arrow keys move selection, Enter runs the selected action, and
@@ -65,7 +66,14 @@ command-palette-open
 command-palette-run action=terminal.splitRight
 command-palette-run action=workspace.restore
 command-palette-run action=git.refresh
+command-palette-run action=help.copyDiagnostics
 ```
+
+`Copy Diagnostics` copies app version, macOS version, architecture, renderer,
+shell integration status, active cwd, preferences path, workspace path,
+diagnostics log path, and install method when known. It does not copy terminal
+output, command history, AI prompts, secrets, Git diffs, shell history, or
+environment variable values.
 
 ## Limits
 

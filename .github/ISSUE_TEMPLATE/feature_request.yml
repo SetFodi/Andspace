@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest a workflow improvement for AndSpace.
+title: "[Feature]: "
+labels: ["enhancement", "alpha-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AndSpace is intentionally terminal-first. Please describe the workflow problem before the solution.
+  - type: textarea
+    id: workflow_problem
+    attributes:
+      label: Workflow problem
+      description: What are you trying to do, and where does AndSpace get in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_behavior
+    attributes:
+      label: Proposed behavior
+      description: What should AndSpace do?
+    validations:
+      required: true
+  - type: textarea
+    id: why_andspace
+    attributes:
+      label: Why this belongs in AndSpace
+      description: Why should this live in a terminal-first workspace instead of another tool?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      multiple: true
+      options:
+        - Terminal
+        - Sidebar
+        - Browser Preview
+        - AI Handoff
+        - Git
+        - Preferences
+        - Packaging / install
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. What do you use today?

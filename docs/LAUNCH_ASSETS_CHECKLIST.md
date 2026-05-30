@@ -38,6 +38,17 @@ docs/screenshots/final/
 | Release link target | `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.6` |
 | Launch copy reviewed | Ready: `docs/LAUNCH_COPY.md` |
 
+## Public Feedback Readiness
+
+| Item | Status |
+| --- | --- |
+| GitHub bug report template | Complete: `.github/ISSUE_TEMPLATE/bug_report.yml` |
+| GitHub feature request template | Complete: `.github/ISSUE_TEMPLATE/feature_request.yml` |
+| Known issues doc | Complete: `docs/KNOWN_ISSUES.md` |
+| Download verification doc | Complete: `docs/VERIFY_DOWNLOAD.md` |
+| Copy Diagnostics command | Complete: `Cmd+K` -> `Copy Diagnostics` |
+| Homebrew cask draft | Prepared: `docs/HOMEBREW_CASK.md` |
+
 ## Website Asset Notes
 
 The website is in:

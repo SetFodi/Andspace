@@ -9,6 +9,7 @@ video references, and public release materials.
 - Demo video: https://andspace.app/andspace.mp4
 - Privacy: https://andspace.app/privacy
 - Security: https://andspace.app/security
+- Feedback: https://github.com/SetFodi/Andspace/issues
 
 ## What Changed Since alpha.5
 
@@ -27,6 +28,8 @@ video references, and public release materials.
   modifiers.
 - Updated public README, release docs, launch assets checklist, verification
   guide, website copy, and the demo video link for the current alpha.
+- Added public issue templates, a known issues guide, a Homebrew cask draft,
+  and a sanitized `Copy Diagnostics` command for alpha bug reports.
 
 ## Included App Features
 
@@ -53,10 +56,9 @@ video references, and public release materials.
    `/Applications` if desired.
 4. Launch AndSpace.
 
-This prerelease alpha is not signed with a Developer ID and is not notarized
-yet. If macOS blocks first launch, open System Settings -> Privacy & Security
-and choose "Open Anyway" for AndSpace, or right-click `AndSpace.app` in Finder
-and choose Open.
+AndSpace is currently an unsigned prerelease alpha. macOS may require
+right-click -> Open, or approval from System Settings -> Privacy & Security
+after the first blocked launch attempt.
 
 ## Artifacts
 
@@ -84,11 +86,12 @@ Verification guide: [docs/VERIFY_DOWNLOAD.md](VERIFY_DOWNLOAD.md)
 - Privacy notes: [docs/PRIVACY.md](PRIVACY.md)
 - Security notes: [docs/SECURITY_NOTES.md](SECURITY_NOTES.md)
 - Download verification: [docs/VERIFY_DOWNLOAD.md](VERIFY_DOWNLOAD.md)
+- Known issues: [docs/KNOWN_ISSUES.md](KNOWN_ISSUES.md)
+- Homebrew cask draft: [docs/HOMEBREW_CASK.md](HOMEBREW_CASK.md)
 
 ## Known Limitations
 
-- Not signed with a Developer ID.
-- Not notarized.
+- Unsigned prerelease alpha; macOS may show a first-launch warning.
 - No auto-update.
 - macOS-first and zsh-first.
 - Local AI CLI handoff only; no provider API integration or API billing.
@@ -104,5 +107,5 @@ Verification guide: [docs/VERIFY_DOWNLOAD.md](VERIFY_DOWNLOAD.md)
   development and workflow ergonomics, not for matching a native Metal
   terminal's worst-case raw flood throughput.
 
-Signing and notarization readiness is tracked in
-`docs/MACOS_SIGNING_NOTARIZATION.md`.
+Future macOS signing notes are tracked in `docs/MACOS_SIGNING_NOTARIZATION.md`;
+this alpha continues to use unsigned prerelease distribution.

@@ -1,7 +1,22 @@
 use crate::pty::PtyManager;
+use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use tauri::{AppHandle, State};
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicDiagnostics {
+    pub andspace_version: String,
+    pub os_name: String,
+    pub os_version: String,
+    pub architecture: String,
+    pub preferences_path: String,
+    pub workspace_path: String,
+    pub diagnostics_log_path: String,
+    pub install_method: String,
+}
 
 #[tauri::command]
 pub fn create_pty(
@@ -47,6 +62,41 @@ pub fn ack_pty_output(state: State<'_, PtyManager>, pane_id: String, bytes: usiz
 #[tauri::command]
 pub fn report_renderer(kind: String) {
     crate::pty::diag_log(&format!("renderer={kind}"));
+}
+
+#[tauri::command]
+pub fn get_public_diagnostics() -> PublicDiagnostics {
+    crate::pty::diag_log("diagnostics-copy");
+    PublicDiagnostics {
+        andspace_version: env!("CARGO_PKG_VERSION").to_string(),
+        os_name: "macOS".to_string(),
+        os_version: macos_version().unwrap_or_else(|| "unknown".to_string()),
+        architecture: std::env::consts::ARCH.to_string(),
+        preferences_path: crate::preferences::preferences_path()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|_| "unknown".to_string()),
+        workspace_path: crate::workspace::workspace_path()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|_| "unknown".to_string()),
+        diagnostics_log_path: "/tmp/andspace-diag.log".to_string(),
+        install_method: "unknown".to_string(),
+    }
+}
+
+fn macos_version() -> Option<String> {
+    let output = Command::new("sw_vers")
+        .arg("-productVersion")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if version.is_empty() {
+        None
+    } else {
+        Some(version)
+    }
 }
 
 #[tauri::command]

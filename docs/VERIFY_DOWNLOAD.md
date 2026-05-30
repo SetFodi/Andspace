@@ -4,8 +4,8 @@ Use this guide to verify AndSpace `v0.1.0-alpha.6` release artifacts before
 installing or sharing them.
 
 Checksums confirm that the file you downloaded matches the published release
-artifact. They do not replace Developer ID signing or Apple notarization. The
-current alpha is still unsigned and not notarized.
+artifact. AndSpace is currently an unsigned prerelease alpha, so macOS may
+show a first-launch warning even when the checksum is correct.
 
 ## Release
 
@@ -55,9 +55,8 @@ https://github.com/SetFodi/Andspace/issues
 
 ## Install Warning
 
-AndSpace `v0.1.0-alpha.6` is not signed with a Developer ID certificate and is
-not notarized yet. macOS may block first launch. This is expected for the
-current alpha.
+AndSpace `v0.1.0-alpha.6` is currently an unsigned prerelease alpha. macOS may
+block first launch. This is expected for the current alpha distribution.
 
 To open the app:
 

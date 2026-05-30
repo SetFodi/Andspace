@@ -15,6 +15,7 @@ Git inspection.
 - Demo: https://andspace.app/andspace.mp4
 - Privacy: https://andspace.app/privacy
 - Security: https://andspace.app/security
+- Feedback: https://github.com/SetFodi/Andspace/issues
 
 ## What Is Included
 
@@ -68,10 +69,9 @@ checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md)
 3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
 4. Launch AndSpace.
 
-This prerelease alpha is not signed with a Developer ID and is not notarized
-yet. If macOS blocks the first launch, open System Settings -> Privacy &
-Security and choose "Open Anyway" for AndSpace. You can also right-click
-`AndSpace.app` in Finder and choose Open.
+AndSpace is currently an unsigned prerelease alpha. macOS may require
+right-click -> Open, or approval from System Settings -> Privacy & Security
+after the first blocked launch attempt.
 
 SHA-256 checksums from the latest local packaging run:
 
@@ -95,8 +95,7 @@ scripts/package-alpha.sh
 - macOS-first, currently packaged for Apple Silicon
 - zsh-first shell integration
 - Prerelease alpha; expect rough edges
-- Not signed with a Developer ID
-- Not notarized
+- Unsigned prerelease alpha; macOS may show a first-launch warning
 - No auto-update
 - Local AI CLI handoff only
 - No provider API billing or hosted AI backend
@@ -109,10 +108,19 @@ scripts/package-alpha.sh
 
 - [Privacy notes](docs/PRIVACY.md): local app behavior, local AI CLI handoff,
   workspace persistence, diagnostics, and website logs.
-- [Security notes](docs/SECURITY_NOTES.md): notarization status, Command Guard
-  limits, read-only Git behavior, and reporting guidance.
+- [Security notes](docs/SECURITY_NOTES.md): unsigned alpha install context,
+  Command Guard limits, read-only Git behavior, and reporting guidance.
 - [Verify downloads](docs/VERIFY_DOWNLOAD.md): SHA-256 checksum commands for
   the ZIP and DMG.
+- [Known issues](docs/KNOWN_ISSUES.md): current alpha limits and what is worth
+  reporting.
+- [Homebrew cask draft](docs/HOMEBREW_CASK.md): planned install path after
+  alpha artifacts stabilize.
+
+Use `Cmd+K` -> **Copy Diagnostics** when reporting bugs. The copied block is
+sanitized: it includes version, macOS/architecture, renderer, shell status,
+active cwd, and local support paths, but no terminal output, command history,
+AI prompts, secrets, Git diffs, or environment variable values.
 
 ## Performance Note
 
@@ -178,6 +186,8 @@ src-tauri/target/release/bundle/dmg/
 - [privacy notes](docs/PRIVACY.md)
 - [security notes](docs/SECURITY_NOTES.md)
 - [verify downloads](docs/VERIFY_DOWNLOAD.md)
+- [known issues](docs/KNOWN_ISSUES.md)
+- [Homebrew cask preparation](docs/HOMEBREW_CASK.md)
 - [preferences](docs/PREFERENCES.md)
 - [local preview](docs/LOCAL_PREVIEW.md)
 - [terminal comparison benchmark](docs/TERMINAL_COMPARISON_BENCHMARK.md)

@@ -341,9 +341,11 @@ export function TerminalPane({ paneId, tabId }: Props) {
 
       // Diagnostic — write the chosen renderer to /tmp/andspace-diag.log so we
       // can verify which path is active without devtools.
-      invoke("report_renderer", { kind: webgl ? "webgl" : "dom" }).catch(
-        () => {}
+      const rendererKind = webgl ? "webgl" : "dom";
+      window.dispatchEvent(
+        new CustomEvent("andspace:renderer", { detail: { kind: rendererKind } })
       );
+      invoke("report_renderer", { kind: rendererKind }).catch(() => {});
 
       resizePtyToTerminal();
 

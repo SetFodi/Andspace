@@ -3,24 +3,23 @@
 Last updated: May 29, 2026
 
 These notes describe the current security posture of AndSpace
-`v0.1.0-alpha.6`. This is an early public alpha, not a hardened or notarized
-stable release.
+`v0.1.0-alpha.6`. This is an early public alpha, not a hardened stable
+release.
 
 ## Current Alpha Status
 
 - macOS first.
 - Apple Silicon focused.
 - zsh-first shell integration.
-- Not signed with a Developer ID certificate yet.
-- Not notarized by Apple yet.
+- Unsigned prerelease alpha distribution.
 - No auto-update mechanism yet.
 - No account required.
 - No provider API integration or hidden API billing.
 
-Because the app is not notarized yet, macOS may block first launch after
-download. This is expected for the current alpha. You may need to right-click
-`AndSpace.app` and choose Open, or allow it from System Settings -> Privacy &
-Security after the first blocked launch attempt.
+Because this is an unsigned prerelease alpha, macOS may block first launch
+after download. This is expected for the current alpha. You may need to
+right-click `AndSpace.app` and choose Open, or allow it from System Settings ->
+Privacy & Security after the first blocked launch attempt.
 
 ## Verify Downloads
 
@@ -77,6 +76,17 @@ AndSpace starts terminal shells and runs user-triggered local actions such as:
 AndSpace does not intentionally run hidden shell commands unrelated to user
 actions. Local shell startup files, installed CLIs, package scripts, and project
 tooling are controlled by the user's machine and project.
+
+## Copy Diagnostics
+
+Use `Cmd+K` -> **Copy Diagnostics** when reporting bugs. The copied block
+includes app version, macOS version, architecture, renderer, shell integration
+status, active cwd, preferences path, workspace path, diagnostics log path, and
+install method when known.
+
+It does not include terminal output, command history, AI prompts, secrets, Git
+diffs, shell history, or environment variable values. Review the block before
+posting publicly and remove any path or username you do not want to share.
 
 ## AI CLI Handoff
 

@@ -76,6 +76,10 @@ import {
   type CommandPaletteAction,
   type CommandPaletteActionId,
 } from "./terminal/commandPalette";
+import {
+  buildDiagnosticBlock,
+  getPublicDiagnostics,
+} from "./terminal/diagnostics";
 import type { PaneFocusDirection } from "./terminal/paneNavigation";
 import { buildWorkspaceSnapshot } from "./terminal/workspaceModel";
 import {
@@ -244,6 +248,7 @@ export default function App() {
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [colorSchemeOpen, setColorSchemeOpen] = useState(false);
   const [savingTheme, setSavingTheme] = useState<ThemePreference | null>(null);
+  const [rendererKind, setRendererKind] = useState<string | null>(null);
   const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
   const [previewPanelWidth, setPreviewPanelWidth] = useState(520);
@@ -684,6 +689,24 @@ export default function App() {
     }
   }, [copyGitDiff, loadFirstGitDiffTarget, setSidebarVisible, showToast]);
 
+  const copyDiagnostics = useCallback(async () => {
+    try {
+      const base = await getPublicDiagnostics();
+      const block = buildDiagnosticBlock(base, {
+        activeCwd: activePaneCwd,
+        renderer: rendererKind ?? undefined,
+        shellIntegration: activePaneCwd ? "cwd detected" : "unknown",
+      });
+      await navigator.clipboard.writeText(block);
+      showToast({ tone: "success", message: "Copied diagnostics" });
+    } catch (e) {
+      showToast({
+        tone: "error",
+        message: `Could not copy diagnostics: ${String(e)}`,
+      });
+    }
+  }, [activePaneCwd, rendererKind, showToast]);
+
   const runPaletteAction = useCallback(
     async (action: CommandPaletteAction) => {
       await reportCommandPaletteRun(action.id);
@@ -828,6 +851,8 @@ export default function App() {
           );
         }
         showToast({ tone: "success", message: "Copied redacted handoff prompt" });
+      } else if (action.id === "help.copyDiagnostics") {
+        await copyDiagnostics();
       }
     },
     [
@@ -837,6 +862,7 @@ export default function App() {
       buildPromptForActivePane,
       closeActive,
       closePalette,
+      copyDiagnostics,
       initRulesForActivePane,
       newTab,
       copyGitDiffFromPalette,
@@ -1049,6 +1075,15 @@ export default function App() {
     workspaceFingerprint,
     workspaceReady,
   ]);
+
+  useEffect(() => {
+    const onRenderer = (event: Event) => {
+      const detail = (event as CustomEvent<{ kind?: string }>).detail;
+      if (detail?.kind) setRendererKind(detail.kind);
+    };
+    window.addEventListener("andspace:renderer", onRenderer);
+    return () => window.removeEventListener("andspace:renderer", onRenderer);
+  }, []);
 
   useEffect(() => {
     const onPreviewUrl = (event: Event) => {

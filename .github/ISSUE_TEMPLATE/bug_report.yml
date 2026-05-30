@@ -1,0 +1,93 @@
+name: Bug report
+description: Report something that is broken or unreliable in AndSpace.
+title: "[Bug]: "
+labels: ["bug", "alpha-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing AndSpace. Please remove secrets, private paths, tokens, project output, and customer data before posting.
+  - type: input
+    id: version
+    attributes:
+      label: AndSpace version
+      description: Example: v0.1.0-alpha.6
+      placeholder: v0.1.0-alpha.6
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "14.6, 15.1, etc."
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac architecture
+      options:
+        - Apple Silicon
+        - Intel
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: shell
+    attributes:
+      label: Shell
+      placeholder: "zsh, bash, fish, etc."
+    validations:
+      required: true
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - DMG
+        - ZIP
+        - Source
+        - Other / unsure
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do before the bug happened?
+      placeholder: |
+        1. Open AndSpace
+        2. Run ...
+        3. Press ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or video
+      description: Drag screenshots/videos here if they are safe to share.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Use Cmd+K -> Copy Diagnostics in AndSpace, then remove anything sensitive before posting.
+      render: text
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed secrets, tokens, private terminal output, and sensitive project/customer data.
+          required: true
