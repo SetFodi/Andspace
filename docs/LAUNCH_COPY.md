@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.8 Launch Copy
+# AndSpace v0.1.0-alpha.9 Launch Copy
 
 ## One-Line Description
 
@@ -17,7 +17,7 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.8` is a shell setup polish release. It adds a managed
+AndSpace `v0.1.0-alpha.9` is a shell setup polish release. It adds a managed
 zsh profile for new users, keeps existing shell configs available for advanced
 users, and can install recommended shell tools with explicit Homebrew
 confirmation.
@@ -27,11 +27,11 @@ distribution, and intentionally scoped. Local Preview is limited to detected
 localhost/private-LAN dev servers. There is no built-in editor, no provider API
 integration, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.8 is live.
+AndSpace v0.1.0-alpha.9 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and

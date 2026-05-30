@@ -3,7 +3,7 @@
 Last updated: May 29, 2026
 
 These notes describe the current security posture of AndSpace
-`v0.1.0-alpha.8`. This is an early public alpha, not a hardened stable
+`v0.1.0-alpha.9`. This is an early public alpha, not a hardened stable
 release.
 
 ## Current Alpha Status

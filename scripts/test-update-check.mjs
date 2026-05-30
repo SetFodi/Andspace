@@ -56,8 +56,8 @@ test("formats bare versions as tags", () => {
 });
 
 test("compares alpha prerelease numbers numerically", () => {
-  assert.equal(compareVersionTags("v0.1.0-alpha.7", "v0.1.0-alpha.8"), -1);
-  assert.equal(compareVersionTags("v0.1.0-alpha.10", "v0.1.0-alpha.8"), 1);
+  assert.equal(compareVersionTags("v0.1.0-alpha.7", "v0.1.0-alpha.9"), -1);
+  assert.equal(compareVersionTags("v0.1.0-alpha.10", "v0.1.0-alpha.9"), 1);
   assert.equal(compareVersionTags("0.1.0-alpha.7", "v0.1.0-alpha.7"), 0);
 });
 
@@ -68,13 +68,13 @@ test("compares stable versions above prereleases", () => {
 
 test("parses a GitHub release response", () => {
   const parsed = parseGitHubRelease({
-    tag_name: "v0.1.0-alpha.8",
-    name: "AndSpace v0.1.0-alpha.8",
-    html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8",
+    tag_name: "v0.1.0-alpha.9",
+    name: "AndSpace v0.1.0-alpha.9",
+    html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9",
     prerelease: true,
   });
   assert(parsed);
-  assert.equal(parsed.tagName, "v0.1.0-alpha.8");
+  assert.equal(parsed.tagName, "v0.1.0-alpha.9");
   assert.equal(parsed.prerelease, true);
 });
 
@@ -82,31 +82,31 @@ test("ignores draft or invalid GitHub responses", () => {
   assert.equal(
     parseGitHubRelease({
       draft: true,
-      tag_name: "v0.1.0-alpha.8",
+      tag_name: "v0.1.0-alpha.9",
       html_url: "https://example.com",
     }),
     null
   );
-  assert.equal(parseGitHubRelease({ tag_name: "v0.1.0-alpha.8" }), null);
+  assert.equal(parseGitHubRelease({ tag_name: "v0.1.0-alpha.9" }), null);
 });
 
 test("parses the first non-draft release from a list", () => {
   const parsed = parseGitHubReleaseList([
     { draft: true, tag_name: "v0.1.0-alpha.9", html_url: "https://example.com" },
     {
-      tag_name: "v0.1.0-alpha.8",
-      html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8",
+      tag_name: "v0.1.0-alpha.9",
+      html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9",
     },
   ]);
   assert(parsed);
-  assert.equal(parsed.tagName, "v0.1.0-alpha.8");
+  assert.equal(parsed.tagName, "v0.1.0-alpha.9");
 });
 
 await asyncTest("returns newer when GitHub has a higher alpha", async () => {
   const result = await checkForUpdates("0.1.0-alpha.7", async () =>
     response(true, 200, {
-      tag_name: "v0.1.0-alpha.8",
-      html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8",
+      tag_name: "v0.1.0-alpha.9",
+      html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9",
     })
   );
   assert.equal(result.status, "newer");
@@ -122,7 +122,7 @@ await asyncTest("returns current for same or older latest releases", async () =>
   );
   assert.equal(same.status, "current");
 
-  const older = await checkForUpdates("0.1.0-alpha.8", async () =>
+  const older = await checkForUpdates("0.1.0-alpha.9", async () =>
     response(true, 200, {
       tag_name: "v0.1.0-alpha.7",
       html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.7",
@@ -141,8 +141,8 @@ await asyncTest("falls back to release list when latest endpoint fails", async (
     assert.equal(url, GITHUB_RELEASES_API);
     return response(true, 200, [
       {
-        tag_name: "v0.1.0-alpha.8",
-        html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8",
+        tag_name: "v0.1.0-alpha.9",
+        html_url: "https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9",
         prerelease: true,
       },
     ]);

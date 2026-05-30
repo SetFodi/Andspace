@@ -18,6 +18,47 @@ run() {
   "$@"
 }
 
+sign_app_bundle() {
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    return 0
+  fi
+
+  echo
+  echo "==> signing app bundle with local ad-hoc signature"
+  xattr -cr "$APP_PATH" || true
+  codesign --force --deep --sign - "$APP_PATH"
+  codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+}
+
+create_clean_dmg() {
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    return 0
+  fi
+
+  local dmg_path="$DMG_DIR/AndSpace_${VERSION}_aarch64.dmg"
+  local source_dir
+
+  source_dir="$(mktemp -d)"
+
+  echo
+  echo "==> creating clean DMG without a custom volume icon"
+  rm -f "$dmg_path"
+  ditto "$APP_PATH" "$source_dir/AndSpace.app"
+
+  "$DMG_DIR/bundle_dmg.sh" \
+    --volname "AndSpace" \
+    --window-size 660 400 \
+    --icon-size 128 \
+    --text-size 16 \
+    --icon "AndSpace.app" 180 170 \
+    --app-drop-link 480 170 \
+    --no-internet-enable \
+    "$dmg_path" \
+    "$source_dir"
+
+  rm -rf "$source_dir"
+}
+
 run pnpm tsc --noEmit
 run pnpm build
 run cargo test --manifest-path src-tauri/Cargo.toml
@@ -32,6 +73,9 @@ if [[ ! -d "$APP_PATH" ]]; then
   echo "Missing app bundle: $APP_PATH" >&2
   exit 1
 fi
+
+sign_app_bundle
+create_clean_dmg
 
 rm -f "$ZIP_PATH"
 (

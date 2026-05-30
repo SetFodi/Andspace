@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.8 Launch Assets Checklist
+# AndSpace v0.1.0-alpha.9 Launch Assets Checklist
 
 ## Screenshots
 
@@ -35,7 +35,7 @@ docs/screenshots/final/
 | README demo link inserted | Complete: `https://andspace.app/andspace.mp4` |
 | GitHub release screenshots added | Optional after capture |
 | GitHub release demo video added | Optional; release notes link to website video |
-| Release link target | `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8` |
+| Release link target | `https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9` |
 | Launch copy reviewed | Ready: `docs/LAUNCH_COPY.md` |
 
 ## Public Feedback Readiness
@@ -78,4 +78,4 @@ keyboard shortcut visuals, and demo video section now use real product assets.
   web browsing, built-in editing, full settings app behavior, or provider API
   integration.
 - Release notes, README, website, and launch copy all point to
-  `v0.1.0-alpha.8`.
+  `v0.1.0-alpha.9`.
