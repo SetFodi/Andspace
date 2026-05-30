@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import packageJson from "../package.json";
 import { useStore } from "./terminal/terminalStore";
 import { TabStrip } from "./terminal/TabStrip";
 import { SplitTree } from "./terminal/SplitTree";
@@ -14,6 +16,10 @@ import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
 import { GitDiffOverlay } from "./terminal/GitDiffOverlay";
 import { PreferencesOverlay } from "./terminal/PreferencesOverlay";
 import { ColorSchemeOverlay } from "./terminal/ColorSchemeOverlay";
+import {
+  UpdateCheckOverlay,
+  type UpdateCheckPrompt,
+} from "./terminal/UpdateCheckOverlay";
 import { LocalPreviewPanel } from "./terminal/LocalPreviewPanel";
 import {
   ProjectSidebar,
@@ -80,6 +86,7 @@ import {
   buildDiagnosticBlock,
   getPublicDiagnostics,
 } from "./terminal/diagnostics";
+import { checkForUpdates } from "./terminal/updateCheck";
 import type { PaneFocusDirection } from "./terminal/paneNavigation";
 import { buildWorkspaceSnapshot } from "./terminal/workspaceModel";
 import {
@@ -96,6 +103,8 @@ import {
   type Preferences,
   type ThemePreference,
 } from "./terminal/preferencesModel";
+
+const CURRENT_APP_VERSION = packageJson.version;
 
 function TitleBar() {
   const startWindowDrag = (event: MouseEvent<HTMLDivElement>) => {
@@ -248,6 +257,9 @@ export default function App() {
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [colorSchemeOpen, setColorSchemeOpen] = useState(false);
   const [savingTheme, setSavingTheme] = useState<ThemePreference | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateCheckPrompt, setUpdateCheckPrompt] =
+    useState<UpdateCheckPrompt | null>(null);
   const [rendererKind, setRendererKind] = useState<string | null>(null);
   const [previewTabs, setPreviewTabs] = useState<PreviewTab[]>([]);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
@@ -707,6 +719,55 @@ export default function App() {
     }
   }, [activePaneCwd, rendererKind, showToast]);
 
+  const openUpdateUrl = useCallback(
+    async (url: string) => {
+      try {
+        await invoke("open_url", { url });
+        setUpdateCheckPrompt(null);
+        refocusTerminal();
+      } catch (e) {
+        showToast({
+          tone: "error",
+          message: `Could not open release page: ${String(e)}`,
+        });
+      }
+    },
+    [refocusTerminal, showToast]
+  );
+
+  const closeUpdateCheck = useCallback(() => {
+    setUpdateCheckPrompt(null);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const runUpdateCheck = useCallback(async () => {
+    if (checkingUpdates) return;
+    setCheckingUpdates(true);
+    showToast({ tone: "neutral", message: "Checking for updates..." });
+    try {
+      const result = await checkForUpdates(CURRENT_APP_VERSION);
+      if (result.status === "newer") {
+        setUpdateCheckPrompt({
+          kind: "available",
+          currentTag: result.currentTag,
+          latest: result.latest,
+        });
+      } else {
+        showToast({
+          tone: "success",
+          message: `You’re up to date — ${result.currentTag}`,
+        });
+      }
+    } catch {
+      setUpdateCheckPrompt({
+        kind: "error",
+        message: "Couldn’t check for updates. Open releases page?",
+      });
+    } finally {
+      setCheckingUpdates(false);
+    }
+  }, [checkingUpdates, showToast]);
+
   const runPaletteAction = useCallback(
     async (action: CommandPaletteAction) => {
       await reportCommandPaletteRun(action.id);
@@ -853,6 +914,8 @@ export default function App() {
         showToast({ tone: "success", message: "Copied redacted handoff prompt" });
       } else if (action.id === "help.copyDiagnostics") {
         await copyDiagnostics();
+      } else if (action.id === "help.checkUpdates") {
+        await runUpdateCheck();
       }
     },
     [
@@ -863,6 +926,7 @@ export default function App() {
       closeActive,
       closePalette,
       copyDiagnostics,
+      runUpdateCheck,
       initRulesForActivePane,
       newTab,
       copyGitDiffFromPalette,
@@ -1136,6 +1200,7 @@ export default function App() {
     preferencesOpen ||
     colorSchemeOpen ||
     onboardingOpen ||
+    updateCheckPrompt !== null ||
     fileActionsPath !== null ||
     gitDiffOpen ||
     goToFileOpen;
@@ -1518,11 +1583,18 @@ export default function App() {
           refocusTerminal();
         }}
       />
+      <UpdateCheckOverlay
+        prompt={pendingGuardConfirmation ? null : updateCheckPrompt}
+        onOpenDownload={(url) => void openUpdateUrl(url)}
+        onViewReleaseNotes={(url) => void openUpdateUrl(url)}
+        onClose={closeUpdateCheck}
+      />
       <KeybindsOverlay
         open={
           !pendingGuardConfirmation &&
           !handoffOpen &&
           !paletteOpen &&
+          updateCheckPrompt === null &&
           !preferencesOpen &&
           !colorSchemeOpen &&
           !onboardingOpen &&

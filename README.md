@@ -26,6 +26,7 @@ Git inspection.
 - Command Guard with project rules from `ANDSPACE.md`
 - AI CLI handoff to installed local Claude Code, Codex, and Cursor CLIs
 - Command palette and keyboard shortcuts overlay
+- Manual `Check for Updates` action from the command palette
 - Optional project sidebar with Files, Scripts, Servers, and Git Changes
 - File Actions for Cursor, VS Code, Neovim split, copy path, and Finder reveal
 - Passive localhost server detection from terminal output
@@ -96,7 +97,7 @@ scripts/package-alpha.sh
 - zsh-first shell integration
 - Prerelease alpha; expect rough edges
 - Unsigned prerelease alpha; macOS may show a first-launch warning
-- No auto-update
+- No auto-update; update checking is manual from `Cmd+K`
 - Local AI CLI handoff only
 - No provider API billing or hosted AI backend
 - No Git write actions: no staging, commit, push, pull, reset, checkout, stash,
@@ -121,6 +122,10 @@ Use `Cmd+K` -> **Copy Diagnostics** when reporting bugs. The copied block is
 sanitized: it includes version, macOS/architecture, renderer, shell status,
 active cwd, and local support paths, but no terminal output, command history,
 AI prompts, secrets, Git diffs, or environment variable values.
+
+Use `Cmd+K` -> **Check for Updates** to manually check GitHub releases. AndSpace
+does not check for updates on startup, run background update checks, install
+updates automatically, or send telemetry.
 
 ## Performance Note
 

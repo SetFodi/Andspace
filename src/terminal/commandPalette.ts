@@ -25,6 +25,7 @@ export type CommandPaletteActionId =
   | "workspace.reset"
   | "preferences.open"
   | "preferences.colorScheme"
+  | "help.checkUpdates"
   | "help.copyDiagnostics"
   | "help.showKeybinds";
 
@@ -201,6 +202,12 @@ export const COMMAND_PALETTE_ACTIONS: CommandPaletteAction[] = [
     title: "Keyboard Shortcuts",
     section: "Help",
     keywords: ["help", "keybinds", "shortcuts", "cheatsheet", "hotkeys"],
+  },
+  {
+    id: "help.checkUpdates",
+    title: "Check for Updates",
+    section: "Help",
+    keywords: ["help", "update", "updates", "version", "release", "github"],
   },
   {
     id: "help.copyDiagnostics",

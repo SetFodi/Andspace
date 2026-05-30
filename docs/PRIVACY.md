@@ -18,6 +18,7 @@ This document is practical public-facing privacy information for the AndSpace
 - Lightweight preferences are stored locally.
 - Diagnostics are local.
 - No app telemetry or analytics are added in this alpha.
+- Update checking is manual and contacts GitHub only when requested.
 
 ## Local App Behavior
 
@@ -114,6 +115,17 @@ environment variable values.
 
 If you share diagnostics in a bug report, review them first and remove any
 private paths, usernames, tokens, or project details you do not want to share.
+
+## Manual Update Checks
+
+The command palette action `Check for Updates` makes a user-triggered request
+to GitHub releases so AndSpace can compare the latest public release tag with
+the current app version.
+
+AndSpace does not check for updates on startup, does not poll in the
+background, does not install updates automatically, and does not send terminal
+content, workspace data, diagnostics, prompts, Git diffs, or telemetry with the
+request.
 
 ## Website
 

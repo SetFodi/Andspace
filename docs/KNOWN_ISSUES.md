@@ -27,6 +27,9 @@ worth reporting.
   provider API billing.
 - **Local AI CLIs only.** If a CLI is not installed or cannot be resolved from
   the app environment, the related handoff action may be unavailable.
+- **No auto-update yet.** `Cmd+K` -> Check for Updates can manually check
+  GitHub releases, but AndSpace does not download, install, or check for
+  updates in the background.
 
 ## Good Alpha Feedback
 

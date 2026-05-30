@@ -13,6 +13,7 @@ release.
 - zsh-first shell integration.
 - Unsigned prerelease alpha distribution.
 - No auto-update mechanism yet.
+- Manual update checks are user-triggered only.
 - No account required.
 - No provider API integration or hidden API billing.
 
@@ -28,6 +29,15 @@ against the published SHA-256 checksum.
 
 See [VERIFY_DOWNLOAD.md](VERIFY_DOWNLOAD.md) for exact commands and expected
 checksums.
+
+## Manual Update Checks
+
+`Cmd+K` -> **Check for Updates** checks GitHub releases only when the user asks.
+If a newer release exists, AndSpace opens the GitHub download/release page only
+after the user chooses that action.
+
+There is no automatic download, install, startup check, background polling,
+telemetry, analytics, or diagnostic upload.
 
 ## Command Guard
 

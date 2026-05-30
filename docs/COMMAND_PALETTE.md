@@ -33,6 +33,7 @@ explorer, or full settings app.
 | Preferences  | Open Preferences      | Open lightweight local preferences          |
 | Preferences  | Color Scheme          | Open the quick color scheme picker          |
 | Help         | Keyboard Shortcuts   | Open the cheatsheet overlay                 |
+| Help         | Check for Updates    | Manually check GitHub for the latest release |
 | Help         | Copy Diagnostics     | Copy a sanitized support block for bug reports |
 
 Filtering is simple substring matching over command title, section, id, and
@@ -66,6 +67,7 @@ command-palette-open
 command-palette-run action=terminal.splitRight
 command-palette-run action=workspace.restore
 command-palette-run action=git.refresh
+command-palette-run action=help.checkUpdates
 command-palette-run action=help.copyDiagnostics
 ```
 
@@ -74,6 +76,11 @@ shell integration status, active cwd, preferences path, workspace path,
 diagnostics log path, and install method when known. It does not copy terminal
 output, command history, AI prompts, secrets, Git diffs, shell history, or
 environment variable values.
+
+`Check for Updates` is manual and user-triggered. It contacts GitHub releases
+only when selected, compares the latest release tag to the current app version,
+and opens the GitHub release page if the user chooses. It does not auto-install
+updates, run in the background, send diagnostics, or send telemetry.
 
 ## Limits
 
