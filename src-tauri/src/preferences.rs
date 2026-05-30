@@ -18,6 +18,8 @@ pub struct Preferences {
     #[serde(default)]
     pub terminal: TerminalPreferences,
     #[serde(default)]
+    pub shell: ShellPreferences,
+    #[serde(default)]
     pub workflow: WorkflowPreferences,
     #[serde(default)]
     pub safety: SafetyPreferences,
@@ -31,6 +33,7 @@ impl Default for Preferences {
             onboarding_completed: false,
             theme: ThemePreference::default(),
             terminal: TerminalPreferences::default(),
+            shell: ShellPreferences::default(),
             workflow: WorkflowPreferences::default(),
             safety: SafetyPreferences::default(),
         }
@@ -78,6 +81,33 @@ pub enum ScrollbackProfile {
     #[default]
     Balanced,
     LongHistory,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellPreferences {
+    #[serde(default)]
+    pub profile: ShellProfile,
+    #[serde(default)]
+    pub custom_path: Option<String>,
+}
+
+impl Default for ShellPreferences {
+    fn default() -> Self {
+        Self {
+            profile: ShellProfile::default(),
+            custom_path: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ShellProfile {
+    ManagedZsh,
+    #[default]
+    UserShell,
+    Custom,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -234,6 +264,10 @@ mod tests {
                 font_size: 15,
                 scrollback_profile: ScrollbackProfile::LongHistory,
             },
+            shell: ShellPreferences {
+                profile: ShellProfile::ManagedZsh,
+                custom_path: None,
+            },
             workflow: WorkflowPreferences {
                 default_file_action: DefaultFileAction::Cursor,
                 default_ai_cli: DefaultAiCli::Claude,
@@ -252,6 +286,7 @@ mod tests {
         assert_eq!(parsed.onboarding_completed, true);
         assert_eq!(parsed.theme, ThemePreference::Midnight);
         assert_eq!(parsed.terminal.font_size, 15);
+        assert_eq!(parsed.shell.profile, ShellProfile::ManagedZsh);
         assert_eq!(
             parsed.workflow.default_file_action,
             DefaultFileAction::Cursor
@@ -276,6 +311,7 @@ mod tests {
             ScrollbackProfile::Balanced
         );
         assert_eq!(parsed.workflow.default_ai_cli, DefaultAiCli::Ask);
+        assert_eq!(parsed.shell.profile, ShellProfile::UserShell);
         assert_eq!(parsed.safety.command_guard_enabled, true);
     }
 

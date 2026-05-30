@@ -263,6 +263,8 @@ export const THEME_PRESETS: ThemePreset[] = [
 
 export type ScrollbackProfile = "memory-saver" | "balanced" | "long-history";
 
+export type ShellProfile = "managed-zsh" | "user-shell" | "custom";
+
 export type DefaultFileAction =
   | "auto"
   | "cursor"
@@ -277,6 +279,11 @@ export type ServerOpenBehavior = "external" | "preview" | "ask";
 export interface TerminalPreferences {
   fontSize: number;
   scrollbackProfile: ScrollbackProfile;
+}
+
+export interface ShellPreferences {
+  profile: ShellProfile;
+  customPath: string | null;
 }
 
 export interface WorkflowPreferences {
@@ -296,6 +303,7 @@ export interface Preferences {
   onboardingCompleted: boolean;
   theme: ThemePreference;
   terminal: TerminalPreferences;
+  shell: ShellPreferences;
   workflow: WorkflowPreferences;
   safety: SafetyPreferences;
 }
@@ -308,6 +316,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   terminal: {
     fontSize: 13,
     scrollbackProfile: "balanced",
+  },
+  shell: {
+    profile: "user-shell",
+    customPath: null,
   },
   workflow: {
     defaultFileAction: "auto",
@@ -331,6 +343,7 @@ export function normalizePreferences(raw: unknown): Preferences {
     onboardingCompleted: value.onboardingCompleted === true,
     theme: normalizeTheme(value.theme),
     terminal: normalizeTerminalPreferences(value.terminal),
+    shell: normalizeShellPreferences(value.shell),
     workflow: normalizeWorkflowPreferences(value.workflow),
     safety: normalizeSafetyPreferences(value.safety),
   };
@@ -340,6 +353,7 @@ export function cloneDefaultPreferences(): Preferences {
   return {
     ...DEFAULT_PREFERENCES,
     terminal: { ...DEFAULT_PREFERENCES.terminal },
+    shell: { ...DEFAULT_PREFERENCES.shell },
     workflow: { ...DEFAULT_PREFERENCES.workflow },
     safety: { ...DEFAULT_PREFERENCES.safety },
   };
@@ -379,6 +393,20 @@ function normalizeTerminalPreferences(value: unknown): TerminalPreferences {
   };
 }
 
+function normalizeShellPreferences(value: unknown): ShellPreferences {
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_PREFERENCES.shell };
+  }
+  const shell = value as Partial<ShellPreferences>;
+  return {
+    profile: normalizeShellProfile(shell.profile),
+    customPath:
+      typeof shell.customPath === "string" && shell.customPath.trim()
+        ? shell.customPath.trim()
+        : null,
+  };
+}
+
 function normalizeWorkflowPreferences(value: unknown): WorkflowPreferences {
   if (!value || typeof value !== "object") {
     return { ...DEFAULT_PREFERENCES.workflow };
@@ -415,6 +443,12 @@ function normalizeScrollbackProfile(value: unknown): ScrollbackProfile {
     value === "balanced"
     ? value
     : DEFAULT_PREFERENCES.terminal.scrollbackProfile;
+}
+
+function normalizeShellProfile(value: unknown): ShellProfile {
+  return value === "managed-zsh" || value === "custom" || value === "user-shell"
+    ? value
+    : DEFAULT_PREFERENCES.shell.profile;
 }
 
 function normalizeDefaultFileAction(value: unknown): DefaultFileAction {

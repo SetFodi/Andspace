@@ -249,7 +249,9 @@ is pending:
 - Matching uses the command text reported by shell integration.
 - The zsh pre-execution gate matches `$BUFFER` before execution.
 - Dangerous commands default to cancel on UI failure or timeout.
-- zsh is still the only fully supported shell integration.
+- zsh is still the only fully supported shell integration. The managed zsh
+  profile keeps Command Guard available without requiring a user's personal
+  zsh config.
 - Command Guard can be disabled from Preferences. This removes the
   pre-execution safety rail; it does not make commands safer.
 - There is no full settings UI or write-capable Git client. Read-only Git Changes,

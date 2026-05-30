@@ -11,8 +11,15 @@ import type {
   DefaultFileAction,
   Preferences,
   ScrollbackProfile,
+  ShellProfile,
 } from "./preferencesModel";
 import { THEME_PRESETS } from "./preferencesModel";
+import {
+  detectShellSetup,
+  installRecommendedShellTools,
+  shortShellPath,
+  type ShellSetupStatus,
+} from "./shellSetup";
 import { CheckMark, ThemeCard } from "./ThemeCard";
 
 interface Props {
@@ -70,6 +77,28 @@ const AI_TARGETS: Array<{
   { value: "cursor", target: "cursor", title: "Cursor CLI", description: "Prefer Cursor's CLI." },
 ];
 
+const SHELL_PROFILES: Array<{
+  value: ShellProfile;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "managed-zsh",
+    title: "Managed zsh profile",
+    description: "Recommended. Clean AndSpace-owned zsh setup; no edits to your dotfiles.",
+  },
+  {
+    value: "user-shell",
+    title: "Use my shell config",
+    description: "Use your existing $SHELL and dotfiles. Best for customized setups.",
+  },
+  {
+    value: "custom",
+    title: "Custom shell path",
+    description: "Point AndSpace at a specific shell executable.",
+  },
+];
+
 export function PreferencesOverlay({
   open,
   mode,
@@ -80,7 +109,10 @@ export function PreferencesOverlay({
 }: Props) {
   const [draft, setDraft] = useState(preferences);
   const [saving, setSaving] = useState(false);
-  const [tools, setTools] = useState<AiCliTool[]>([]);
+  const [aiTools, setAiTools] = useState<AiCliTool[]>([]);
+  const [shellStatus, setShellStatus] = useState<ShellSetupStatus | null>(null);
+  const [shellError, setShellError] = useState<string | null>(null);
+  const [installingShellTools, setInstallingShellTools] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const isOnboarding = mode === "onboarding";
 
@@ -92,8 +124,17 @@ export function PreferencesOverlay({
     if (!open) return;
     const id = requestAnimationFrame(() => rootRef.current?.focus());
     detectAiCliTools()
-      .then(setTools)
-      .catch(() => setTools([]));
+      .then(setAiTools)
+      .catch(() => setAiTools([]));
+    detectShellSetup()
+      .then((status) => {
+        setShellStatus(status);
+        setShellError(null);
+      })
+      .catch((e) => {
+        setShellStatus(null);
+        setShellError(String(e));
+      });
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !isOnboarding) {
@@ -111,11 +152,24 @@ export function PreferencesOverlay({
 
   const toolAvailability = useMemo(() => {
     const map: Partial<Record<AiCliTarget, AiCliTool>> = {};
-    for (const tool of tools) map[tool.target] = tool;
+    for (const tool of aiTools) map[tool.target] = tool;
     return map;
-  }, [tools]);
+  }, [aiTools]);
 
   if (!open) return null;
+
+  const installTools = async () => {
+    setInstallingShellTools(true);
+    setShellError(null);
+    try {
+      const status = await installRecommendedShellTools();
+      setShellStatus(status);
+    } catch (e) {
+      setShellError(String(e));
+    } finally {
+      setInstallingShellTools(false);
+    }
+  };
 
   const save = async (completed: boolean) => {
     setSaving(true);
@@ -251,6 +305,60 @@ export function PreferencesOverlay({
                 />
               ))}
             </div>
+          </PreferenceSection>
+
+          <PreferenceSection
+            eyebrow="Shell"
+            title="Choose how panes start"
+            description="Managed zsh gives new users a clean setup without copying your personal dotfiles. Existing config keeps today's behavior."
+          >
+            <div className="preferences-card-grid three shell-profile-grid">
+              {SHELL_PROFILES.map((profile) => (
+                <RadioCard
+                  key={profile.value}
+                  title={profile.title}
+                  description={shellProfileDescription(profile, shellStatus)}
+                  selected={draft.shell.profile === profile.value}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      shell: {
+                        ...draft.shell,
+                        profile: profile.value,
+                      },
+                    })
+                  }
+                />
+              ))}
+            </div>
+
+            {draft.shell.profile === "custom" && (
+              <label className="shell-custom-path">
+                <span>Shell executable</span>
+                <input
+                  value={draft.shell.customPath ?? ""}
+                  placeholder="/bin/zsh"
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      shell: {
+                        ...draft.shell,
+                        customPath: e.target.value || null,
+                      },
+                    })
+                  }
+                />
+              </label>
+            )}
+
+            {draft.shell.profile === "managed-zsh" && (
+              <ShellToolsPanel
+                status={shellStatus}
+                error={shellError}
+                installing={installingShellTools}
+                onInstall={() => void installTools()}
+              />
+            )}
           </PreferenceSection>
 
           <PreferenceSection
@@ -493,6 +601,86 @@ function ToggleRow({
       </span>
     </button>
   );
+}
+
+function ShellToolsPanel({
+  status,
+  error,
+  installing,
+  onInstall,
+}: {
+  status: ShellSetupStatus | null;
+  error: string | null;
+  installing: boolean;
+  onInstall: () => void;
+}) {
+  const tools = status?.tools ?? [];
+  const missing = tools.filter((tool) => !tool.installed);
+
+  return (
+    <div className="shell-tools-panel">
+      <div className="shell-tools-head">
+        <div>
+          <strong>Recommended shell tools</strong>
+          <em>
+            AndSpace enables these only when installed. It never edits your
+            personal dotfiles.
+          </em>
+        </div>
+        <button
+          type="button"
+          className="preferences-button ghost shell-install-button"
+          disabled={!status?.homebrewPath || missing.length === 0 || installing}
+          onClick={onInstall}
+        >
+          {installing
+            ? "Installing"
+            : missing.length === 0
+              ? "All installed"
+              : "Install missing"}
+        </button>
+      </div>
+      {!status?.homebrewPath && (
+        <div className="shell-tools-note">
+          Homebrew was not detected. Install Homebrew first to install the
+          recommended tools from AndSpace.
+        </div>
+      )}
+      {error && <div className="shell-tools-error">{error}</div>}
+      <div className="shell-tool-list">
+        {tools.length === 0 ? (
+          <div className="shell-tools-note">Checking local tools...</div>
+        ) : (
+          tools.map((tool) => (
+            <div
+              key={tool.id}
+              className={`shell-tool-row ${tool.installed ? "installed" : ""}`}
+            >
+              <span className="shell-tool-dot" aria-hidden />
+              <span>
+                <strong>{tool.title}</strong>
+                <em>{tool.description}</em>
+              </span>
+              <code>{tool.installed ? "installed" : tool.package}</code>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function shellProfileDescription(
+  profile: { value: ShellProfile; description: string },
+  status: ShellSetupStatus | null
+): string {
+  if (profile.value === "managed-zsh" && status) {
+    return `Recommended. Starts ${shortShellPath(status.managedShell)} with AndSpace's clean zsh profile.`;
+  }
+  if (profile.value === "user-shell" && status) {
+    return `Use ${shortShellPath(status.userShell)} and your existing dotfiles.`;
+  }
+  return profile.description;
 }
 
 function fileActionDescription(

@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.7 Launch Copy
+# AndSpace v0.1.0-alpha.8 Launch Copy
 
 ## One-Line Description
 
@@ -17,28 +17,28 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.7` is a public alpha polish release. It adds first-run
-onboarding, lightweight local Preferences, ten color schemes, a `Cmd+P` color
-scheme picker, and a right-side Local Preview panel for detected
-localhost/private-LAN dev servers.
+AndSpace `v0.1.0-alpha.8` is a shell setup polish release. It adds a managed
+zsh profile for new users, keeps existing shell configs available for advanced
+users, and can install recommended shell tools with explicit Homebrew
+confirmation.
 
 This is a prerelease alpha: macOS-first, zsh-first, unsigned alpha
 distribution, and intentionally scoped. Local Preview is limited to detected
 localhost/private-LAN dev servers. There is no built-in editor, no provider API
 integration, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.7
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.7 is live.
+AndSpace v0.1.0-alpha.8 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and
 read-only Git Changes + Diff Preview.
 
-New: first-run onboarding, lightweight preferences, ten color schemes, and a
-local-only preview panel for dev servers.
+New: managed zsh profile for first-run users, existing-shell/custom-shell
+choices, and optional Homebrew install for recommended shell tools.
 
 No provider API billing. No Git write actions.
 

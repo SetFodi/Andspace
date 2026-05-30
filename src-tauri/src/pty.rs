@@ -40,6 +40,8 @@ struct PtyHandle {
 pub struct CreatedPty {
     pub pane_id: String,
     pub cwd: String,
+    pub shell: String,
+    pub shell_profile: String,
 }
 
 pub struct PtyManager {
@@ -74,6 +76,7 @@ impl PtyManager {
         rows: u16,
         cwd: Option<String>,
         command_guard_enabled: bool,
+        shell_preference: Option<crate::shell_setup::ShellLaunchPreference>,
     ) -> Result<CreatedPty, String> {
         let pty_system = native_pty_system();
         let pair = pty_system
@@ -85,9 +88,10 @@ impl PtyManager {
             })
             .map_err(|e| format!("openpty failed: {e}"))?;
 
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+        let shell = crate::shell_setup::resolve_shell(shell_preference.as_ref());
         let mut cmd = CommandBuilder::new_default_prog();
-        cmd.env("SHELL", &shell);
+        cmd.env("SHELL", &shell.path);
+        cmd.env("ANDSPACE_SHELL_PROFILE", &shell.profile);
         let (initial_cwd, restore_result) = resolve_initial_cwd(cwd.as_deref());
         cmd.cwd(&initial_cwd);
         cmd.env("TERM", "xterm-256color");
@@ -101,7 +105,7 @@ impl PtyManager {
 
         let pane_id = make_id();
         cmd.env("ANDSPACE_PANE_ID", &pane_id);
-        let zsh_bootstrap = apply_zsh_bootstrap(&mut cmd, &shell);
+        let zsh_bootstrap = apply_zsh_bootstrap(&mut cmd, &shell.path, &shell.profile);
 
         let child = pair
             .slave
@@ -120,7 +124,11 @@ impl PtyManager {
             .try_clone_reader()
             .map_err(|e| format!("clone_reader failed: {e}"))?;
 
-        diag_log(&format!("pty-create pid={child_pid} pane={pane_id}"));
+        diag_log(&format!(
+            "pty-create pid={child_pid} pane={pane_id} shell={} shell_profile={}",
+            log_value(&shell.path),
+            shell.profile
+        ));
         if let Some(requested_cwd) = cwd {
             diag_log(&format!(
                 "workspace-restore-pane requested_cwd={} cwd={} result={}",
@@ -182,6 +190,8 @@ impl PtyManager {
         Ok(CreatedPty {
             pane_id,
             cwd: initial_cwd,
+            shell: shell_name(&shell.path),
+            shell_profile: shell.profile,
         })
     }
 
@@ -320,7 +330,11 @@ fn is_zsh(shell: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn apply_zsh_bootstrap(cmd: &mut CommandBuilder, shell: &str) -> Option<(String, String)> {
+fn apply_zsh_bootstrap(
+    cmd: &mut CommandBuilder,
+    shell: &str,
+    shell_profile: &str,
+) -> Option<(String, String)> {
     if !is_zsh(shell) {
         return None;
     }
@@ -329,7 +343,19 @@ fn apply_zsh_bootstrap(cmd: &mut CommandBuilder, shell: &str) -> Option<(String,
     cmd.env("ZDOTDIR", &zdotdir);
     cmd.env("ANDSPACE_ZDOTDIR", &zdotdir);
     cmd.env("ANDSPACE_ZSH_INTEGRATION", &integration);
+    if let Some(prefix) = crate::shell_setup::homebrew_prefix() {
+        cmd.env("ANDSPACE_HOMEBREW_PREFIX", prefix.display().to_string());
+    }
+    cmd.env("ANDSPACE_SHELL_PROFILE", shell_profile);
     Some((integration, zdotdir))
+}
+
+fn shell_name(shell: &str) -> String {
+    std::path::Path::new(shell)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(shell)
+        .to_string()
 }
 
 fn make_id() -> String {

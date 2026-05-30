@@ -28,6 +28,10 @@ Current preference shape:
     "fontSize": 13,
     "scrollbackProfile": "balanced"
   },
+  "shell": {
+    "profile": "user-shell",
+    "customPath": null
+  },
   "workflow": {
     "defaultFileAction": "auto",
     "defaultAiCli": "ask",
@@ -47,6 +51,7 @@ On first launch, AndSpace shows a local welcome/preferences modal. It covers:
 - Theme. AndSpace currently includes ten local color schemes.
 - Terminal font size.
 - Scrollback profile.
+- Shell profile.
 - Default file action.
 - Default AI CLI target.
 - Local server open behavior.
@@ -66,6 +71,33 @@ After the user chooses **Start using AndSpace**, `onboardingCompleted` is set to
 Preferences` all open the same lightweight surface later. `Cmd+P` opens a
 focused color scheme picker for quick theme changes.
 
+On first launch, AndSpace waits to create the first PTY until onboarding is
+complete. That keeps the first pane aligned with the shell profile the user
+chooses.
+
+## Shell Profiles
+
+AndSpace supports three shell profile choices:
+
+| Profile | Behavior |
+| --- | --- |
+| Managed zsh profile | Recommended. Starts `/bin/zsh` with AndSpace's managed `ZDOTDIR`, clean prompt, AndSpace shell integration, and optional recommended tools. It does not source or modify the user's personal dotfiles. |
+| Use my shell config | Uses the user's existing `$SHELL` and personal zsh dotfiles when the shell is zsh. This preserves customized setups and matches earlier alpha behavior. |
+| Custom shell path | Starts a specific shell executable. If the path is invalid, AndSpace falls back to the user's shell. |
+
+The managed profile can enable these tools when they are already installed:
+
+- `zoxide`
+- `zsh-autosuggestions`
+- `zsh-syntax-highlighting`
+- `fzf`
+- `eza`
+
+If Homebrew is available, the Preferences modal can install missing recommended
+tools after the user clicks **Install missing**. AndSpace does not install
+shell tools silently and does not edit `~/.zshrc`, `~/.zprofile`, or
+`~/.zshenv`.
+
 ## Applied Preferences
 
 These preferences are active in this version:
@@ -75,6 +107,7 @@ These preferences are active in this version:
 | Theme | Applies to app chrome and terminal color theme |
 | Font size | Applies to existing and new terminal panes |
 | Scrollback profile | Applies to existing and new terminal panes |
+| Shell profile | Applies to newly created panes |
 | Default file action | Used by `Cmd+Enter` file actions and Go to File defaults |
 | Default AI CLI | Preferred handoff CLI is ordered/focused first in the `Cmd+E` overlay |
 | Server links | Optional escape hatch to open server rows in the external browser instead of Preview |
@@ -111,6 +144,7 @@ Preferences do not store:
 - Command history.
 - Shell history.
 - Server records.
+- Personal shell config contents.
 
 See [PRIVACY.md](PRIVACY.md) and
 [WORKSPACE_PERSISTENCE.md](WORKSPACE_PERSISTENCE.md).
@@ -124,6 +158,8 @@ preferences-load result=ok path=...
 preferences-load result=missing
 preferences-load result=error error=...
 preferences-save result=ok path=... onboarding_completed=true
+shell-setup-detect
+shell-tools-install result=ok packages=...
 ```
 
 ## Tests

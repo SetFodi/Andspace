@@ -4,6 +4,6 @@
 
 [[ "$TERM_PROGRAM" == "AndSpace" ]] || return 0
 
-if [[ -f "$HOME/.zprofile" ]]; then
+if [[ "${ANDSPACE_SHELL_PROFILE:-user-shell}" != "managed-zsh" && -f "$HOME/.zprofile" ]]; then
   source "$HOME/.zprofile"
 fi

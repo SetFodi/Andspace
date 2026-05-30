@@ -34,6 +34,8 @@ test("defaults are local-first and safe", () => {
   assert.equal(preferences.version, 1);
   assert.equal(preferences.onboardingCompleted, false);
   assert.equal(preferences.theme, "graphite-violet");
+  assert.equal(preferences.shell.profile, "user-shell");
+  assert.equal(preferences.shell.customPath, null);
   assert.equal(preferences.workflow.defaultAiCli, "ask");
   assert.equal(preferences.workflow.defaultFileAction, "auto");
   assert.equal(preferences.workflow.serverOpenBehavior, "preview");
@@ -46,6 +48,7 @@ test("normalizes partial preference JSON", () => {
     onboardingCompleted: true,
     theme: "evergreen",
     terminal: { fontSize: 16 },
+    shell: { profile: "managed-zsh" },
     workflow: { defaultAiCli: "claude" },
   });
 
@@ -53,6 +56,7 @@ test("normalizes partial preference JSON", () => {
   assert.equal(preferences.theme, "evergreen");
   assert.equal(preferences.terminal.fontSize, 16);
   assert.equal(preferences.terminal.scrollbackProfile, "balanced");
+  assert.equal(preferences.shell.profile, "managed-zsh");
   assert.equal(preferences.workflow.defaultAiCli, "claude");
   assert.equal(preferences.workflow.defaultFileAction, "auto");
 });
@@ -90,6 +94,7 @@ test("rejects unknown enum values", () => {
   const preferences = normalizePreferences({
     theme: "solarized",
     terminal: { scrollbackProfile: "forever" },
+    shell: { profile: "tcsh" },
     workflow: { defaultFileAction: "delete", defaultAiCli: "remote" },
   });
 
@@ -106,6 +111,7 @@ test("rejects unknown enum values", () => {
     preferences.workflow.defaultAiCli,
     DEFAULT_PREFERENCES.workflow.defaultAiCli
   );
+  assert.equal(preferences.shell.profile, DEFAULT_PREFERENCES.shell.profile);
 });
 
 test("clamps terminal font size", () => {

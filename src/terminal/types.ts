@@ -27,6 +27,8 @@ export interface CommandHistoryEntry {
 
 export interface PaneMeta {
   cwd?: string;
+  shell?: string;
+  shellProfile?: string;
   lastCommand?: string;
   lastExitCode?: number;
   lastCommandStartedAt?: number;

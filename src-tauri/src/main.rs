@@ -9,6 +9,7 @@ mod preferences;
 mod project_sidebar;
 mod pty;
 mod rules;
+mod shell_setup;
 mod tool_resolver;
 mod workspace;
 
@@ -75,6 +76,8 @@ fn main() {
             ack_pty_output,
             report_renderer,
             get_public_diagnostics,
+            detect_shell_setup,
+            install_recommended_shell_tools,
             report_shell_event,
             load_rules_for_cwd,
             init_andspace_rules,

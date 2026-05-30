@@ -81,6 +81,8 @@ interface State {
 interface CreatedPty {
   paneId: string;
   cwd: string;
+  shell: string;
+  shellProfile: string;
 }
 
 function uid(): string {
@@ -88,14 +90,26 @@ function uid(): string {
 }
 
 async function createPty(cwd?: string): Promise<CreatedPty> {
-  const commandGuardEnabled =
-    usePreferencesStore.getState().preferences.safety.commandGuardEnabled;
+  const preferences = usePreferencesStore.getState().preferences;
+  const commandGuardEnabled = preferences.safety.commandGuardEnabled;
   return invoke<CreatedPty>("create_pty", {
     cols: 80,
     rows: 24,
     cwd,
     commandGuardEnabled,
+    shellPreference: {
+      profile: preferences.shell.profile,
+      customPath: preferences.shell.customPath,
+    },
   });
+}
+
+function paneMetaForCreatedPty(created: CreatedPty): PaneMeta {
+  return {
+    ...(created.cwd ? { cwd: created.cwd } : {}),
+    shell: created.shell,
+    shellProfile: created.shellProfile,
+  };
 }
 
 async function killPty(paneId: string) {
@@ -411,6 +425,13 @@ export const useStore = create<State>((set, get) => ({
         s.guardEvaluationsByPane,
         paneId
       ),
+      paneMeta: {
+        ...s.paneMeta,
+        [paneId]: {
+          ...s.paneMeta[paneId],
+          ...paneMetaForCreatedPty(created),
+        },
+      },
       tabs: [...s.tabs, tab],
       activeTabId: tab.id,
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: paneId },
@@ -433,7 +454,7 @@ export const useStore = create<State>((set, get) => ({
         const created = await createPty(snapshot.panes[oldPaneId]?.cwd);
         oldToNew[oldPaneId] = created.paneId;
         createdPaneIds.push(created.paneId);
-        newPaneMeta[created.paneId] = created.cwd ? { cwd: created.cwd } : {};
+        newPaneMeta[created.paneId] = paneMetaForCreatedPty(created);
         newCommandHistory[created.paneId] = [];
         newHandoffHistory[created.paneId] = [];
         newSelectedText[created.paneId] = "";
@@ -572,6 +593,13 @@ export const useStore = create<State>((set, get) => ({
         s.guardEvaluationsByPane,
         newPaneId
       ),
+      paneMeta: {
+        ...s.paneMeta,
+        [newPaneId]: {
+          ...s.paneMeta[newPaneId],
+          ...paneMetaForCreatedPty(created),
+        },
+      },
       tabs: s.tabs.map((t) => (t.id === tab.id ? { ...t, root: newRoot } : t)),
       activePaneByTab: { ...s.activePaneByTab, [tab.id]: newPaneId },
     }));

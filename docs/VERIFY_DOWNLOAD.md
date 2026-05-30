@@ -1,6 +1,6 @@
 # Verify AndSpace Downloads
 
-Use this guide to verify AndSpace `v0.1.0-alpha.7` release artifacts before
+Use this guide to verify AndSpace `v0.1.0-alpha.8` release artifacts before
 installing or sharing them.
 
 Checksums confirm that the file you downloaded matches the published release
@@ -9,14 +9,14 @@ show a first-launch warning even when the checksum is correct.
 
 ## Release
 
-- GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.7
+- GitHub release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.8
 - Platform focus: macOS first, Apple Silicon focused.
 
 ## Expected SHA-256 Checksums
 
 ```text
-2a76eb64f3e56702c22a382c692cb7a59f6c30d4d32cdcb32c2352295fa6bb4e  AndSpace-v0.1.0-alpha.7-macos.zip
-f3a05ea81c67a5961f8e2f4f29774468e5a7bb4035f34e2f2bf2528cd32e9d2c  AndSpace_0.1.0-alpha.7_aarch64.dmg
+c0845b48cb6239120d7f42905c4b4f371ed7eba8f8c1c86c704b39b27682d0d5  AndSpace-v0.1.0-alpha.8-macos.zip
+650914ed22cb5cfad5ac27287b7f7273cd3438e2cdd96f977c287c85dd7db475  AndSpace_0.1.0-alpha.8_aarch64.dmg
 ```
 
 ## Verify The ZIP
@@ -24,13 +24,13 @@ f3a05ea81c67a5961f8e2f4f29774468e5a7bb4035f34e2f2bf2528cd32e9d2c  AndSpace_0.1.0
 From the folder containing the downloaded ZIP:
 
 ```bash
-shasum -a 256 AndSpace-v0.1.0-alpha.7-macos.zip
+shasum -a 256 AndSpace-v0.1.0-alpha.8-macos.zip
 ```
 
 Expected output:
 
 ```text
-2a76eb64f3e56702c22a382c692cb7a59f6c30d4d32cdcb32c2352295fa6bb4e  AndSpace-v0.1.0-alpha.7-macos.zip
+c0845b48cb6239120d7f42905c4b4f371ed7eba8f8c1c86c704b39b27682d0d5  AndSpace-v0.1.0-alpha.8-macos.zip
 ```
 
 ## Verify The DMG
@@ -38,13 +38,13 @@ Expected output:
 From the folder containing the downloaded DMG:
 
 ```bash
-shasum -a 256 AndSpace_0.1.0-alpha.7_aarch64.dmg
+shasum -a 256 AndSpace_0.1.0-alpha.8_aarch64.dmg
 ```
 
 Expected output:
 
 ```text
-f3a05ea81c67a5961f8e2f4f29774468e5a7bb4035f34e2f2bf2528cd32e9d2c  AndSpace_0.1.0-alpha.7_aarch64.dmg
+650914ed22cb5cfad5ac27287b7f7273cd3438e2cdd96f977c287c85dd7db475  AndSpace_0.1.0-alpha.8_aarch64.dmg
 ```
 
 ## If The Checksum Does Not Match
@@ -55,7 +55,7 @@ https://github.com/SetFodi/Andspace/issues
 
 ## Install Warning
 
-AndSpace `v0.1.0-alpha.7` is currently an unsigned prerelease alpha. macOS may
+AndSpace `v0.1.0-alpha.8` is currently an unsigned prerelease alpha. macOS may
 block first launch. This is expected for the current alpha distribution.
 
 To open the app:

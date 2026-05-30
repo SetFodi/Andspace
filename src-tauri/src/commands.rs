@@ -26,8 +26,16 @@ pub fn create_pty(
     rows: u16,
     cwd: Option<String>,
     command_guard_enabled: Option<bool>,
+    shell_preference: Option<crate::shell_setup::ShellLaunchPreference>,
 ) -> Result<crate::pty::CreatedPty, String> {
-    state.create(app, cols, rows, cwd, command_guard_enabled.unwrap_or(true))
+    state.create(
+        app,
+        cols,
+        rows,
+        cwd,
+        command_guard_enabled.unwrap_or(true),
+        shell_preference,
+    )
 }
 
 #[tauri::command]
@@ -81,6 +89,16 @@ pub fn get_public_diagnostics() -> PublicDiagnostics {
         diagnostics_log_path: "/tmp/andspace-diag.log".to_string(),
         install_method: "unknown".to_string(),
     }
+}
+
+#[tauri::command]
+pub fn detect_shell_setup() -> crate::shell_setup::ShellSetupStatus {
+    crate::shell_setup::detect_shell_setup()
+}
+
+#[tauri::command]
+pub fn install_recommended_shell_tools() -> Result<crate::shell_setup::ShellSetupStatus, String> {
+    crate::shell_setup::install_recommended_shell_tools()
 }
 
 fn macos_version() -> Option<String> {

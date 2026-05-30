@@ -1,6 +1,6 @@
 # Known Issues
 
-AndSpace `v0.1.0-alpha.7` is a public prerelease alpha. This document keeps
+AndSpace `v0.1.0-alpha.8` is a public prerelease alpha. This document keeps
 current limits visible so testers know what is expected behavior and what is
 worth reporting.
 
@@ -12,6 +12,8 @@ worth reporting.
   as the primary focus.
 - **zsh-first shell integration.** Bash/fish placeholders exist, but the
   polished shell integration and Command Guard path are zsh-first today.
+  The managed zsh profile is the recommended first-run option for users who do
+  not already maintain a shell config.
 - **Browser Preview is local-dev focused.** Local Preview is limited to
   localhost/private-LAN HTTP(S) URLs. It is not a full browser, has no address
   bar, no browsing history, and no devtools.

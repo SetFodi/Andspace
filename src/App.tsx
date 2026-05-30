@@ -145,12 +145,15 @@ function StatusBar() {
     activePaneId ? s.paneMeta[activePaneId] : undefined
   );
   const cwd = meta?.cwd ? shortenPath(meta.cwd) : "~";
+  const shell = meta?.shell ?? "shell";
+  const shellLabel =
+    meta?.shellProfile === "managed-zsh" ? `${shell} managed` : shell;
 
   return (
     <div className="status-bar">
       <div className="status-left">
         <span className="status-dot" aria-hidden />
-        <span>zsh</span>
+        <span>{shellLabel}</span>
       </div>
       <div className="status-right">
         <span title={meta?.cwd}>{cwd}</span>
@@ -321,6 +324,9 @@ export default function App() {
       try {
         await savePreferences(next);
         setPreferencesOpen(false);
+        if (next.onboardingCompleted && useStore.getState().tabs.length === 0) {
+          await newTab();
+        }
         showToast({ tone: "success", message: "Saved preferences" });
         refocusTerminal();
       } catch (e) {
@@ -330,7 +336,7 @@ export default function App() {
         });
       }
     },
-    [refocusTerminal, savePreferences, showToast]
+    [newTab, refocusTerminal, savePreferences, showToast]
   );
 
   const saveThemePreference = useCallback(
@@ -1101,7 +1107,11 @@ export default function App() {
       } catch (e) {
         console.warn("Failed to load workspace", e);
       }
-      if (!restored && useStore.getState().tabs.length === 0) {
+      if (
+        loadedPreferences.onboardingCompleted &&
+        !restored &&
+        useStore.getState().tabs.length === 0
+      ) {
         await newTab();
       }
       workspaceReadyRef.current = true;

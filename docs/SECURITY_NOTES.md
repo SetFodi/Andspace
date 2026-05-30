@@ -3,7 +3,7 @@
 Last updated: May 29, 2026
 
 These notes describe the current security posture of AndSpace
-`v0.1.0-alpha.7`. This is an early public alpha, not a hardened stable
+`v0.1.0-alpha.8`. This is an early public alpha, not a hardened stable
 release.
 
 ## Current Alpha Status
@@ -11,6 +11,8 @@ release.
 - macOS first.
 - Apple Silicon focused.
 - zsh-first shell integration.
+- Managed zsh profile option for users who want a clean AndSpace-owned shell
+  setup without sourcing personal dotfiles.
 - Unsigned prerelease alpha distribution.
 - No auto-update mechanism yet.
 - Manual update checks are user-triggered only.
@@ -86,6 +88,11 @@ AndSpace starts terminal shells and runs user-triggered local actions such as:
 AndSpace does not intentionally run hidden shell commands unrelated to user
 actions. Local shell startup files, installed CLIs, package scripts, and project
 tooling are controlled by the user's machine and project.
+
+The managed zsh profile does not modify `~/.zshrc`, `~/.zprofile`, or
+`~/.zshenv`. If the user chooses **Install missing** for recommended shell
+tools, AndSpace runs Homebrew only for the visible package list shown in
+Preferences. There is no silent package installation.
 
 ## Copy Diagnostics
 

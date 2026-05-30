@@ -3,7 +3,7 @@
 Last updated: May 29, 2026
 
 This document is practical public-facing privacy information for the AndSpace
-`v0.1.0-alpha.7` prerelease. It is not formal legal advice.
+`v0.1.0-alpha.8` prerelease. It is not formal legal advice.
 
 ## Summary
 
@@ -16,6 +16,8 @@ This document is practical public-facing privacy information for the AndSpace
   Codex, and Cursor CLI.
 - Lightweight workspace restore data is stored locally.
 - Lightweight preferences are stored locally.
+- Shell profile preferences are local. The managed zsh profile does not copy or
+  store personal shell dotfiles.
 - Diagnostics are local.
 - No app telemetry or analytics are added in this alpha.
 - Update checking is manual and contacts GitHub only when requested.
@@ -88,6 +90,7 @@ Preferences may include:
 - Theme.
 - Terminal font size.
 - Scrollback profile.
+- Shell profile and optional custom shell path.
 - Default file action.
 - Default AI CLI.
 - Server open behavior.
@@ -95,8 +98,8 @@ Preferences may include:
 - Command Guard enabled/disabled.
 
 Preferences do not store terminal output, terminal scrollback, AI prompt
-contents, secrets, Git diffs, command history, shell history, or detected
-server records.
+contents, secrets, Git diffs, command history, shell history, personal dotfile
+contents, or detected server records.
 
 See [PREFERENCES.md](PREFERENCES.md) for details.
 
