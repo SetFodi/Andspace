@@ -52,7 +52,7 @@ export function UpdateCheckOverlay({
     ? `AndSpace ${prompt.latest.tagName} is available`
     : "Couldn't check for updates";
   const body = isAvailable
-    ? `You are currently running ${prompt.currentTag}. Download the latest alpha from GitHub when you are ready.`
+    ? `You are currently running ${prompt.currentTag}. Download the latest beta from GitHub when you are ready.`
     : prompt.message;
 
   return (
