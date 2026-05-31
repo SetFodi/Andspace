@@ -48,6 +48,17 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    title: "Edit & Search",
+    binds: [
+      { keys: ["⌘", "C"], label: "Copy selection" },
+      { keys: ["⌘", "V"], label: "Paste" },
+      { keys: ["⌘", "A"], label: "Select all" },
+      { keys: ["⌘", "F"], label: "Find in output" },
+      { keys: ["↵"], label: "Next match" },
+      { keys: ["⇧", "↵"], label: "Previous match" },
+    ],
+  },
+  {
     title: "General",
     binds: [
       { keys: ["Esc"], label: "Close modal / return to terminal" },

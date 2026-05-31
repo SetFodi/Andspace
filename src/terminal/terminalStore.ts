@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
+import { clearPtyOutput, pushPtyOutput } from "./ptyOutput";
 import type {
   CommandHistoryEntry,
   PaneId,
@@ -92,7 +93,24 @@ function uid(): string {
 async function createPty(cwd?: string): Promise<CreatedPty> {
   const preferences = usePreferencesStore.getState().preferences;
   const commandGuardEnabled = preferences.safety.commandGuardEnabled;
-  return invoke<CreatedPty>("create_pty", {
+
+  // Raw PTY bytes stream over this channel as ArrayBuffers. The shell can print
+  // before create_pty resolves with the (server-minted) pane id, so buffer any
+  // early chunks and flush them in order once the pane id is known.
+  const onOutput = new Channel<ArrayBuffer>();
+  const earlyChunks: Uint8Array[] = [];
+  let resolvedPaneId: string | null = null;
+  onOutput.onmessage = (message) => {
+    const bytes = new Uint8Array(message);
+    if (resolvedPaneId) {
+      pushPtyOutput(resolvedPaneId, bytes);
+    } else {
+      earlyChunks.push(bytes);
+    }
+  };
+
+  const created = await invoke<CreatedPty>("create_pty", {
+    onOutput,
     cols: 80,
     rows: 24,
     cwd,
@@ -102,6 +120,11 @@ async function createPty(cwd?: string): Promise<CreatedPty> {
       customPath: preferences.shell.customPath,
     },
   });
+
+  resolvedPaneId = created.paneId;
+  for (const chunk of earlyChunks) pushPtyOutput(created.paneId, chunk);
+  earlyChunks.length = 0;
+  return created;
 }
 
 function paneMetaForCreatedPty(created: CreatedPty): PaneMeta {
@@ -113,6 +136,7 @@ function paneMetaForCreatedPty(created: CreatedPty): PaneMeta {
 }
 
 async function killPty(paneId: string) {
+  clearPtyOutput(paneId);
   try {
     await invoke("kill_pty", { paneId });
   } catch {

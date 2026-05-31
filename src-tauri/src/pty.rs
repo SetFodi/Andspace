@@ -23,10 +23,10 @@ pub fn diag_log(line: &str) {
     }
 }
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use parking_lot::{Condvar, Mutex};
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
+use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::{AppHandle, Emitter};
 
 struct PtyHandle {
@@ -54,13 +54,6 @@ struct OutputBackpressure {
     changed: Condvar,
 }
 
-#[derive(Serialize, Clone)]
-struct PtyOutputPayload {
-    pane_id: String,
-    data: String,
-    encoding: &'static str,
-}
-
 impl PtyManager {
     pub fn new() -> Self {
         Self {
@@ -72,6 +65,7 @@ impl PtyManager {
     pub fn create(
         &self,
         app: AppHandle,
+        on_output: Channel<InvokeResponseBody>,
         cols: u16,
         rows: u16,
         cwd: Option<String>,
@@ -149,9 +143,10 @@ impl PtyManager {
         let panes_for_thread = self.panes.clone();
         let output_backpressure = self.output_backpressure.clone();
 
-        // Blocking read loop on its own thread. Each chunk is forwarded
-        // to the frontend via the `pty-output` event. On EOF / error,
-        // emits `pty-exit` and removes the pane.
+        // Blocking read loop on its own thread. Each chunk is forwarded to the
+        // frontend as raw bytes over the per-pane IPC channel (delivered as an
+        // ArrayBuffer — no base64, no JSON array). On EOF / error, emits
+        // `pty-exit` and removes the pane.
         thread::spawn(move || {
             let mut buf = [0u8; 65536];
             loop {
@@ -160,12 +155,10 @@ impl PtyManager {
                     Ok(0) => break,
                     Ok(n) => {
                         output_backpressure.add(&pane_id_for_thread, n);
-                        let payload = PtyOutputPayload {
-                            pane_id: pane_id_for_thread.clone(),
-                            data: BASE64.encode(&buf[..n]),
-                            encoding: "base64",
-                        };
-                        if app_for_thread.emit("pty-output", payload).is_err() {
+                        if on_output
+                            .send(InvokeResponseBody::Raw(buf[..n].to_vec()))
+                            .is_err()
+                        {
                             output_backpressure.ack(&pane_id_for_thread, n);
                         }
                     }

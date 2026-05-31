@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { SearchAddon } from "@xterm/addon-search";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { installShellIntegration } from "./shellIntegration";
@@ -10,6 +11,7 @@ import { useStore } from "./terminalStore";
 import type { PaneId, TabId } from "./types";
 import { appendOutputCaptureBytes } from "./aiHandoff";
 import { hasServerDetectionTail, useServerStore } from "./serverStore";
+import { subscribePtyOutput } from "./ptyOutput";
 import { usePreferencesStore } from "./preferencesStore";
 import {
   scrollbackRowsForProfile,
@@ -22,17 +24,21 @@ interface Props {
   tabId: TabId;
 }
 
-interface PtyOutputPayload {
-  pane_id: string;
-  data: string | number[];
-  encoding?: "base64";
-}
-
 // How long after the last input the cursor stops blinking. Matches iTerm2 /
 // Warp's behavior — cursor blinks while you're typing, goes steady when idle.
 // Cheap and significant: 2 paints/sec while blinking is ~2% of one CPU core.
 const BLINK_IDLE_MS = 3000;
 const MAX_XTERM_WRITE_BATCH_BYTES = 128 * 1024;
+
+// Highlight colors for scrollback search matches (violet to match the app).
+const SEARCH_DECORATIONS = {
+  matchBackground: "#4c2f86",
+  matchBorder: "#8b5cf6",
+  matchOverviewRuler: "#8b5cf6",
+  activeMatchBackground: "#a78bfa",
+  activeMatchBorder: "#c4b5fd",
+  activeMatchColorOverviewRuler: "#c4b5fd",
+};
 
 type RepairOptions = {
   resize?: boolean;
@@ -141,29 +147,6 @@ function takeWriteBatch(queue: Uint8Array[]): Uint8Array | null {
   return batch;
 }
 
-function decodePtyPayload(payload: PtyOutputPayload): Uint8Array {
-  if (typeof payload.data !== "string") {
-    return new Uint8Array(payload.data);
-  }
-  if (payload.encoding === "base64") {
-    const fromBase64 = (
-      Uint8Array as unknown as {
-        fromBase64?: (value: string) => Uint8Array;
-      }
-    ).fromBase64;
-    if (typeof fromBase64 === "function") {
-      return fromBase64(payload.data);
-    }
-    const binary = atob(payload.data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-  return new TextEncoder().encode(payload.data);
-}
-
 export function TerminalPane({ paneId, tabId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -184,6 +167,42 @@ export function TerminalPane({ paneId, tabId }: Props) {
   );
   const themePreference = usePreferencesStore((s) => s.preferences.theme);
   const [linkHint, setLinkHint] = useState<LinkHint | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{
+    index: number;
+    count: number;
+  }>({ index: -1, count: 0 });
+  const searchAddonRef = useRef<SearchAddon | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const runSearch = (query: string, direction: "next" | "previous") => {
+    const addon = searchAddonRef.current;
+    if (!addon) return;
+    if (!query) {
+      addon.clearDecorations();
+      setSearchResults({ index: -1, count: 0 });
+      return;
+    }
+    const options = {
+      regex: false,
+      caseSensitive: false,
+      wholeWord: false,
+      decorations: SEARCH_DECORATIONS,
+    };
+    if (direction === "next") {
+      addon.findNext(query, { ...options, incremental: true });
+    } else {
+      addon.findPrevious(query, options);
+    }
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    searchAddonRef.current?.clearDecorations();
+    setSearchResults({ index: -1, count: 0 });
+    termRef.current?.focus();
+  };
 
   // Live ref so the main effect's closures can read the current isActive
   // without re-binding the effect on every change.
@@ -254,7 +273,47 @@ export function TerminalPane({ paneId, tabId }: Props) {
     );
     term.loadAddon(webLinks);
 
-    term.attachCustomKeyEventHandler((e) => !isAppShortcut(e));
+    const search = new SearchAddon();
+    searchAddonRef.current = search;
+    term.loadAddon(search);
+    const searchResultsDisposable = search.onDidChangeResults((e) => {
+      setSearchResults({ index: e.resultIndex, count: e.resultCount });
+    });
+
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== "keydown") return true;
+
+      // ⌘ shortcuts the terminal owns: copy, select-all, find. xterm's WebGL
+      // selection isn't a DOM selection, so the OS "Copy" would grab nothing —
+      // we copy term.getSelection() ourselves. Paste is left to xterm's native
+      // textarea paste handling (⌘V works without us touching it).
+      if (e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        const k = e.key.toLowerCase();
+        if (k === "c" && term.hasSelection()) {
+          const selection = term.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            void navigator.clipboard.writeText(selection).catch(() => {});
+            return false;
+          }
+        }
+        if (k === "a") {
+          e.preventDefault();
+          e.stopPropagation();
+          term.selectAll();
+          return false;
+        }
+        if (k === "f") {
+          e.preventDefault();
+          e.stopPropagation();
+          setSearchOpen(true);
+          return false;
+        }
+      }
+
+      return !isAppShortcut(e);
+    });
 
     term.open(container);
 
@@ -414,7 +473,6 @@ export function TerminalPane({ paneId, tabId }: Props) {
       setPaneSelectedText(paneId, term.getSelection());
     });
 
-    let unlisten: (() => void) | null = null;
     const writeQueue: Uint8Array[] = [];
     let isWritingToTerminal = false;
     let unackedTerminalBytes = 0;
@@ -451,24 +509,17 @@ export function TerminalPane({ paneId, tabId }: Props) {
       pumpTerminalWriteQueue();
     };
 
-    listen<PtyOutputPayload>("pty-output", (event) => {
-      if (event.payload.pane_id !== paneId) return;
-      const bytes = decodePtyPayload(event.payload);
+    const unsubscribeOutput = subscribePtyOutput(paneId, (bytes) => {
       unackedTerminalBytes += bytes.length;
       appendOutputCaptureBytes(paneId, bytes);
       // Server detection runs off the same byte stream, but only decode chunks
       // that can plausibly contain a local server URL/banner. Heavy terminal
       // output should not pay a UTF-8 decode + regex scan per PTY chunk.
-      if (
-        hasServerDetectionTail(paneId) ||
-        containsServerScanMarker(bytes)
-      ) {
+      if (hasServerDetectionTail(paneId) || containsServerScanMarker(bytes)) {
         const text = new TextDecoder().decode(bytes);
         useServerStore.getState().ingestPaneOutput(paneId, text);
       }
       enqueueTerminalWrite(bytes);
-    }).then((fn) => {
-      unlisten = fn;
     });
 
     let unlistenExit: (() => void) | null = null;
@@ -517,8 +568,9 @@ export function TerminalPane({ paneId, tabId }: Props) {
       window.removeEventListener("resize", syncSize);
       dataDisposable.dispose();
       selectionDisposable.dispose();
+      searchResultsDisposable.dispose();
       shellIntegration.dispose();
-      unlisten?.();
+      unsubscribeOutput();
       unlistenExit?.();
       ackTerminalBytes(unackedTerminalBytes);
       ro.disconnect();
@@ -532,8 +584,20 @@ export function TerminalPane({ paneId, tabId }: Props) {
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
+      searchAddonRef.current = null;
     };
   }, [paneId, tabId, setActivePane, setPaneSelectedText, handleShellOsc]);
+
+  // When the search bar opens, focus its input and re-run the current query so
+  // matches re-highlight immediately.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const input = searchInputRef.current;
+    input?.focus();
+    input?.select();
+    if (searchQuery) runSearch(searchQuery, "next");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchOpen]);
 
   useEffect(() => {
     const term = termRef.current;
@@ -585,6 +649,86 @@ export function TerminalPane({ paneId, tabId }: Props) {
       onPointerDownCapture={() => setActivePane(tabId, paneId)}
     >
       <div ref={containerRef} className="terminal-host" />
+      {searchOpen && (
+        <div
+          className="terminal-search"
+          role="search"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <svg
+            className="terminal-search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            ref={searchInputRef}
+            className="terminal-search-input"
+            type="text"
+            placeholder="Find in output"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              runSearch(e.target.value, "next");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                closeSearch();
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                runSearch(searchQuery, e.shiftKey ? "previous" : "next");
+              }
+            }}
+          />
+          <span className="terminal-search-count">
+            {searchQuery
+              ? searchResults.count > 0
+                ? `${searchResults.index + 1}/${searchResults.count}`
+                : "0/0"
+              : ""}
+          </span>
+          <button
+            type="button"
+            className="terminal-search-btn"
+            title="Previous match (⇧⏎)"
+            aria-label="Previous match"
+            onClick={() => runSearch(searchQuery, "previous")}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className="terminal-search-btn"
+            title="Next match (⏎)"
+            aria-label="Next match"
+            onClick={() => runSearch(searchQuery, "next")}
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            className="terminal-search-btn terminal-search-close"
+            title="Close (Esc)"
+            aria-label="Close search"
+            onClick={closeSearch}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {linkHint && (
         <div
           className="terminal-link-hint"

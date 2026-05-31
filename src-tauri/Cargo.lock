@@ -45,7 +45,6 @@ dependencies = [
 name = "andspace"
 version = "0.1.0-alpha.9"
 dependencies = [
- "base64 0.22.1",
  "parking_lot",
  "portable-pty",
  "regex",

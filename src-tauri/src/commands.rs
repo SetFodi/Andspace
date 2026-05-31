@@ -22,6 +22,7 @@ pub struct PublicDiagnostics {
 pub fn create_pty(
     app: AppHandle,
     state: State<'_, PtyManager>,
+    on_output: tauri::ipc::Channel<tauri::ipc::InvokeResponseBody>,
     cols: u16,
     rows: u16,
     cwd: Option<String>,
@@ -30,6 +31,7 @@ pub fn create_pty(
 ) -> Result<crate::pty::CreatedPty, String> {
     state.create(
         app,
+        on_output,
         cols,
         rows,
         cwd,
