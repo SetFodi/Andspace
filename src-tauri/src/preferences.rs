@@ -23,6 +23,8 @@ pub struct Preferences {
     pub workflow: WorkflowPreferences,
     #[serde(default)]
     pub safety: SafetyPreferences,
+    #[serde(default)]
+    pub notifications: NotificationPreferences,
 }
 
 impl Default for Preferences {
@@ -36,6 +38,7 @@ impl Default for Preferences {
             shell: ShellPreferences::default(),
             workflow: WorkflowPreferences::default(),
             safety: SafetyPreferences::default(),
+            notifications: NotificationPreferences::default(),
         }
     }
 }
@@ -177,6 +180,28 @@ impl Default for SafetyPreferences {
             command_guard_enabled: true,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationPreferences {
+    #[serde(default = "default_true")]
+    pub command_finish: bool,
+    #[serde(default = "default_notify_min_duration")]
+    pub min_duration_seconds: u64,
+}
+
+impl Default for NotificationPreferences {
+    fn default() -> Self {
+        Self {
+            command_finish: true,
+            min_duration_seconds: 30,
+        }
+    }
+}
+
+fn default_notify_min_duration() -> u64 {
+    30
 }
 
 pub fn load_preferences_state() -> Result<Preferences, String> {

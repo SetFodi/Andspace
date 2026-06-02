@@ -21,6 +21,7 @@ import {
   type ShellSetupStatus,
 } from "./shellSetup";
 import { CheckMark, ThemeCard } from "./ThemeCard";
+import { sendTestNotification } from "./commandNotifications";
 
 interface Props {
   open: boolean;
@@ -113,6 +114,9 @@ export function PreferencesOverlay({
   const [shellStatus, setShellStatus] = useState<ShellSetupStatus | null>(null);
   const [shellError, setShellError] = useState<string | null>(null);
   const [installingShellTools, setInstallingShellTools] = useState(false);
+  const [notifyTest, setNotifyTest] = useState<
+    "idle" | "sending" | "sent" | "denied" | "error"
+  >("idle");
   const rootRef = useRef<HTMLDivElement>(null);
   const isOnboarding = mode === "onboarding";
 
@@ -466,6 +470,53 @@ export function PreferencesOverlay({
                   })
                 }
               />
+            </div>
+          </PreferenceSection>
+
+          <PreferenceSection
+            eyebrow="Notifications"
+            title="Get pinged when long commands finish"
+            description="Fires a macOS notification when a command — or a handed-off AI CLI — finishes while AndSpace is in the background and ran longer than 30 seconds."
+          >
+            <div className="preferences-toggle-list">
+              <ToggleRow
+                title="Command finish notifications"
+                description="Only fires when the window is unfocused. macOS may ask for notification permission the first time."
+                checked={draft.notifications.commandFinish}
+                onChange={(checked) =>
+                  setDraft({
+                    ...draft,
+                    notifications: {
+                      ...draft.notifications,
+                      commandFinish: checked,
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="preferences-notify-test">
+              <button
+                type="button"
+                className="preferences-button ghost"
+                disabled={notifyTest === "sending"}
+                onClick={async () => {
+                  setNotifyTest("sending");
+                  setNotifyTest(await sendTestNotification());
+                }}
+              >
+                {notifyTest === "sending"
+                  ? "Sending…"
+                  : "Send a test notification"}
+              </button>
+              {notifyTest !== "idle" && notifyTest !== "sending" ? (
+                <span className="preferences-notify-test-status">
+                  {notifyTest === "sent"
+                    ? "Sent — check Notification Center."
+                    : notifyTest === "denied"
+                      ? "Blocked. Allow AndSpace in System Settings → Notifications."
+                      : "Couldn't send — notifications need the installed app, not dev mode."}
+                </span>
+              ) : null}
             </div>
           </PreferenceSection>
         </div>

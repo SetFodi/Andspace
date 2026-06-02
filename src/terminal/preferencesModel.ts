@@ -297,6 +297,11 @@ export interface SafetyPreferences {
   commandGuardEnabled: boolean;
 }
 
+export interface NotificationPreferences {
+  commandFinish: boolean;
+  minDurationSeconds: number;
+}
+
 export interface Preferences {
   version: number;
   savedAt: number | null;
@@ -306,6 +311,7 @@ export interface Preferences {
   shell: ShellPreferences;
   workflow: WorkflowPreferences;
   safety: SafetyPreferences;
+  notifications: NotificationPreferences;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -330,6 +336,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
     workspaceRestoreEnabled: true,
     commandGuardEnabled: true,
   },
+  notifications: {
+    commandFinish: true,
+    minDurationSeconds: 30,
+  },
 };
 
 export function normalizePreferences(raw: unknown): Preferences {
@@ -346,6 +356,7 @@ export function normalizePreferences(raw: unknown): Preferences {
     shell: normalizeShellPreferences(value.shell),
     workflow: normalizeWorkflowPreferences(value.workflow),
     safety: normalizeSafetyPreferences(value.safety),
+    notifications: normalizeNotificationPreferences(value.notifications),
   };
 }
 
@@ -356,6 +367,24 @@ export function cloneDefaultPreferences(): Preferences {
     shell: { ...DEFAULT_PREFERENCES.shell },
     workflow: { ...DEFAULT_PREFERENCES.workflow },
     safety: { ...DEFAULT_PREFERENCES.safety },
+    notifications: { ...DEFAULT_PREFERENCES.notifications },
+  };
+}
+
+function normalizeNotificationPreferences(
+  raw: unknown
+): NotificationPreferences {
+  const value = (raw ?? {}) as Partial<NotificationPreferences>;
+  return {
+    commandFinish:
+      typeof value.commandFinish === "boolean"
+        ? value.commandFinish
+        : DEFAULT_PREFERENCES.notifications.commandFinish,
+    minDurationSeconds:
+      typeof value.minDurationSeconds === "number" &&
+      value.minDurationSeconds >= 0
+        ? value.minDurationSeconds
+        : DEFAULT_PREFERENCES.notifications.minDurationSeconds,
   };
 }
 

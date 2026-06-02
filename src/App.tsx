@@ -98,6 +98,7 @@ import {
   saveWorkspaceState,
 } from "./terminal/workspacePersistence";
 import { usePreferencesStore } from "./terminal/preferencesStore";
+import { primeNotificationPermission } from "./terminal/commandNotifications";
 import {
   themePresetForPreference,
   type Preferences,
@@ -1361,6 +1362,14 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  // Establish notification permission early (only if the feature is enabled)
+  // so the first "command finished" notification actually fires instead of
+  // being swallowed by the permission prompt while the user is away.
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    void primeNotificationPermission(preferences.notifications.commandFinish);
+  }, [preferencesLoaded, preferences.notifications.commandFinish]);
 
   // Resolve project root whenever the active pane's cwd changes. The sidebar
   // displays this resolved root instead of the raw cwd — feels saner when the

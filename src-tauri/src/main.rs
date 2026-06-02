@@ -26,6 +26,7 @@ const MENU_SPLIT_DOWN: &str = "pane.split_down";
 fn main() {
     pty::diag_log("=== app-start ===");
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .menu(|app| {
             let menu = Menu::default(app)?;
             let preferences = MenuItem::with_id(

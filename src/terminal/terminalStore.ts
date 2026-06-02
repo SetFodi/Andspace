@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { clearPtyOutput, pushPtyOutput } from "./ptyOutput";
+import { maybeNotifyCommandFinish } from "./commandNotifications";
 import type {
   CommandHistoryEntry,
   PaneId,
@@ -411,6 +412,19 @@ export const useStore = create<State>((set, get) => ({
           },
         };
       });
+
+      // Ping the user if they tabbed away while a long command (or a
+      // handed-off AI CLI) was running.
+      const notifyPrefs =
+        usePreferencesStore.getState().preferences.notifications;
+      void maybeNotifyCommandFinish({
+        command: entry.command,
+        exitCode,
+        durationMs: Math.max(0, endedAt - entry.startedAt),
+        enabled: notifyPrefs.commandFinish,
+        minDurationSeconds: notifyPrefs.minDurationSeconds,
+      });
+
       // Server detection is intentionally passive: if the foreground command
       // that printed the URL exits, clear that pane's detected URLs instead
       // of pretending we know the server is still alive.
