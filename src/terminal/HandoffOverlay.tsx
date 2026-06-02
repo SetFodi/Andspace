@@ -23,6 +23,11 @@ interface Props {
     prompt: HandoffPrompt,
     record: HandoffCommandRecord | null
   ) => Promise<void>;
+  onSendToClis: (
+    targets: AiCliTarget[],
+    prompt: HandoffPrompt,
+    record: HandoffCommandRecord | null
+  ) => Promise<void>;
   onClose: () => void;
   onToast: (message: string, tone: "success" | "neutral" | "error") => void;
 }
@@ -36,6 +41,7 @@ export function HandoffOverlay({
   selectedText,
   defaultTarget,
   onSendToCli,
+  onSendToClis,
   onClose,
   onToast,
 }: Props) {
@@ -45,6 +51,7 @@ export function HandoffOverlay({
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [tools, setTools] = useState<AiCliTool[]>([]);
   const [sendingTarget, setSendingTarget] = useState<AiCliTarget | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const copyRef = useRef<HTMLButtonElement>(null);
   const defaultSendRef = useRef<HTMLButtonElement>(null);
 
@@ -134,7 +141,19 @@ export function HandoffOverlay({
       setSendingTarget(null);
     }
   };
+  const sendToAll = async (targets: AiCliTarget[]) => {
+    if (!prompt || targets.length === 0) return;
+    setSendingAll(true);
+    try {
+      await onSendToClis(targets, prompt, record);
+    } finally {
+      setSendingAll(false);
+    }
+  };
   const orderedTools = orderToolsByPreference(tools, defaultTarget);
+  const availableTargets = orderedTools
+    .filter((tool) => tool.available)
+    .map((tool) => tool.target);
 
   return (
     <div
@@ -217,6 +236,7 @@ export function HandoffOverlay({
                 loading ||
                 !prompt ||
                 !tool.available ||
+                sendingAll ||
                 sendingTarget === tool.target
               }
               title={
@@ -234,6 +254,20 @@ export function HandoffOverlay({
             </button>
             );
           })}
+          {availableTargets.length >= 2 && (
+            <button
+              className="handoff-button secondary"
+              disabled={
+                loading || !prompt || sendingAll || sendingTarget !== null
+              }
+              title="Run the same prompt on every installed CLI, each in its own split pane, to compare answers"
+              onClick={() => sendToAll(availableTargets)}
+            >
+              {sendingAll
+                ? "Sending to all…"
+                : `Compare on all (${availableTargets.length})`}
+            </button>
+          )}
           <button className="handoff-button ghost" onClick={onClose}>
             Cancel
           </button>

@@ -553,6 +553,66 @@ export default function App() {
     [activePaneCwd, activePaneId, showToast, splitActive, writeToPane]
   );
 
+  // Fan the same prompt out to several local CLIs at once, each in its own
+  // split pane, so you can compare their answers side by side. AndSpace stays
+  // the conductor — it just drives the CLIs you already have installed.
+  const sendPromptToClis = useCallback(
+    async (
+      targets: AiCliTarget[],
+      prompt: HandoffPrompt,
+      record: HandoffCommandRecord | null
+    ) => {
+      if (!activePaneId || targets.length === 0) return;
+      const handoffCwd = record?.cwd || activePaneCwd || "~";
+      let sent = 0;
+      for (const target of targets) {
+        try {
+          await reportAiHandoffEvent(
+            "handoff-send",
+            activePaneId,
+            prompt,
+            record,
+            { target }
+          );
+          const prepared = await prepareAiCliHandoff(
+            target,
+            prompt.prompt,
+            handoffCwd
+          );
+          const paneId = await splitActive("row");
+          if (!paneId) continue;
+          await writeToPane(paneId, `${prepared.shellCommand}\n`);
+          await reportAiHandoffEvent(
+            "handoff-send-success",
+            activePaneId,
+            prompt,
+            record,
+            { target }
+          );
+          sent += 1;
+        } catch (e) {
+          await reportAiHandoffEvent(
+            "handoff-send-error",
+            activePaneId,
+            prompt,
+            record,
+            { target, error: String(e) }
+          );
+        }
+      }
+      setHandoffOpen(false);
+      showToast(
+        sent > 0
+          ? {
+              tone: "success",
+              message: `Sent to ${sent} CLI${sent === 1 ? "" : "s"} to compare`,
+            }
+          : { tone: "error", message: "Could not send to any CLI" }
+      );
+    },
+    [activePaneCwd, activePaneId, showToast, splitActive, writeToPane]
+  );
+
   const initRulesForActivePane = useCallback(async () => {
     if (!activePaneCwd) {
       showToast({
@@ -1477,6 +1537,7 @@ export default function App() {
         selectedText={activeSelectedText}
         defaultTarget={preferences.workflow.defaultAiCli}
         onSendToCli={sendPromptToCli}
+        onSendToClis={sendPromptToClis}
         onClose={closeHandoff}
         onToast={(message, tone) => showToast({ message, tone })}
       />
