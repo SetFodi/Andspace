@@ -36,3 +36,20 @@ export interface PaneMeta {
   outputBoundary?: number;
   commandRunning?: boolean;
 }
+
+export type AgentStatus = "running" | "done" | "failed";
+
+// A local AI CLI launched via the ⌘E handoff, tracked so the Agents cockpit
+// can show what's running where and let you jump to it.
+export interface AgentSession {
+  id: string;
+  target: "claude" | "codex" | "cursor";
+  label: string;
+  paneId: PaneId;
+  tabId: TabId;
+  task: string;
+  startedAt: number;
+  status: AgentStatus;
+  exitCode?: number;
+  endedAt?: number;
+}

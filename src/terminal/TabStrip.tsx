@@ -1,4 +1,49 @@
 import { useStore } from "./terminalStore";
+import type { PaneMeta, SplitNode } from "./types";
+import { aiCliLabelForCommand } from "./aiCli";
+
+function collectPaneIds(node: SplitNode): string[] {
+  if (node.kind === "pane") return [node.paneId];
+  return [...collectPaneIds(node.a), ...collectPaneIds(node.b)];
+}
+
+type TabAgent = { status: "running" | "done" | "failed"; label: string };
+
+// Derive the agent status to show on a tab from its panes' last commands.
+// Running wins; otherwise the most recently finished AI CLI.
+function tabAgentStatus(
+  root: SplitNode,
+  paneMeta: Record<string, PaneMeta>
+): TabAgent | null {
+  let running: TabAgent | null = null;
+  let finished: (TabAgent & { endedAt: number }) | null = null;
+  for (const id of collectPaneIds(root)) {
+    const meta = paneMeta[id];
+    if (!meta) continue;
+    const label = aiCliLabelForCommand(meta.lastCommand);
+    if (!label) continue;
+    if (meta.commandRunning) {
+      running = { status: "running", label };
+    } else {
+      const endedAt = meta.lastCommandEndedAt ?? 0;
+      const status = (meta.lastExitCode ?? 0) === 0 ? "done" : "failed";
+      if (!finished || endedAt > finished.endedAt) {
+        finished = { status, label, endedAt };
+      }
+    }
+  }
+  if (running) return running;
+  if (finished) return { status: finished.status, label: finished.label };
+  return null;
+}
+
+// Last path segment of the cwd — the meaningful, Ghostty-style tab name.
+function dirName(cwd: string | undefined): string | null {
+  if (!cwd) return null;
+  const trimmed = cwd.replace(/\/+$/, "");
+  if (trimmed === "") return "/";
+  return trimmed.split("/").pop() || "/";
+}
 
 function SplitRightIcon() {
   return (
@@ -67,29 +112,60 @@ export function TabStrip() {
   const closeTab = useStore((s) => s.closeTab);
   const newTab = useStore((s) => s.newTab);
   const splitActive = useStore((s) => s.splitActive);
+  const paneMeta = useStore((s) => s.paneMeta);
+  const activePaneByTab = useStore((s) => s.activePaneByTab);
 
   return (
     <div className="tab-strip">
-      {tabs.map((tab, idx) => (
-        <div
-          key={tab.id}
-          className={`tab ${tab.id === activeTabId ? "active" : ""}`}
-          onClick={() => setActiveTab(tab.id)}
-        >
-          <span className="tab-index">{idx + 1}</span>
-          <span className="tab-title">{tab.title}</span>
-          <button
-            className="tab-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              closeTab(tab.id);
-            }}
-            aria-label="Close tab"
+      {tabs.map((tab, idx) => {
+        const agent = tabAgentStatus(tab.root, paneMeta);
+        const activePane = activePaneByTab[tab.id];
+        const cwd = activePane ? paneMeta[activePane]?.cwd : undefined;
+        const dir = dirName(cwd);
+        const place = dir ?? tab.title;
+        // When an agent is running, show "Agent · folder" (so two Codex tabs in
+        // different projects stay distinct); otherwise just the folder.
+        const label =
+          agent && agent.status === "running"
+            ? dir
+              ? `${agent.label} · ${dir}`
+              : agent.label
+            : place;
+        return (
+          <div
+            key={tab.id}
+            className={`tab ${tab.id === activeTabId ? "active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
+            title={cwd ?? tab.title}
           >
-            ×
-          </button>
-        </div>
-      ))}
+            <span className="tab-index">{idx + 1}</span>
+            {agent && agent.status === "running" ? (
+              <span
+                className={`tab-agent tab-agent-running tab-agent-${agent.label.toLowerCase()}`}
+                title={`${agent.label} running`}
+                aria-hidden
+              />
+            ) : agent && tab.id !== activeTabId ? (
+              <span
+                className={`tab-agent tab-agent-${agent.status}`}
+                title={`${agent.label} ${agent.status}`}
+                aria-hidden
+              />
+            ) : null}
+            <span className="tab-title">{label}</span>
+            <button
+              className="tab-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeTab(tab.id);
+              }}
+              aria-label="Close tab"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
       <button className="tab-new" onClick={newTab} aria-label="New tab">
         +
       </button>

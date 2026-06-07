@@ -42,6 +42,7 @@ const GROUPS: Group[] = [
     binds: [
       { keys: ["⌘", "K"], label: "Command palette" },
       { keys: ["⌘", "E"], label: "AI handoff" },
+      { keys: ["⌘", "⇧", "A"], label: "Agents cockpit" },
       { keys: ["⌘", "⇧", "I"], label: "Create ANDSPACE.md" },
       { keys: ["⌘", "click"], label: "Preview local URL" },
       { keys: ["⌘", "⇧", "click"], label: "Open local URL in browser" },

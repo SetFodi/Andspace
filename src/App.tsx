@@ -13,6 +13,7 @@ import { CommandPaletteOverlay } from "./terminal/CommandPaletteOverlay";
 import { FileActionsOverlay } from "./terminal/FileActionsOverlay";
 import { GoToFileOverlay } from "./terminal/GoToFileOverlay";
 import { KeybindsOverlay } from "./terminal/KeybindsOverlay";
+import { AgentsOverlay } from "./terminal/AgentsOverlay";
 import { GitDiffOverlay } from "./terminal/GitDiffOverlay";
 import { PreferencesOverlay } from "./terminal/PreferencesOverlay";
 import { ColorSchemeOverlay } from "./terminal/ColorSchemeOverlay";
@@ -88,6 +89,7 @@ import {
 } from "./terminal/diagnostics";
 import { checkForUpdates } from "./terminal/updateCheck";
 import type { PaneFocusDirection } from "./terminal/paneNavigation";
+import type { AgentSession } from "./terminal/types";
 import { buildWorkspaceSnapshot } from "./terminal/workspaceModel";
 import {
   applyWindowState,
@@ -182,6 +184,12 @@ interface PreviewTab extends LocalPreviewTarget {
 }
 
 type NativeShortcut = "split-right" | "split-down";
+
+const AI_CLI_LABEL: Record<AiCliTarget, string> = {
+  claude: "Claude",
+  codex: "Codex",
+  cursor: "Cursor",
+};
 type NativeMenuAction = NativeShortcut | "preferences.open" | "color-scheme.open";
 
 export default function App() {
@@ -214,6 +222,12 @@ export default function App() {
   const closeTab = useStore((s) => s.closeTab);
   const closeActive = useStore((s) => s.closeActive);
   const splitActive = useStore((s) => s.splitActive);
+  const closePane = useStore((s) => s.closePane);
+  const setActiveTab = useStore((s) => s.setActiveTab);
+  const setActivePane = useStore((s) => s.setActivePane);
+  const agentSessions = useStore((s) => s.agentSessions);
+  const registerAgentSession = useStore((s) => s.registerAgentSession);
+  const dismissAgentSession = useStore((s) => s.dismissAgentSession);
   const focusPaneInDirection = useStore((s) => s.focusPaneInDirection);
   const writeToPane = useStore((s) => s.writeToPane);
   const nextTab = useStore((s) => s.nextTab);
@@ -229,6 +243,7 @@ export default function App() {
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [keybindsOpen, setKeybindsOpen] = useState(false);
+  const [agentsOpen, setAgentsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarSection, setSidebarSection] = useState<
     "files" | "scripts" | "servers" | "git"
@@ -446,6 +461,28 @@ export default function App() {
     refocusTerminal();
   }, [refocusTerminal]);
 
+  const closeAgents = useCallback(() => {
+    setAgentsOpen(false);
+    refocusTerminal();
+  }, [refocusTerminal]);
+
+  const jumpToAgent = useCallback(
+    (session: AgentSession) => {
+      setAgentsOpen(false);
+      setActiveTab(session.tabId);
+      setActivePane(session.tabId, session.paneId);
+      refocusTerminal();
+    },
+    [refocusTerminal, setActivePane, setActiveTab]
+  );
+
+  const killAgent = useCallback(
+    (session: AgentSession) => {
+      void closePane(session.paneId);
+    },
+    [closePane]
+  );
+
   // Slide focus into the sidebar after it opens. Two rAFs so the layout
   // settles (open transition applied → first focusable in tree) before we
   // try to focus, otherwise the call no-ops.
@@ -526,6 +563,13 @@ export default function App() {
         const paneId = await splitActive("row");
         if (!paneId) throw new Error("could not create handoff pane");
         await writeToPane(paneId, `${prepared.shellCommand}\n`);
+        registerAgentSession({
+          target,
+          label: AI_CLI_LABEL[target],
+          paneId,
+          tabId: activeTabId,
+          task: record?.command || "Context handoff",
+        });
         await reportAiHandoffEvent(
           "handoff-send-success",
           activePaneId,
@@ -550,7 +594,15 @@ export default function App() {
         });
       }
     },
-    [activePaneCwd, activePaneId, showToast, splitActive, writeToPane]
+    [
+      activePaneCwd,
+      activePaneId,
+      activeTabId,
+      registerAgentSession,
+      showToast,
+      splitActive,
+      writeToPane,
+    ]
   );
 
   // Fan the same prompt out to several local CLIs at once, each in its own
@@ -582,6 +634,13 @@ export default function App() {
           const paneId = await splitActive("row");
           if (!paneId) continue;
           await writeToPane(paneId, `${prepared.shellCommand}\n`);
+          registerAgentSession({
+            target,
+            label: AI_CLI_LABEL[target],
+            paneId,
+            tabId: activeTabId,
+            task: record?.command || "Context handoff",
+          });
           await reportAiHandoffEvent(
             "handoff-send-success",
             activePaneId,
@@ -610,7 +669,15 @@ export default function App() {
           : { tone: "error", message: "Could not send to any CLI" }
       );
     },
-    [activePaneCwd, activePaneId, showToast, splitActive, writeToPane]
+    [
+      activePaneCwd,
+      activePaneId,
+      activeTabId,
+      registerAgentSession,
+      showToast,
+      splitActive,
+      writeToPane,
+    ]
   );
 
   const initRulesForActivePane = useCallback(async () => {
@@ -1268,6 +1335,7 @@ export default function App() {
     handoffOpen ||
     paletteOpen ||
     keybindsOpen ||
+    agentsOpen ||
     preferencesOpen ||
     colorSchemeOpen ||
     onboardingOpen ||
@@ -1318,6 +1386,9 @@ export default function App() {
       } else if (k.toLowerCase() === "i" && e.shiftKey) {
         e.preventDefault();
         void initRulesForActivePane();
+      } else if (k.toLowerCase() === "a" && e.shiftKey) {
+        e.preventDefault();
+        setAgentsOpen(true);
       } else if (k.toLowerCase() === "e" && !e.shiftKey) {
         e.preventDefault();
         setHandoffOpen(true);
@@ -1687,6 +1758,27 @@ export default function App() {
           setKeybindsOpen(false);
           refocusTerminal();
         }}
+      />
+      <AgentsOverlay
+        open={
+          !pendingGuardConfirmation &&
+          !handoffOpen &&
+          !paletteOpen &&
+          !keybindsOpen &&
+          updateCheckPrompt === null &&
+          !preferencesOpen &&
+          !colorSchemeOpen &&
+          !onboardingOpen &&
+          fileActionsPath === null &&
+          !gitDiffOpen &&
+          !goToFileOpen &&
+          agentsOpen
+        }
+        sessions={agentSessions}
+        onClose={closeAgents}
+        onJump={jumpToAgent}
+        onKill={killAgent}
+        onDismiss={dismissAgentSession}
       />
       {toast && (
         <div className={`app-toast ${toast.tone}`} role="status">

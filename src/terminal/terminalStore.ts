@@ -3,6 +3,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { clearPtyOutput, pushPtyOutput } from "./ptyOutput";
 import { maybeNotifyCommandFinish } from "./commandNotifications";
 import type {
+  AgentSession,
   CommandHistoryEntry,
   PaneId,
   PaneMeta,
@@ -41,6 +42,7 @@ import { usePreferencesStore } from "./preferencesStore";
 const MAX_COMMAND_HISTORY = 50;
 const MAX_GUARD_HISTORY = 50;
 const MAX_HANDOFF_HISTORY = 12;
+const MAX_AGENT_SESSIONS = 30;
 
 interface State {
   tabs: Tab[];
@@ -53,6 +55,7 @@ interface State {
   resolvedRulesByPane: Record<PaneId, ResolvedRules>;
   guardEvaluationsByPane: Record<PaneId, CommandGuardEvaluation[]>;
   pendingGuardConfirmation: GuardConfirmationRequest | null;
+  agentSessions: AgentSession[];
 
   newTab: () => Promise<PaneId | null>;
   restoreWorkspace: (snapshot: WorkspaceSnapshot) => Promise<boolean>;
@@ -62,6 +65,10 @@ interface State {
   closeActive: () => Promise<void>;
   focusPaneInDirection: (direction: PaneFocusDirection) => PaneId | null;
   setActivePane: (tabId: TabId, paneId: PaneId) => void;
+  registerAgentSession: (
+    input: Omit<AgentSession, "id" | "startedAt" | "status">
+  ) => void;
+  dismissAgentSession: (id: string) => void;
   setActiveTab: (id: TabId) => void;
   nextTab: () => void;
   prevTab: () => void;
@@ -234,6 +241,7 @@ export const useStore = create<State>((set, get) => ({
   resolvedRulesByPane: {},
   guardEvaluationsByPane: {},
   pendingGuardConfirmation: null,
+  agentSessions: [],
 
   updatePaneMeta: (paneId, patch) =>
     set((s) => ({
@@ -410,6 +418,16 @@ export const useStore = create<State>((set, get) => ({
               lastCommandEndedAt: endedAt,
             },
           },
+          agentSessions: s.agentSessions.map((sess) =>
+            sess.paneId === paneId && sess.status === "running"
+              ? {
+                  ...sess,
+                  status: exitCode === 0 ? "done" : "failed",
+                  exitCode,
+                  endedAt,
+                }
+              : sess
+          ),
         };
       });
 
@@ -604,6 +622,7 @@ export const useStore = create<State>((set, get) => ({
         selectedTextByPane,
         resolvedRulesByPane,
         guardEvaluationsByPane,
+        agentSessions: s.agentSessions.filter((sess) => sess.tabId !== id),
       };
     });
   },
@@ -670,6 +689,7 @@ export const useStore = create<State>((set, get) => ({
         ...s.activePaneByTab,
         [tab.id]: remainingPanes[0],
       },
+      agentSessions: s.agentSessions.filter((sess) => sess.paneId !== paneId),
     }));
   },
 
@@ -708,6 +728,24 @@ export const useStore = create<State>((set, get) => ({
   setActivePane: (tabId, paneId) =>
     set((s) => ({
       activePaneByTab: { ...s.activePaneByTab, [tabId]: paneId },
+    })),
+
+  registerAgentSession: (input) =>
+    set((s) => ({
+      agentSessions: [
+        ...s.agentSessions,
+        {
+          ...input,
+          id: uid(),
+          startedAt: Date.now(),
+          status: "running" as const,
+        },
+      ].slice(-MAX_AGENT_SESSIONS),
+    })),
+
+  dismissAgentSession: (id) =>
+    set((s) => ({
+      agentSessions: s.agentSessions.filter((sess) => sess.id !== id),
     })),
 
   setActiveTab: (id) => set({ activeTabId: id }),
