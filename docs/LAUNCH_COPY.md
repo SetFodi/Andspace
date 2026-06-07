@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-beta.1 Launch Copy
+# AndSpace v0.1.0-beta.2 Launch Copy
 
 ## One-Line Description
 
@@ -17,28 +17,28 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-beta.1` is the first beta release. It keeps the alpha feature
-set, then adds daily-use polish around copy/paste/find, terminal output
-throughput, shell setup, and the public install flow.
+AndSpace `v0.1.0-beta.2` is a focused beta update. It keeps the current feature
+set, then makes Agents cockpit, tab agent status, terminal search, and the
+latest daily-use polish available in the public DMG and ZIP.
 
 This is a prerelease beta: macOS-first, zsh-first, unsigned beta
 distribution, and intentionally scoped. Local Preview is limited to detected
 localhost/private-LAN dev servers. There is no built-in editor, no provider API
 integration, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.2
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-beta.1 is live.
+AndSpace v0.1.0-beta.2 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and
 read-only Git Changes + Diff Preview.
 
-New in beta: copy/paste/find polish, faster sustained terminal output, cleaner
-DMG/install docs, managed zsh profile options, and a tighter public download
-flow.
+New in beta.2: Agents cockpit with `Cmd+Shift+A`, agent-aware tab labels,
+copy/paste/find polish, faster sustained terminal output, cleaner DMG/install
+docs, managed zsh profile options, and a tighter public download flow.
 
 No provider API billing. No Git write actions.
 

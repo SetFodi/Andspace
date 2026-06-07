@@ -10,8 +10,8 @@ context, command safety, local AI CLI handoff, server discovery, and read-only
 Git inspection.
 
 - Website: https://andspace.app
-- Current beta: `v0.1.0-beta.1`
-- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1
+- Current beta: `v0.1.0-beta.2`
+- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.2
 - Demo: https://andspace.app/andspace.mp4
 - Privacy: https://andspace.app/privacy
 - Security: https://andspace.app/security
@@ -26,6 +26,7 @@ Git inspection.
 - Managed zsh profile for new users, with optional Homebrew-installed shell tools
 - Command Guard with project rules from `ANDSPACE.md`
 - AI CLI handoff to installed local Claude Code, Codex, and Cursor CLIs
+- Agents cockpit for tracking local AI CLI handoff sessions
 - Command palette and keyboard shortcuts overlay
 - Manual `Check for Updates` action from the command palette
 - Optional project sidebar with Files, Scripts, Servers, and Git Changes
@@ -65,7 +66,7 @@ checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md)
 ## Install The Beta
 
 1. Download the macOS ZIP or DMG from the
-   [v0.1.0-beta.1 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1).
+   [v0.1.0-beta.2 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.2).
 2. For a ZIP, unzip it. For a DMG, open it and drag `AndSpace.app` to
    Applications.
 3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
@@ -78,8 +79,8 @@ after the first blocked launch attempt.
 SHA-256 checksums from the latest local packaging run:
 
 ```text
-9efdb0617763e4c8ce2dc04ddf605403e9a1fc30907777239399ee7648c99440  AndSpace-v0.1.0-beta.1-macos.zip
-6d72c7f1dff0e1e9c6f7f7e3dd90e71feb3e77a71c3c2274a20484022073b31f  AndSpace_0.1.0-beta.1_aarch64.dmg
+766e12286a2fdf83350c370ae75ee032cef0814add8b863b627d7d0b98a98ab0  AndSpace-v0.1.0-beta.2-macos.zip
+9ecd35d34265ad5a7366ccc9c6bcca6fd0e228825cf547c5d426ace3f36ffc64  AndSpace_0.1.0-beta.2_aarch64.dmg
 ```
 
 For verification steps and install-warning context, see
@@ -155,6 +156,7 @@ terminals like Ghostty.
 | `Cmd+,` | Preferences |
 | `Cmd+P` | Color scheme picker |
 | `Cmd+E` | AI handoff |
+| `Cmd+Shift+A` | Agents cockpit |
 | `Cmd+/` | Keyboard shortcuts |
 | `Cmd+Shift+I` | Create `ANDSPACE.md` |
 | `Cmd+[` / `Cmd+]` | Previous / next tab |

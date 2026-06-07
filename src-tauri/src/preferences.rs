@@ -302,6 +302,10 @@ mod tests {
                 workspace_restore_enabled: false,
                 command_guard_enabled: true,
             },
+            notifications: NotificationPreferences {
+                command_finish: true,
+                min_duration_seconds: 45,
+            },
         };
 
         let raw = serde_json::to_string(&preferences).unwrap();
@@ -317,6 +321,8 @@ mod tests {
             DefaultFileAction::Cursor
         );
         assert_eq!(parsed.safety.workspace_restore_enabled, false);
+        assert_eq!(parsed.notifications.command_finish, true);
+        assert_eq!(parsed.notifications.min_duration_seconds, 45);
     }
 
     #[test]

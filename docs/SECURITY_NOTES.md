@@ -3,7 +3,7 @@
 Last updated: May 29, 2026
 
 These notes describe the current security posture of AndSpace
-`v0.1.0-beta.1`. This is an early public beta, not a hardened stable
+`v0.1.0-beta.2`. This is an early public beta, not a hardened stable
 release.
 
 ## Current Beta Status

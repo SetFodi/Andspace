@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-beta.1 Demo Video Script
+# AndSpace v0.1.0-beta.2 Demo Video Script
 
 Target length: 30-45 seconds.
 

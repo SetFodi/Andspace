@@ -5,18 +5,18 @@ submit this to `homebrew-cask` yet; this is a draft for future tap/cask work.
 
 ## Current Artifact
 
-- Version: `0.1.0-beta.1`
-- Release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1
-- DMG: `AndSpace_0.1.0-beta.1_aarch64.dmg`
+- Version: `0.1.0-beta.2`
+- Release: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.2
+- DMG: `AndSpace_0.1.0-beta.2_aarch64.dmg`
 - SHA-256:
-  `6d72c7f1dff0e1e9c6f7f7e3dd90e71feb3e77a71c3c2274a20484022073b31f`
+  `9ecd35d34265ad5a7366ccc9c6bcca6fd0e228825cf547c5d426ace3f36ffc64`
 
 ## Draft Cask
 
 ```ruby
 cask "andspace" do
-  version "0.1.0-beta.1"
-  sha256 "6d72c7f1dff0e1e9c6f7f7e3dd90e71feb3e77a71c3c2274a20484022073b31f"
+  version "0.1.0-beta.2"
+  sha256 "9ecd35d34265ad5a7366ccc9c6bcca6fd0e228825cf547c5d426ace3f36ffc64"
 
   url "https://github.com/SetFodi/Andspace/releases/download/v#{version}/AndSpace_#{version}_aarch64.dmg"
   name "AndSpace"

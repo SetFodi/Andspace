@@ -1,6 +1,6 @@
 # Known Issues
 
-AndSpace `v0.1.0-beta.1` is a public prerelease beta. This document keeps
+AndSpace `v0.1.0-beta.2` is a public prerelease beta. This document keeps
 current limits visible so testers know what is expected behavior and what is
 worth reporting.
 
