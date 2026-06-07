@@ -3,7 +3,7 @@
 Last updated: May 29, 2026
 
 This document is practical public-facing privacy information for the AndSpace
-`v0.1.0-alpha.9` prerelease. It is not formal legal advice.
+`v0.1.0-beta.1` prerelease. It is not formal legal advice.
 
 ## Summary
 

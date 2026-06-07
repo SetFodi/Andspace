@@ -3,30 +3,30 @@
 Last updated: May 29, 2026
 
 These notes describe the current security posture of AndSpace
-`v0.1.0-alpha.9`. This is an early public alpha, not a hardened stable
+`v0.1.0-beta.1`. This is an early public beta, not a hardened stable
 release.
 
-## Current Alpha Status
+## Current Beta Status
 
 - macOS first.
 - Apple Silicon focused.
 - zsh-first shell integration.
 - Managed zsh profile option for users who want a clean AndSpace-owned shell
   setup without sourcing personal dotfiles.
-- Unsigned prerelease alpha distribution.
+- Unsigned prerelease beta distribution.
 - No auto-update mechanism yet.
 - Manual update checks are user-triggered only.
 - No account required.
 - No provider API integration or hidden API billing.
 
-Because this is an unsigned prerelease alpha, macOS may block first launch
-after download. This is expected for the current alpha. You may need to
+Because this is an unsigned prerelease beta, macOS may block first launch
+after download. This is expected for the current beta. You may need to
 right-click `AndSpace.app` and choose Open, or allow it from System Settings ->
 Privacy & Security after the first blocked launch attempt.
 
 ## Verify Downloads
 
-Before installing or sharing an alpha build, verify the downloaded ZIP or DMG
+Before installing or sharing a beta build, verify the downloaded ZIP or DMG
 against the published SHA-256 checksum.
 
 See [VERIFY_DOWNLOAD.md](VERIFY_DOWNLOAD.md) for exact commands and expected
@@ -60,7 +60,7 @@ Command Guard does not:
 
 ## Git Features
 
-Git features are read-only in this alpha. AndSpace can show Git status and
+Git features are read-only in this beta. AndSpace can show Git status and
 read-only diff previews.
 
 The UI does not provide Git write actions:

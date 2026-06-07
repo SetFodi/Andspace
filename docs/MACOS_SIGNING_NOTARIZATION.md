@@ -16,11 +16,11 @@ Official references:
 
 - Product name: `AndSpace`
 - Bundle identifier: `com.andspace.desktop`
-- Version: `0.1.0-alpha.9`
+- Version: `0.1.0-beta.1`
 - Tauri bundle targets: `app` and `dmg`
 - Icon config includes `src-tauri/icons/icon.icns`
-- Current public alpha is not signed with a Developer ID.
-- Current public alpha is not notarized.
+- Current public beta is not signed with a Developer ID.
+- Current public beta is not notarized.
 - No Apple credentials are stored in this repo.
 
 ## Requirements
@@ -168,4 +168,4 @@ codesign -dv --verbose=4 src-tauri/target/release/bundle/macos/AndSpace.app
 - Upload of signed/notarized DMG to the GitHub release.
 
 Until those are configured, AndSpace should continue to be described as an
-unsigned, not-notarized public alpha.
+unsigned, not-notarized public beta.

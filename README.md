@@ -10,8 +10,8 @@ context, command safety, local AI CLI handoff, server discovery, and read-only
 Git inspection.
 
 - Website: https://andspace.app
-- Current alpha: `v0.1.0-alpha.9`
-- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9
+- Current beta: `v0.1.0-beta.1`
+- Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1
 - Demo: https://andspace.app/andspace.mp4
 - Privacy: https://andspace.app/privacy
 - Security: https://andspace.app/security
@@ -40,7 +40,7 @@ AI handoff is local CLI orchestration only.
 
 ## Watch Demo
 
-Watch the short alpha demo:
+Watch the short beta demo:
 [andspace.app/andspace.mp4](https://andspace.app/andspace.mp4)
 
 ## Screenshots
@@ -62,24 +62,24 @@ checklist is tracked in [docs/screenshots/README.md](docs/screenshots/README.md)
 
 ![Keyboard shortcuts overlay](docs/screenshots/final/07-keyboard-shortcuts.png)
 
-## Install The Alpha
+## Install The Beta
 
 1. Download the macOS ZIP or DMG from the
-   [v0.1.0-alpha.9 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9).
+   [v0.1.0-beta.1 GitHub release](https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1).
 2. For a ZIP, unzip it. For a DMG, open it and drag `AndSpace.app` to
    Applications.
 3. Move `AndSpace.app` to `/Applications` if you downloaded the ZIP.
 4. Launch AndSpace.
 
-AndSpace is currently an unsigned prerelease alpha. macOS may require
+AndSpace is currently an unsigned prerelease beta. macOS may require
 right-click -> Open, or approval from System Settings -> Privacy & Security
 after the first blocked launch attempt.
 
 SHA-256 checksums from the latest local packaging run:
 
 ```text
-d2239e43f897e9dfc98477b3cb8d08cda68b465b229d18ac0d498690a2e94fcc  AndSpace-v0.1.0-alpha.9-macos.zip
-36181540ddd9d39531746a5728bb45b9913942fff43398bc322b86547cc72881  AndSpace_0.1.0-alpha.9_aarch64.dmg
+9efdb0617763e4c8ce2dc04ddf605403e9a1fc30907777239399ee7648c99440  AndSpace-v0.1.0-beta.1-macos.zip
+6d72c7f1dff0e1e9c6f7f7e3dd90e71feb3e77a71c3c2274a20484022073b31f  AndSpace_0.1.0-beta.1_aarch64.dmg
 ```
 
 For verification steps and install-warning context, see
@@ -92,12 +92,12 @@ Local release packaging and checksum generation:
 scripts/package-alpha.sh
 ```
 
-## Alpha Limitations
+## Beta Limitations
 
 - macOS-first, currently packaged for Apple Silicon
 - zsh-first shell integration, with a managed zsh profile option for new users
-- Prerelease alpha; expect rough edges
-- Unsigned prerelease alpha; macOS may show a first-launch warning
+- Prerelease beta; expect rough edges
+- Unsigned prerelease beta; macOS may show a first-launch warning
 - No auto-update; update checking is manual from `Cmd+K`
 - Local AI CLI handoff only
 - No provider API billing or hosted AI backend
@@ -110,14 +110,14 @@ scripts/package-alpha.sh
 
 - [Privacy notes](docs/PRIVACY.md): local app behavior, local AI CLI handoff,
   workspace persistence, diagnostics, and website logs.
-- [Security notes](docs/SECURITY_NOTES.md): unsigned alpha install context,
+- [Security notes](docs/SECURITY_NOTES.md): unsigned beta install context,
   Command Guard limits, read-only Git behavior, and reporting guidance.
 - [Verify downloads](docs/VERIFY_DOWNLOAD.md): SHA-256 checksum commands for
   the ZIP and DMG.
-- [Known issues](docs/KNOWN_ISSUES.md): current alpha limits and what is worth
+- [Known issues](docs/KNOWN_ISSUES.md): current beta limits and what is worth
   reporting.
 - [Homebrew cask draft](docs/HOMEBREW_CASK.md): planned install path after
-  alpha artifacts stabilize.
+  release artifacts stabilize.
 - [Shell profiles](docs/SHELL_PROFILES.md): managed zsh, existing shell config,
   and recommended local shell tools.
 
@@ -132,7 +132,7 @@ updates automatically, or send telemetry.
 
 ## Performance Note
 
-AndSpace is built on Tauri, WKWebView, and xterm.js. Recent alpha hardening
+AndSpace is built on Tauri, WKWebView, and xterm.js. Recent beta hardening
 adds bounded PTY backpressure, larger PTY read chunks, compact PTY transport,
 and lower retained scrollback. It performs well for normal local development,
 but it is not positioned as a raw-throughput replacement for native GPU

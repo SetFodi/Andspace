@@ -1,12 +1,12 @@
 # Known Issues
 
-AndSpace `v0.1.0-alpha.9` is a public prerelease alpha. This document keeps
+AndSpace `v0.1.0-beta.1` is a public prerelease beta. This document keeps
 current limits visible so testers know what is expected behavior and what is
 worth reporting.
 
-## Current Alpha Limits
+## Current Beta Limits
 
-- **Unsigned prerelease alpha.** macOS may require right-click -> Open or
+- **Unsigned prerelease beta.** macOS may require right-click -> Open or
   approval from System Settings -> Privacy & Security on first launch.
 - **macOS-first.** The packaged public build targets macOS, with Apple Silicon
   as the primary focus.
@@ -33,7 +33,7 @@ worth reporting.
   GitHub releases, but AndSpace does not download, install, or check for
   updates in the background.
 
-## Good Alpha Feedback
+## Good Beta Feedback
 
 Please report bugs that affect real daily terminal use:
 

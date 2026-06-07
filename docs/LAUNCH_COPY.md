@@ -1,4 +1,4 @@
-# AndSpace v0.1.0-alpha.9 Launch Copy
+# AndSpace v0.1.0-beta.1 Launch Copy
 
 ## One-Line Description
 
@@ -17,28 +17,28 @@ provider APIs, manage API keys, or add Git write actions.
 
 ## GitHub Release Blurb
 
-AndSpace `v0.1.0-alpha.9` is a shell setup polish release. It adds a managed
-zsh profile for new users, keeps existing shell configs available for advanced
-users, and can install recommended shell tools with explicit Homebrew
-confirmation.
+AndSpace `v0.1.0-beta.1` is the first beta release. It keeps the alpha feature
+set, then adds daily-use polish around copy/paste/find, terminal output
+throughput, shell setup, and the public install flow.
 
-This is a prerelease alpha: macOS-first, zsh-first, unsigned alpha
+This is a prerelease beta: macOS-first, zsh-first, unsigned beta
 distribution, and intentionally scoped. Local Preview is limited to detected
 localhost/private-LAN dev servers. There is no built-in editor, no provider API
 integration, and no Git write actions.
 
-Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-alpha.9
+Download: https://github.com/SetFodi/Andspace/releases/tag/v0.1.0-beta.1
 
 ## Tweet / X Post
 
-AndSpace v0.1.0-alpha.9 is live.
+AndSpace v0.1.0-beta.1 is live.
 
 A terminal-first macOS app for local dev: tabs/splits, workspace restore,
 Command Guard, local AI CLI handoff, project sidebar, localhost detection, and
 read-only Git Changes + Diff Preview.
 
-New: managed zsh profile for first-run users, existing-shell/custom-shell
-choices, and optional Homebrew install for recommended shell tools.
+New in beta: copy/paste/find polish, faster sustained terminal output, cleaner
+DMG/install docs, managed zsh profile options, and a tighter public download
+flow.
 
 No provider API billing. No Git write actions.
 

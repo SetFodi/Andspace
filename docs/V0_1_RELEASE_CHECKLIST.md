@@ -1,6 +1,6 @@
 # v0.1-alpha Release Checklist
 
-Target tag: `v0.1.0-alpha.9`
+Target tag: `v0.1.0-beta.1`
 
 This checklist is for the first usable v0.1-alpha build. It covers release
 readiness only: no write-capable Git client, full settings app, general browser,
@@ -98,7 +98,7 @@ must be checked manually in the launched production app:
 | Area | Status | Notes |
 | --- | --- | --- |
 | Automated checks | Passed | TypeScript, frontend build, Rust tests/check, Command Guard zsh verification, server parser tests, pane navigation tests |
-| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-alpha.9_aarch64.dmg` |
+| Production package | Passed | `pnpm tauri build` creates `AndSpace.app` and `AndSpace_0.1.0-beta.1_aarch64.dmg` |
 | Bundle metadata | Passed | App name, bundle id, version, executable, and icon metadata verified |
 | Runtime diagnostics | Passed | PTY creation, WebGL renderer, shell autoload, and cwd OSC events verified |
 | Visual UI workflow | Partial pass | `Cmd+K`, `Cmd+B`, and `Cmd+E` verified visually; full dogfood and remaining shortcuts still need manual confirmation |
@@ -137,18 +137,18 @@ must be checked manually in the launched production app:
 - `pnpm tauri build` succeeded and produced:
   `src-tauri/target/release/bundle/macos/AndSpace.app`
 - DMG output was produced at:
-  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-alpha.9_aarch64.dmg`.
+  `src-tauri/target/release/bundle/dmg/AndSpace_0.1.0-beta.1_aarch64.dmg`.
 - `scripts/package-alpha.sh` produced:
-  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-alpha.9-macos.zip`
-  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-alpha.9-checksums.txt`.
+  `src-tauri/target/release/bundle/macos/AndSpace-v0.1.0-beta.1-macos.zip`
+  and `src-tauri/target/release/bundle/AndSpace-v0.1.0-beta.1-checksums.txt`.
 - Latest local package checksums:
   `317afd38c3c19ce1c6cd7ba74e74f8677f16564c5c250ebaa06786e9bd3a7d9f`
   for the ZIP and
   `f6dc8458b81a73d6aa759bec24af9ded231a81b1f84c09b28750892d8d020f5c`
   for the DMG.
 - Bundle metadata shows `CFBundleDisplayName=AndSpace`,
-  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-alpha.9`,
-  `CFBundleVersion=0.1.0-alpha.9`,
+  `CFBundleName=AndSpace`, `CFBundleShortVersionString=0.1.0-beta.1`,
+  `CFBundleVersion=0.1.0-beta.1`,
   `CFBundleIdentifier=com.andspace.desktop`, and
   `CFBundleIconFile=icon.icns`.
 - Packaged icon is a real macOS `.icns` file at
@@ -207,7 +207,7 @@ must be checked manually in the launched production app:
 - Codex handoff keeps stdin attached to the terminal for interactive launch
 - zsh startup now sources login profile setup before user `.zshrc`
 
-### v0.1.0-alpha.9
+### v0.1.0-beta.1
 
 - Hotfix release for CLI/editor detection from Finder/Dock-launched app bundles
 - Claude, Codex, VS Code, Neovim, Vim, and Cursor detection now checks common
